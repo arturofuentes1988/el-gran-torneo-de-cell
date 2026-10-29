@@ -3,6 +3,7 @@ import { MusicLibrary } from '../audio/music';
 import type { Sfx } from '../audio/sfx';
 import type { FighterAsset } from '../content/mannequin/fighters';
 import type { StageLibrary } from '../content/stages';
+import { saveMuted } from './settings';
 import type { Gamepads, Keyboard, MenuInput } from '../input/devices';
 import type { StageView } from '../render/stage';
 import type { Display } from './display';
@@ -59,7 +60,7 @@ export class Game {
 
   /** Atajos globales: M sonido, F1 cajas, F2 información. */
   globalKeys(): void {
-    if (this.kb.hit('KeyM')) this.sfx.toggleMute();
+    if (this.kb.hit('KeyM')) saveMuted(this.sfx.toggleMute());
     if (this.kb.hit('F1')) this.debug.boxes = !this.debug.boxes;
     if (this.kb.hit('F2')) this.debug.info = !this.debug.info;
   }

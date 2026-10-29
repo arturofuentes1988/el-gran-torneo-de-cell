@@ -143,13 +143,13 @@ Pablito Neuquén (sin cargar ni mantener: toques de atrás y adelante):
 | Súper ¡SÁCATE AL TIRO LAS ZAPATILLAS! (1 barra) | adelante, atrás, adelante + golpe |
 | Ultra ¡YO SOY PABLITO NEUQUÉN! (2 barras, rival en peligro) | adelante, atrás, adelante + patada |
 
-Flaitiano (agua y rayos: "¡junten agua, junten luz!"; la U es media vuelta del stick):
+Flaitiano (agua y rayos: "¡junten agua, junten luz!"):
 
 | Movimiento | Comando |
 |---|---|
-| ¡Cállate, cotorra! (sus rastas avanzan por el suelo como olas; se cubre agachado) | U adelante (atrás, abajo, adelante) + golpe |
-| ¡No hay luz! (se corta la luz y cae un rayo; con patada fuerte, sobre el rival) | U adelante + patada |
-| ¡Cabeza de tarro! (agarre: tambor en la cabeza y patada) | U atrás (adelante, abajo, atrás) + golpe |
+| ¡Cállate, cotorra! (sus rastas avanzan por el suelo como olas; se cubre agachado) | abajo, diagonal, adelante + golpe (también sale con la U completa) |
+| ¡No hay luz! (se corta la luz y cae un rayo; con patada fuerte, sobre el rival) | abajo, diagonal, adelante + patada |
+| ¡Cabeza de tarro! (agarre: tambor en la cabeza y patada) | adelante, adelante + golpe |
 | Súper ¡JUNTEN AGUA, JUNTEN LUZ! (tormenta, remolino y rayo gigante; 1 barra) | dos veces abajo, diagonal, adelante + golpe |
 | Ultra ¿HASTA CUÁNDO, AMIGO? (en el lago, con tormenta; 2 barras, rival en peligro) | dos veces abajo, diagonal, adelante + patada |
 

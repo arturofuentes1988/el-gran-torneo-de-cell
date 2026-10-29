@@ -23,6 +23,25 @@ export function saveDifficulty(d: DifficultyId): void {
   }
 }
 
+const KEY_SOUND = 'torneoDeCell.sonido';
+
+/** ¿El sonido quedó desactivado? (por defecto, activado). */
+export function loadMuted(): boolean {
+  try {
+    return localStorage.getItem(KEY_SOUND) === 'no';
+  } catch {
+    return false;
+  }
+}
+
+export function saveMuted(muted: boolean): void {
+  try {
+    localStorage.setItem(KEY_SOUND, muted ? 'no' : 'si');
+  } catch {
+    // Si no se puede guardar, solo dura esta sesión.
+  }
+}
+
 const KEY_CONTROLS = 'torneoDeCell.controles';
 
 /** Controles guardados (teclas y botones de joystick de cada jugador), sin validar; null si no hay. */

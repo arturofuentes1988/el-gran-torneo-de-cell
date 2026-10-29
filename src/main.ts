@@ -4,6 +4,7 @@ import { Display } from './app/display';
 import { autoFullscreen, installFullscreen } from './app/fullscreen';
 import { installQaBridge } from './app/qa';
 import { Game, type FightMode } from './app/game';
+import { loadMuted } from './app/settings';
 import { Sfx } from './audio/sfx';
 import { FRAME_MS, PIXEL_FONT } from './config';
 import { loadFighterFolder, validateFighter } from './content/loadFighter';
@@ -48,6 +49,8 @@ async function main(): Promise<void> {
   const pads = new Gamepads();
   const menu = new MenuInput(kb, pads);
   const sfx = new Sfx();
+  // El sonido queda como lo dejó el jugador (OPCIONES > SONIDO o la tecla M).
+  sfx.setMuted(loadMuted());
   // El navegador solo permite audio y pantalla completa después de un gesto del usuario:
   // la primera tecla (o clic) desbloquea el sonido (y con él la música del título) y pide
   // la pantalla completa, esté donde esté el jugador.

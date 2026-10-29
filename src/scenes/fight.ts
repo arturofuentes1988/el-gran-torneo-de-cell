@@ -53,11 +53,11 @@ function mergeKeys(a: KeyBindings, b: KeyBindings): KeyBindings {
   return out;
 }
 
-const PAUSE_OPTIONS = ['CONTINUAR', 'MOVIMIENTOS', 'CONTROLES', 'SALIR AL MENÚ'] as const;
+const PAUSE_OPTIONS = ['CONTINUAR', 'REINICIAR COMBATE', 'MOVIMIENTOS', 'CONTROLES', 'SALIR AL MENÚ'] as const;
 /** Menú de pausa compacto (mismo estilo que el menú de modos). */
 const P_FONT = 8;
 const P_ROW = 13;
-const P_W = 150;
+const P_W = 184;
 const P_PAD = 9;
 const P_H = P_PAD * 2 + (PAUSE_OPTIONS.length - 1) * P_ROW + P_FONT;
 const P_X = Math.round((VIEW_W - P_W) / 2);
@@ -478,20 +478,26 @@ export class FightScene implements Scene {
       return;
     }
     if (mi.confirm && this.pauseSel === 1) {
+      // La misma pelea desde el round 1: mismos luchadores, colores, escenario y lo que venga después.
+      g.sfx.play('menuConfirm');
+      g.setScene(new FightScene(g, this.mode, this.seed, this.opts));
+      return;
+    }
+    if (mi.confirm && this.pauseSel === 2) {
       g.sfx.play('menuConfirm');
       this.moveList = new MoveListPanel(g.assets, 0);
       g.display.overlay.addChild(this.moveList.container);
       this.pauseUi.visible = false;
       return;
     }
-    if (mi.confirm && this.pauseSel === 2) {
+    if (mi.confirm && this.pauseSel === 3) {
       g.sfx.play('menuConfirm');
       this.controls = new ControlsPanel(g, true);
       g.display.overlay.addChild(this.controls.container);
       this.pauseUi.visible = false;
       return;
     }
-    if (mi.confirm && this.pauseSel === 3) {
+    if (mi.confirm && this.pauseSel === 4) {
       g.sfx.play('menuBack');
       g.setScene(new MainMenuScene(g));
     }

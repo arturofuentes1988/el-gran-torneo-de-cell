@@ -6,7 +6,7 @@
 import { Container, Graphics, type Text } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
 import type { Game, Scene } from '../app/game';
-import { loadDifficulty, saveDifficulty } from '../app/settings';
+import { loadDifficulty, saveDifficulty, saveMuted } from '../app/settings';
 import { arcade, outlinedText } from '../render/text';
 import { DIFFICULTIES, DIFFICULTY_NAME, type DifficultyId } from '../sim/difficulty';
 import { CharacterSelectScene } from './characterSelect';
@@ -173,7 +173,7 @@ export class CasualMenuScene extends MenuScene {
   }
 }
 
-/** OPCIONES: fichas y movimientos de los luchadores, escenarios, controles y dificultad. */
+/** OPCIONES: fichas y movimientos de los luchadores, escenarios, controles, dificultad y sonido. */
 export class OptionsMenuScene extends MenuScene {
   private difficulty: DifficultyId = loadDifficulty();
 
@@ -184,9 +184,31 @@ export class OptionsMenuScene extends MenuScene {
       { id: 'escenarios', label: 'ESCENARIOS' },
       { id: 'controles', label: 'CONTROLES' },
       { id: 'dificultad', label: '' },
+      { id: 'sonido', label: '' },
       { id: 'volver', label: 'VOLVER' },
     ]);
     this.updateDifficultyLabel();
+    this.updateSoundLabel();
+  }
+
+  private updateSoundLabel(): void {
+    const i = this.options.findIndex((o) => o.id === 'sonido');
+    this.items[i].text = arcade(`SONIDO: < ${this.game.sfx.muted ? 'DESACTIVADO' : 'ACTIVADO'} >`);
+  }
+
+  private toggleSound(): void {
+    const muted = !this.game.sfx.muted;
+    this.game.sfx.setMuted(muted);
+    saveMuted(muted);
+    this.updateSoundLabel();
+    // Al activarlo, un pitido confirma que volvió.
+    this.game.sfx.play('menuMove');
+  }
+
+  override step(): void {
+    super.step();
+    // La tecla M también lo cambia: la fila muestra siempre cómo está.
+    this.updateSoundLabel();
   }
 
   private updateDifficultyLabel(): void {
@@ -204,6 +226,7 @@ export class OptionsMenuScene extends MenuScene {
 
   protected override side(id: string, dir: number): void {
     if (id === 'dificultad') this.changeDifficulty(dir);
+    else if (id === 'sonido') this.toggleSound();
   }
 
   protected choose(id: string): void {
@@ -216,6 +239,7 @@ export class OptionsMenuScene extends MenuScene {
     else if (id === 'escenarios') this.go(new StageViewerScene(g, here));
     else if (id === 'controles') this.go(new ControlsScene(g, here));
     else if (id === 'dificultad') this.changeDifficulty(1);
+    else if (id === 'sonido') this.toggleSound();
     else this.back();
   }
 

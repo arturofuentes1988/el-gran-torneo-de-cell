@@ -700,8 +700,13 @@ export class Sfx {
   }
 
   toggleMute(): boolean {
-    this.muted = !this.muted;
-    if (this.master) this.master.gain.value = this.muted ? 0 : 0.7;
+    this.setMuted(!this.muted);
     return this.muted;
+  }
+
+  /** Activa o desactiva todo el sonido (efectos, voces y música). */
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+    if (this.master) this.master.gain.value = this.muted ? 0 : 0.7;
   }
 }
