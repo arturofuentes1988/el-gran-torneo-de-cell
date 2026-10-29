@@ -15,6 +15,7 @@ import { Hud, type PracticeHudInfo } from '../render/hud';
 import { LiveShow } from '../render/live';
 import { MoveListPanel } from '../render/moveListPanel';
 import { ControlsPanel } from './controls';
+import { COSTUME_COUNT } from '../render/costume';
 import { snap } from '../render/scale';
 import type { StageView } from '../render/stage';
 import { outlinedText } from '../render/text';
@@ -25,7 +26,7 @@ import type { Fighter, StateName } from '../sim/fighter';
 import { DEAD_LINGER, Match } from '../sim/match';
 import type { SimEvent } from '../sim/events';
 import type { FighterDef, ProjectileDef } from '../sim/types';
-import { TitleScene } from './title';
+import { MainMenuScene } from './modeSelect';
 
 /** Estados en que un luchador todavía está "dentro" de un combo o recuperándose. */
 const BUSY: ReadonlySet<StateName> = new Set<StateName>(['hitstun', 'airHit', 'knockdown', 'getup', 'blockstun', 'thrown', 'pinned']);
@@ -63,7 +64,6 @@ const P_X = Math.round((VIEW_W - P_W) / 2);
 const P_Y = Math.round((VIEW_H - P_H) / 2) + 6;
 
 /** Colores para distinguir a un luchador repetido en la misma pelea (el primero va sin cambio). */
-const DUPLICATE_TINTS = [0xffffff, 0x8ea8ff, 0xffa48a, 0xa0ffb0];
 
 /**
  * Opciones de la pelea (índices de game.assets.roster). teams: 2 VS 2, los de cada equipo.
@@ -72,6 +72,12 @@ const DUPLICATE_TINTS = [0xffffff, 0x8ea8ff, 0xffa48a, 0xa0ffb0];
 export interface FightOptions {
   teams?: [number[], number[]];
   fighters?: [number, number];
+  /** Color de ropa de cada lado (0 = el original), elegido en ELIGE LUCHADOR. */
+  colors?: [number, number];
+  /** Dificultad de la CPU para esta pelea (ARCADE la sube de a poco); si falta, la guardada. */
+  difficulty?: DifficultyId;
+  /** Qué viene al terminar (ARCADE: la siguiente pelea o CONTINUAR); si falta, el menú principal. */
+  next?: (winner: 0 | 1 | -1) => Scene;
 }
 
 export class FightScene implements Scene {
@@ -167,7 +173,7 @@ export class FightScene implements Scene {
     private opts: FightOptions = {},
   ) {
     this.seed = seed;
-    this.difficulty = mode === 'demo' ? 'normal' : loadDifficulty();
+    this.difficulty = mode === 'demo' ? 'normal' : opts.difficulty ?? loadDifficulty();
     // 2 VS 2: los luchadores de cada equipo salen del plantel; el primero de cada uno parte peleando.
     const roster = game.assets.roster;
     const pick = (idx: number[]) => idx.map((i) => roster[i]?.def).filter((d): d is FighterDef => !!d);
@@ -177,7 +183,13 @@ export class FightScene implements Scene {
     const chosen = opts.fighters ? pick(opts.fighters) : [];
     const pair = chosen.length === 2 ? chosen : [game.assets.fighters[0].def, game.assets.fighters[1].def];
     const defs = teams ? ([teams[0][0], teams[1][0]] as const) : ([pair[0], pair[1]] as const);
-    this.match = new Match(defs, seed, { practice: mode === 'practica', teams: teams ?? undefined });
+    // Las frases de entrada de los dos suenan una después de la otra, y después el "ROUND 1".
+    const introLen = [defs[0], defs[1]].reduce((t, d) => {
+      const len = game.sfx.duration(`${d.id}/voz/intro`);
+      return t + (len > 0 ? len + 0.3 : 0);
+    }, 0);
+    const introDelay = introLen > 0 ? Math.round((introLen + 0.1) * 60) : 0;
+    this.match = new Match(defs, seed, { practice: mode === 'practica', teams: teams ?? undefined, introDelay });
     const kb = game.kb;
     const pads = game.pads;
     const human = (keys: KeyBindings, pad: number): InputSource => {
@@ -200,12 +212,16 @@ export class FightScene implements Scene {
     this.world.addChild(this.layers.shadows, this.layers.ghosts, this.layers.projectiles, this.layers.fighters);
     const [a, b] = this.match.fighters;
     const all = this.allFighters();
-    // Un luchador repetido (René contra René) se tiñe para distinguirlo.
-    const count = new Map<string, number>();
+    // Color de ropa: el elegido en ELIGE LUCHADOR; un luchador repetido (René contra René)
+    // que no eligió otro color se viste distinto solo.
+    const used = new Map<string, Set<number>>();
     for (const f of all) {
-      const n = count.get(f.def.id) ?? 0;
-      count.set(f.def.id, n + 1);
-      const v = new FighterView(f, game.assets.textures, this.layers, DUPLICATE_TINTS[n % DUPLICATE_TINTS.length]);
+      const taken = used.get(f.def.id) ?? new Set<number>();
+      used.set(f.def.id, taken);
+      let color = !this.match.teams && opts.colors ? opts.colors[f.side] : 0;
+      while (taken.has(color) && taken.size < COSTUME_COUNT) color = (color + 1) % COSTUME_COUNT;
+      taken.add(color);
+      const v = new FighterView(f, game.assets.textures, this.layers, 0xffffff, color);
       v.visible = f === a || f === b;
       this.views.set(f, v);
     }
@@ -424,7 +440,8 @@ export class FightScene implements Scene {
 
     if (m.over) {
       if (this.mode === 'demo') g.setScene(new FightScene(g, 'demo', this.seed + 1, this.opts));
-      else g.setScene(new TitleScene(g));
+      else if (this.opts.next) g.setScene(this.opts.next(m.matchWinner ?? -1));
+      else g.setScene(new MainMenuScene(g));
     }
   }
 
@@ -476,7 +493,7 @@ export class FightScene implements Scene {
     }
     if (mi.confirm && this.pauseSel === 3) {
       g.sfx.play('menuBack');
-      g.setScene(new TitleScene(g));
+      g.setScene(new MainMenuScene(g));
     }
   }
 
@@ -598,7 +615,11 @@ export class FightScene implements Scene {
           // Las voces de un luchador van por su canal: la del último poder corta a la anterior
           // (las de los tramos del ultra, con `wait`, esperan su turno para sonar en fila).
           const voz = own.includes('/voz/');
-          if (own && sfx.has(own)) sfx.play(own, !voz ? {} : e.wait ? { channel: who, mode: 'queue', maxWait: e.wait } : { channel: who });
+          // Las frases de entrada van en fila (una después de la otra, nunca encima).
+          const intro = e.name === 'voz/intro';
+          if (own && sfx.has(own)) {
+            sfx.play(own, intro ? { channel: 'intro', mode: 'queue', maxWait: 12 } : !voz ? {} : e.wait ? { channel: who, mode: 'queue', maxWait: e.wait } : { channel: who });
+          }
           else sfx.play(e.name);
           if (who && (e.name === 'voz/remate' || e.name === 'voz/ultra') && sfx.has(own)) this.lineAt.set(who, this.t);
           break;

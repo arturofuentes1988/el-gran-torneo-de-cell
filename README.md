@@ -106,8 +106,16 @@ En el modo 1 jugador y en práctica, el jugador 1 también puede usar las teclas
 del jugador 2.
 
 Menús: flechas (o cruceta) para moverse, Enter, Espacio o A para aceptar, Esc
-o Retroceso para volver. En ELIGE MODO, la dificultad se cambia con izquierda /
-derecha.
+o Retroceso para volver. El **MENÚ PRINCIPAL** tiene:
+
+- **ARCADE**: eliges tu luchador y le ganas a cada uno de los demás contra la
+  CPU (la última pelea es un poco más difícil). Si pierdes, ¿CONTINUAR? repite
+  esa pelea; si les ganas a todos, ¡CAMPEÓN!
+- **CASUAL**: 1 VS CPU, 1 VS 1, 2 VS 2 y PRÁCTICA.
+- **OPCIONES**: PERSONAJES, MOVIMIENTOS, ESCENARIOS, CONTROLES y DIFICULTAD
+  (izquierda / derecha).
+- **SALIR**: deja la pantalla completa y vuelve al título (el navegador no deja
+  cerrar la pestaña desde el juego).
 
 Atajos: **M** activa o silencia el sonido, **F1** muestra las cajas de golpe
 y daño, **F2** muestra datos de depuración.
@@ -255,13 +263,15 @@ La tabla está en `src/render/comboNames.ts`.
 
 Peleas al mejor de 3 rounds de 99 segundos.
 
-En 1 jugador, 2 jugadores y práctica primero se elige luchador (**ELIGE
-LUCHADOR**): arriba se ve en grande el luchador marcado de cada lado y abajo
-las tarjetas del plantel y ALEATORIO. En 1 jugador y práctica el jugador 1 elige
-el suyo y después el rival (CPU o muñeco); en 2 jugadores cada uno elige con su
-cursor al mismo tiempo (el jugador 2 con sus teclas o el segundo joystick). Se
-puede elegir el mismo luchador (el repetido sale teñido). Esc / Retroceso borra
-la última elección o vuelve al menú. El plantel son los luchadores con sprites
+Antes de pelear se elige luchador (**ELIGE LUCHADOR**): al centro, 8 casillas
+con la cara de cada luchador (las que todavía no tienen uno, bloqueadas) y
+ALEATORIO; a los lados, en grande, el luchador de cada jugador, en gris mientras
+se marca y a color cuando se elige. Después se elige el **color de la ropa**
+con izquierda / derecha y se confirma (el mismo luchador no puede repetir
+color en una pelea). En 1 VS CPU y práctica el jugador 1 elige el suyo y
+después el rival (CPU o muñeco); en 1 VS 1 cada uno elige con su cursor al mismo
+tiempo (el jugador 2 con sus teclas o el segundo joystick). Esc / Retroceso
+vuelve un paso atrás o al menú. Las caras salen de `herramientas/caras.py`. El plantel son los luchadores con sprites
 definitivos de `public/luchadores/` (René, Pablito…); los provisorios Rojo y
 Azul solo aparecen si hay menos de dos.
 
@@ -273,7 +283,7 @@ lista falta o está vacía.
 
 ### Dificultad de la CPU
 
-En ELIGE MODO, la fila **DIFICULTAD** se cambia con izquierda / derecha (o
+En OPCIONES, la fila **DIFICULTAD** se cambia con izquierda / derecha (o
 Enter). Queda guardada en el navegador; por defecto es NORMAL. Vale para
 1 jugador contra la CPU y para el muñeco de práctica en modo CPU. La demo
 (CPU contra CPU) siempre juega en NORMAL.

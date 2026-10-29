@@ -9,7 +9,7 @@ import { StageView } from '../render/stage';
 import { outlinedText } from '../render/text';
 import type { FighterDef } from '../sim/types';
 import { backdrop } from './backdrop';
-import { ModeSelectScene } from './modeSelect';
+import { MainMenuScene } from './modeSelect';
 
 /** Alto en pantalla de cada luchador (de cuerpo entero) y dónde quedan sus pies. */
 const ALTO = 112;
@@ -360,7 +360,7 @@ export class TitleScene implements Scene {
       autoFullscreen();
       this.game.sfx.unlock();
       this.game.sfx.play('menuConfirm');
-      this.game.setScene(new ModeSelectScene(this.game));
+      this.game.setScene(new MainMenuScene(this.game));
     }
   }
 

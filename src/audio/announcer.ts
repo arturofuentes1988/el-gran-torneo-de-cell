@@ -23,7 +23,7 @@ export function announcerVoice(kind: string, text: string): string | null {
     case 'draw':
       return 'voz/draw';
     case 'winner':
-      return 'voz/winner';
+      return 'voz/victory';
     default:
       return null;
   }

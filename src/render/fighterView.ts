@@ -1,6 +1,7 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { Fighter } from '../sim/fighter';
 import type { Match, Projectile } from '../sim/match';
+import { costumeFilter } from './costume';
 import { ProjectileLook } from './elemental';
 import type { FxLayer } from './fx';
 import { snap } from './scale';
@@ -35,6 +36,8 @@ export class FighterView {
     private layers: WorldLayers,
     /** Color para distinguir a un luchador repetido en la misma pelea (2 VS 2). */
     tint = 0xffffff,
+    /** Color de ropa elegido (0 = el original; ver render/costume.ts). */
+    costume = 0,
   ) {
     layers.shadows.addChild(this.shadow);
     layers.fighters.addChild(this.sprite);
@@ -44,6 +47,8 @@ export class FighterView {
     this.zapGlow.tint = 0x7fd8ff;
     this.zapGlow.visible = false;
     layers.fighters.addChild(this.zapGlow);
+    const filter = costumeFilter(costume);
+    if (filter) this.sprite.filters = [filter];
   }
 
   /** Lo electrocuta un rayo: parpadea en azul eléctrico unos cuadros. */

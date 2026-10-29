@@ -202,6 +202,9 @@ export class Match {
   freeze = 0;
   freezeOwner: Fighter | null = null;
   slowmo = 0;
+  /** Cuadros que el round 1 espera las frases de entrada antes del "ROUND 1" (y cuándo se canta en este round). */
+  private introDelay = 0;
+  private callAt = 0;
   camX = STAGE_W / 2;
   private serial = 0;
   roundWinner: 0 | 1 | -1 | null = null;
@@ -221,10 +224,16 @@ export class Match {
   constructor(
     defs: readonly [FighterDef, FighterDef],
     seed = 1,
-    opts: { practice?: boolean; teams?: readonly [readonly FighterDef[], readonly FighterDef[]] } = {},
+    opts: {
+      practice?: boolean;
+      teams?: readonly [readonly FighterDef[], readonly FighterDef[]];
+      /** Cuadros que esperan en el round 1 las frases de entrada de los luchadores antes del "ROUND 1". */
+      introDelay?: number;
+    } = {},
   ) {
     this.rng = new Rng(seed);
     this.practice = !!opts.practice;
+    this.introDelay = Math.max(0, Math.round(opts.introDelay ?? 0));
     const teams = opts.teams && !this.practice && opts.teams[0].length && opts.teams[1].length ? opts.teams : null;
     if (teams) {
       const mk = (side: 0 | 1): Team => {
@@ -343,6 +352,13 @@ export class Match {
     // En práctica también hay presentación ("ROUND 1"… "FIGHT!"); después no hay rounds ni K.O.
     // Frase de entrada de cada luchador (si tiene, ej. Pablito: "Yo vengo deportado de Venecia").
     if (this.round === 1) for (const f of this.fighters) this.emit({ type: 'sfx', name: 'voz/intro', side: f.side, who: f.def.id });
+    // En el round 1 el anunciador espera que terminen esas frases (una después de la otra).
+    this.callAt = this.round === 1 ? this.introDelay : 0;
+    if (this.callAt === 0) this.announceRound();
+  }
+
+  private announceRound(): void {
+    const [a, b] = this.fighters;
     const final = a.wins === ROUNDS_TO_WIN - 1 && b.wins === ROUNDS_TO_WIN - 1;
     this.emit({ type: 'announce', text: final ? 'ROUND FINAL' : `ROUND ${this.round}`, kind: final ? 'final' : 'round' });
   }
@@ -350,10 +366,11 @@ export class Match {
   private updatePhase(): void {
     switch (this.phase) {
       case 'intro':
-        if (this.phaseFrame === FIGHT_AT) {
+        if (this.callAt > 0 && this.phaseFrame === this.callAt) this.announceRound();
+        if (this.phaseFrame === this.callAt + FIGHT_AT) {
           this.emit({ type: 'announce', text: 'FIGHT!', kind: 'fight' });
         }
-        if (this.phaseFrame >= INTRO_END) {
+        if (this.phaseFrame >= this.callAt + INTRO_END) {
           this.phase = 'fight';
           this.phaseFrame = 0;
           for (const f of this.fighters) if (f.state === 'intro') f.setState('idle', 'idle');
@@ -475,7 +492,6 @@ export class Match {
       this.matchWinner = w.side;
       this.emit({ type: 'announce', text: `¡GANA ${w.def.name.toUpperCase()}!`, kind: 'winner' });
     }
-    this.emit({ type: 'sfx', name: 'winner' });
   }
 
   // ---------------------------------------------------------------- reglas

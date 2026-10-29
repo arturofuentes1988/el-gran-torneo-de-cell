@@ -10,7 +10,7 @@ import { P1_KEYS, P2_KEYS } from '../input/devices';
 import { NEON_CYAN, NEON_PINK } from '../render/live';
 import { arcade, outlinedText } from '../render/text';
 import { FightScene } from './fight';
-import { ModeSelectScene } from './modeSelect';
+import { CasualMenuScene } from './modeSelect';
 import { StageSelectScene } from './stageSelect';
 import { fitScale } from '../render/fit';
 import { backdrop } from './backdrop';
@@ -306,7 +306,7 @@ export class TeamSelectScene implements Scene {
       if (!this.joined && this.picks[1].length) this.picks[1].pop();
       else if (this.picks[0].length) this.picks[0].pop();
       else {
-        this.game.setScene(new ModeSelectScene(this.game));
+        this.game.setScene(new CasualMenuScene(this.game));
         return;
       }
       this.refreshSlots();

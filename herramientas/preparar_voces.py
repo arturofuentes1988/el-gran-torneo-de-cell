@@ -22,7 +22,7 @@ VOCES = {
     'round1.mp3': 'voz/round1', 'round2.mp3': 'voz/round2', 'round3.mp3': 'voz/round3',
     'round4.mp3': 'voz/round4', 'final.mp3': 'voz/final', 'fight-a.mp3': 'voz/fight',
     'ko.mp3': 'voz/ko', 'doubleKo.mp3': 'voz/doubleKo', 'perfect.mp3': 'voz/perfect',
-    'time.mp3': 'voz/time', 'draw.mp3': 'voz/draw',
+    'time.mp3': 'voz/time', 'draw.mp3': 'voz/draw', 'victory.mp3': 'voz/victory',
 }
 
 CADENA = ','.join([

@@ -362,6 +362,8 @@ export interface FighterAsset {
   textures: Record<string, Texture>;
   /** Solo los provisorios: atlas generado (para el visor de depuración). */
   atlas?: HTMLCanvasElement;
+  /** Cara para las casillas de ELIGE LUCHADOR (public/luchadores/<id>/cara.webp). */
+  face?: Texture;
 }
 
 function build(kit: Kit): FighterAsset {

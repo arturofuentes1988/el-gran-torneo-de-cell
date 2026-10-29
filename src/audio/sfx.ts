@@ -535,6 +535,14 @@ export class Sfx {
   }
 
   /** Nombre concreto a tocar: una variante al azar (de las ya listas, si hay) o el mismo nombre. */
+  /** Duración en segundos de una muestra (la más larga de sus variantes); 0 si no está cargada. */
+  duration(name: string): number {
+    const names = this.variants.get(name) ?? [name];
+    let d = 0;
+    for (const n of names) d = Math.max(d, this.buffers.get(n)?.duration ?? 0);
+    return d;
+  }
+
   private pick(name: string): string {
     const vs = this.variants.get(name);
     if (!vs) return name;

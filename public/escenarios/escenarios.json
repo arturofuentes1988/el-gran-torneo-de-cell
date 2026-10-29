@@ -9,7 +9,7 @@
   },
   {
     "id": "rene-plaza",
-    "nombre": "LA PLAZA DE LA POBLA",
+    "nombre": "LA CANCHA",
     "json": "rene-plaza/escenario.json",
     "miniatura": "rene-plaza/miniatura.webp",
     "luchador": "rene",

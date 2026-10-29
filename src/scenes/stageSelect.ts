@@ -187,7 +187,7 @@ export class StageSelectScene implements Scene {
     const entry = card.entry;
     const tex = entry ? this.textures.get(entry.id) : undefined;
     this.name.text = arcade(entry ? entry.nombre : 'ALEATORIO');
-    this.owner.text = arcade(entry ? this.ownerLine(entry) : 'UN ESCENARIO AL AZAR');
+    this.owner.text = arcade(entry ? '' : 'UN ESCENARIO AL AZAR');
     this.question.visible = !entry;
     this.showPreview(tex ?? (entry ? null : this.randomTexture()));
     this.cards.forEach((c, i) => {
@@ -229,13 +229,6 @@ export class StageSelectScene implements Scene {
   private randomTexture(): Texture | null {
     const all = [...this.textures.values()];
     return all.length ? all[Math.floor(this.t / 10) % all.length] : null;
-  }
-
-  /** "ESCENARIO DE LOCO RENÉ" si el dueño es un luchador conocido. */
-  private ownerLine(e: StageEntry): string {
-    if (!e.luchador) return '';
-    const f = this.game.assets.roster.find((a) => a.def.id === e.luchador);
-    return `ESCENARIO DE ${(f ? f.def.name : e.luchador).toUpperCase()}`;
   }
 
   render(): void {

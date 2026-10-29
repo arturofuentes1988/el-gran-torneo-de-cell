@@ -79,5 +79,12 @@ export async function loadFighterFolder(folder: string, id: string): Promise<Fig
   const res = await fetch(`${folder}/atlas.json`);
   if (!res.ok) throw new Error(`No se pudo cargar ${folder}/atlas.json`);
   const atlas = (await res.json()) as string[];
-  return loadFighter(atlas.map((a) => `${folder}/${a}`), `${folder}/${id}.json`);
+  const asset = await loadFighter(atlas.map((a) => `${folder}/${a}`), `${folder}/${id}.json`);
+  // Cara para ELIGE LUCHADOR (herramientas/caras.py); si falta, la pantalla usa su silueta.
+  try {
+    asset.face = await Assets.load<Texture>(`${folder}/cara.webp`);
+  } catch {
+    asset.face = undefined;
+  }
+  return asset;
 }
