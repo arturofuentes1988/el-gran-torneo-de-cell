@@ -89,6 +89,8 @@ function motionSteps(motion: MotionId | undefined, press: number): Step[] {
     case 'qcb': return [s(2), s(2), s(1), s(1), s(4, press)];
     case 'dp': return [s(6), s(2), s(3, press)];
     case 'qcf2': return [s(2), s(2), s(3), s(3), s(6), s(2), s(2), s(3), s(3), s(6, press)];
+    case 'hcf': return [s(4), s(4), s(1), s(2), s(2), s(3), s(3), s(6, press)];
+    case 'hcb': return [s(6), s(6), s(3), s(2), s(2), s(1), s(1), s(4, press)];
     case 'ff': return [s(6), s(6), s(5), s(5), s(6, press)];
     case 'bf': return [s(4), s(4), s(6, press)];
     case 'fbf': return [s(6), s(6), s(4), s(4), s(6, press)];
@@ -232,7 +234,7 @@ export class CpuController {
     for (const pr of m.projectiles) {
       if (pr.dead || pr.owner.side === me.side || this.seenProj.has(pr)) continue;
       const dx = me.x - pr.x;
-      if (Math.sign(dx) !== Math.sign(pr.vx) || Math.abs(dx) > 150) continue;
+      if (pr.vx === 0 ? Math.abs(dx) > 70 : Math.sign(dx) !== Math.sign(pr.vx) || Math.abs(dx) > 150) continue;
       this.seenProj.add(pr);
       if (canAct && Math.abs(dx) > 45 && r.chance(P.roll)) {
         this.blockAt = -1;

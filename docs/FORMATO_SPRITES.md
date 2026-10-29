@@ -138,7 +138,9 @@ Además, una animación por cada movimiento (el campo `anim` del movimiento).
 
 - `kind`: `normal`, `special`, `super`, `ultra` (ver sección 4) o `throw`.
 - `motion`: `qcf` (abajo, diagonal, adelante), `qcb` (abajo, diagonal, atrás),
-  `dp` (adelante, abajo, diagonal), `qcf2` (dos veces abajo-adelante), `charge`
+  `dp` (adelante, abajo, diagonal), `qcf2` (dos veces abajo-adelante), `hcf`
+  (media vuelta hacia adelante, una U: ← ↙ ↓ ↘ →), `hcb` (media vuelta hacia
+  atrás: → ↘ ↓ ↙ ←), `charge`
   (cargar atrás y luego adelante) o `ff` (adelante, adelante: hay que soltar →
   entre los dos toques; caminar manteniendo → no cuenta).
 - Combos Killer: el DOBLE no se define; el juego lo arma solo con el normal

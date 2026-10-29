@@ -37,7 +37,7 @@ MARGEN = 2
 class Clip:
     """Cuadros de un video (a 24 por segundo) con su máscara, cargados a pedido."""
 
-    def __init__(self, ruta: Path, tolerancia: float):
+    def __init__(self, ruta: Path, tolerancia: float, huecos_sd: float | None = None):
         self.tmp = Path(tempfile.mkdtemp(prefix="clip_"))
         subprocess.run(
             ["ffmpeg", "-loglevel", "error", "-y", "-i", str(ruta), "-vf", "fps=24", str(self.tmp / "%04d.png")],
@@ -45,13 +45,14 @@ class Clip:
         )
         self.rutas = sorted(self.tmp.glob("*.png"))
         self.tolerancia = tolerancia
+        self.huecos_sd = huecos_sd
         self.cache: dict[int, tuple[np.ndarray, np.ndarray]] = {}
 
     def cuadro(self, i: int) -> tuple[np.ndarray, np.ndarray]:
         i = max(0, min(len(self.rutas) - 1, i))
         if i not in self.cache:
             rgb = np.asarray(Image.open(self.rutas[i]).convert("RGB"))
-            self.cache[i] = (rgb, quitar_fondo(rgb, self.tolerancia))
+            self.cache[i] = (rgb, quitar_fondo(rgb, self.tolerancia, self.huecos_sd))
         return self.cache[i]
 
     def cerrar(self) -> None:
@@ -153,6 +154,25 @@ def caja_golpe(m: np.ndarray, guardia: np.ndarray, dx: float, dy: float, direcci
     return a_mundo((gx1 - 10, ay - alto * 0.78, gx1 + alto * 0.18, ay - alto * 0.55), ax, ay, k)
 
 
+def sin_objeto(rgb: np.ndarray, m: np.ndarray, x_min: int) -> np.ndarray:
+    """Quita de la máscara las manchas blancas lisas grandes a la derecha de x_min, con su contorno.
+    La piel (colores saturados) se queda aunque esté encima."""
+    f = rgb.astype(np.float32)
+    lum = f.mean(axis=2)
+    maximo = f.max(axis=2)
+    sat = (maximo - f.min(axis=2)) / np.maximum(maximo, 1)
+    blanco = (lum > 215) & (sat < 0.12) & m
+    blanco[:, :x_min] = False
+    etiq, n = ndimage.label(blanco)
+    if not n:
+        return m
+    tam = ndimage.sum(blanco, etiq, range(1, n + 1))
+    objeto = np.isin(etiq, np.nonzero(tam > 1500)[0] + 1)
+    objeto = ndimage.binary_dilation(objeto, iterations=9)
+    objeto[:, :x_min - 4] = False
+    return m & ~(objeto & (sat < 0.25))
+
+
 # ---------------------------------------------------------------- imágenes
 
 def recorte(rgb: np.ndarray, m: np.ndarray, escala: float) -> tuple[Image.Image, int, int]:
@@ -233,12 +253,14 @@ def main() -> None:
     salida = Path(cfg["salida"])
     salida.mkdir(parents=True, exist_ok=True)
     tol = cfg.get("tolerancia", 30)
+    # Ropa blanca o gris claro: los huecos encerrados solo son fondo si son parejos (ver quitar_fondo).
+    huecos_sd = cfg.get("huecos_sd")
 
     clips: dict[str, Clip] = {}
 
     def clip(nombre: str) -> Clip:
         if nombre not in clips:
-            clips[nombre] = Clip(videos / f"{nombre}.mp4", tol)
+            clips[nombre] = Clip(videos / f"{nombre}.mp4", tol, huecos_sd)
         return clips[nombre]
 
     # Referencia: alto de la guardia y pies.
@@ -272,7 +294,12 @@ def main() -> None:
             # "boca_fija": {"cuadro": n, "zona": [x0, y0, x1, y1]} deja la boca del cuadro n en todos.
             if boca and i != boca["cuadro"]:
                 rgb = fijar_boca(rgb, c.cuadro(boca["cuadro"])[0], boca["zona"])
-                m = quitar_fondo(rgb, tol)
+                m = quitar_fondo(rgb, tol, huecos_sd)
+            # "borrar_objeto": {"desde": a, "hasta": b, "x_min": px} quita un objeto blanco liso que
+            # el video dibujó en sus manos (la cabeza de un rival invisible), dejando la piel.
+            borrar = spec.get("borrar_objeto")
+            if borrar and borrar["desde"] <= i <= borrar["hasta"]:
+                m = sin_objeto(rgb, m, borrar["x_min"])
             # "centrar": alinea el tronco (caminar, rodar); "pies": el apoyo va en los
             # pies del propio cuadro (cuadros en el aire: el motor ya pone la altura).
             dx = centro_torso(m) - torso0 if spec.get("centrar") or spec.get("pies") else 0.0
@@ -287,6 +314,10 @@ def main() -> None:
                 hb = caja_golpe(m, guardia, dx, dy, spec.get("golpe", "frente"), ax, ay, alto, k)
                 grupos = spec.get("grupos", {})
                 hb["group"] = grupos.get(str(j), 0)
+                # "props_grupo": {"4": {...}} cambia las propiedades de un golpe (ej. el último lanza).
+                props = spec.get("props_grupo", {}).get(str(hb["group"]))
+                if props:
+                    hb["props"] = props
                 fr["hit"] = [hb]
             fr.update(extras.get(str(j), {}))
             frames.append(fr)

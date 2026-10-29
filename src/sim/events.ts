@@ -6,7 +6,11 @@ import type { SparkKind } from './types';
  */
 export type SimEvent =
   /** by: id del luchador que pegó (en 2 VS 2 puede ser la ayuda); total: daño acumulado del combo. */
-  | { type: 'hit'; side: 0 | 1; x: number; y: number; dir: number; spark: SparkKind; damage: number; combo: number; by?: string; total?: number }
+  | {
+      type: 'hit'; side: 0 | 1; x: number; y: number; dir: number; spark: SparkKind; damage: number; combo: number; by?: string; total?: number;
+      /** Para los efectos: el dibujo del proyectil que pegó (ej. 'rayo') y si fue su último golpe, o el movimiento. */
+      look?: string; last?: boolean; move?: string;
+    }
   | { type: 'block'; side: 0 | 1; x: number; y: number; dir: number; spark: SparkKind }
   | { type: 'attack'; side: 0 | 1; heavy: boolean; special: boolean }
   | { type: 'jump'; side: 0 | 1; x: number; kind?: 'normal' | 'short' | 'super' }

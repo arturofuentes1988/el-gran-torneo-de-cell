@@ -1,5 +1,5 @@
 import { ZoomBlurFilter } from 'pixi-filters';
-import { Container, Graphics, type Sprite, type Text } from 'pixi.js';
+import { ColorMatrixFilter, Container, Graphics, type Sprite, type Text } from 'pixi.js';
 import { GROUND_SCREEN_Y, MAX_METER, VIEW_H, VIEW_W } from '../config';
 import type { FightMode, Game, Scene } from '../app/game';
 import { loadDifficulty } from '../app/settings';
@@ -9,18 +9,21 @@ import type { FrameInput } from '../input/buffer';
 import { P1_KEYS, P2_KEYS, PlayerInput, type KeyBindings } from '../input/devices';
 import { FighterView, ProjectileViews, type WorldLayers } from '../render/fighterView';
 import { DiscoShow } from '../render/disco';
+import { StormShow, bolt } from '../render/elemental';
 import { FxLayer } from '../render/fx';
 import { Hud, type PracticeHudInfo } from '../render/hud';
 import { LiveShow } from '../render/live';
 import { MoveListPanel } from '../render/moveListPanel';
 import { ControlsPanel } from './controls';
 import { snap } from '../render/scale';
+import type { StageView } from '../render/stage';
 import { outlinedText } from '../render/text';
 import { CpuController } from '../sim/ai';
 import type { DifficultyId } from '../sim/difficulty';
 import { DUMMY_MODES, DUMMY_NAME, PracticeDummy } from '../sim/dummy';
 import type { Fighter, StateName } from '../sim/fighter';
 import { DEAD_LINGER, Match } from '../sim/match';
+import type { SimEvent } from '../sim/events';
 import type { FighterDef, ProjectileDef } from '../sim/types';
 import { TitleScene } from './title';
 
@@ -94,6 +97,25 @@ export class FightScene implements Scene {
   /** Cuadros mínimos y máximos del show (desde que empieza el cartel). */
   private discoMin = 0;
   private discoMax = 0;
+  /** Tormenta de los súpers con cinematic.lights = 'tormenta' (el Flaitiano). */
+  private storm = new StormShow();
+  private lightsKind: 'disco' | 'tormenta' = 'disco';
+  /** Cuadros de "cuadro de impacto" (la imagen en negativo) después de un golpe enorme. */
+  private impact = 0;
+  private negative = new ColorMatrixFilter();
+  /** Rayo gigante del remate de un súper o ultra de tormenta: dónde y cuántos cuadros le quedan. */
+  private bigBolt = new Graphics();
+  private bigBoltT = 0;
+  private bigBoltX = 0;
+  /** Letras de cómic de los golpes (¡TOC!), en el mundo. */
+  private comics: Array<{ text: Text; life: number }> = [];
+  /** Golpes que lleva conectados cada luchador en su movimiento actual (para las letras de cómic). */
+  private moveHits = new Map<Fighter, { move: string; n: number }>();
+  /** Lo que se dibuja sobre la cabeza del rival durante un movimiento (el tarro). */
+  private overlayG = new Graphics();
+  /** Escenarios de reemplazo ya cargados (el ultra en otro lugar) y el que se ve ahora. */
+  private backdrops = new Map<string, StageView>();
+  private shownStage!: StageView;
   private debugG = new Graphics();
   private hud: Hud;
   /** Presentación de "transmisión en vivo": vistas, regalos, hype, chat y corazones. */
@@ -196,6 +218,18 @@ export class FightScene implements Scene {
     this.hud.addLayer(this.live.container);
     if (this.dummy) this.hud.setPractice(this.practiceState!);
     this.buildPause();
+    this.shownStage = game.assets.stage;
+    this.bigBolt.blendMode = 'add';
+    this.world.addChild(this.overlayG, this.bigBolt);
+    this.negative.negative(false);
+    // Escenarios de reemplazo de los ultras: se cargan ahora para no esperar en plena pelea.
+    for (const f of all) {
+      for (const mv of Object.values(f.def.moves)) {
+        const id = mv.cinematic?.backdrop;
+        if (!id || this.backdrops.has(id) || !game.assets.stages.find(id)) continue;
+        game.assets.stages.get(id).then((st) => this.backdrops.set(id, st), () => undefined);
+      }
+    }
   }
 
   /** Todos los luchadores de la pelea (en 2 VS 2, los cuatro). */
@@ -305,19 +339,21 @@ export class FightScene implements Scene {
 
   enter(): void {
     const d = this.game.display;
-    d.world.addChild(this.game.assets.stage.container, this.disco.container, this.world);
+    d.world.addChild(this.game.assets.stage.container, this.disco.container, this.storm.container, this.world);
     d.fx.addChild(this.fx.container, this.debugG);
     d.hud.addChild(this.hud.container);
     d.overlay.addChild(this.pauseUi);
-    d.worldView.filters = [this.zoom];
+    d.worldView.filters = [this.zoom, this.negative];
     this.zoom.enabled = false;
+    this.negative.enabled = false;
   }
 
   exit(): void {
     this.closeMoveList();
     this.closeControls();
     const d = this.game.display;
-    d.world.removeChild(this.game.assets.stage.container, this.disco.container, this.world);
+    d.world.removeChild(this.shownStage.container, this.disco.container, this.storm.container, this.world);
+    if (this.shownStage !== this.game.assets.stage) this.shownStage.setDarkness(0);
     d.fx.removeChild(this.fx.container, this.debugG);
     d.hud.removeChild(this.hud.container);
     d.overlay.removeChild(this.pauseUi);
@@ -329,6 +365,7 @@ export class FightScene implements Scene {
     this.fx.clear();
     this.live.destroy();
     this.disco.destroy();
+    this.storm.destroy();
     for (const v of this.views.values()) v.destroy();
     this.world.destroy({ children: true });
   }
@@ -374,11 +411,14 @@ export class FightScene implements Scene {
     }
     for (const v of this.views.values()) v.step();
     this.projViews.step(m);
+    this.stepElemental();
     this.fx.step();
     this.hud.step(m);
     this.live.step(m);
     if (this.shake > 0) this.shake = Math.max(0, this.shake - 0.35);
-    const targetDark = Math.max(m.freeze > 0 ? 0.62 : 0, m.ultraActive ? 0.72 : 0, this.disco.darkness);
+    // Un rayo que avisa corta la luz: el escenario parpadea a oscuras.
+    const blackout = this.projViews.blackout(m) * (0.7 + Math.random() * 0.3);
+    const targetDark = Math.max(m.freeze > 0 ? 0.62 : 0, m.ultraActive ? 0.72 : 0, this.disco.darkness, this.storm.darkness, blackout);
     this.dark += (targetDark - this.dark) * (targetDark > this.dark ? 0.35 : 0.08);
     if (this.zoomT > 0) this.zoomT--;
 
@@ -467,6 +507,7 @@ export class FightScene implements Scene {
           this.fx.hit(e.x, e.y, e.dir, e.spark);
           sfx.play(e.spark === 'light' ? 'hitLight' : e.spark === 'heavy' ? 'hitHeavy' : 'hitSuper', { pan: pan(e.x) });
           this.addShake(e.spark === 'light' ? 1.2 : e.spark === 'heavy' ? 2.6 : 3.6);
+          this.elementalHit(e);
           break;
         case 'block':
           this.fx.block(e.x, e.y, e.dir);
@@ -601,14 +642,22 @@ export class FightScene implements Scene {
           this.zoom.center = [p.x * r, p.y * r];
           break;
         }
-        case 'ultraHit':
+        case 'ultraHit': {
           this.addShake(e.final ? 7 : 2.4);
+          // Ultra de tormenta (el Flaitiano): chispas en cada golpe; al final el piquero con géiser y rayo.
+          const owner = this.allFighters().find((f) => f.side === e.side && f.ultraRun);
+          const stormy = !!owner && owner.def.moves[owner.ultraRun!.moveId]?.cinematic?.lights === 'tormenta';
+          if (stormy) {
+            this.fx.electric(e.x, e.y, e.final ? 20 : 6);
+            if (e.final) this.stormFinale(owner!, e.x);
+          }
           if (e.final) {
             this.fx.superBurst(e.x, e.y, 0xffd040);
             this.fx.explosion(e.x, e.y, 0xff5a3a, true);
             sfx.play('explosion', { pan: pan(e.x) });
           }
           break;
+        }
         case 'tag':
           // 2 VS 2: cambio, ayuda, entrada tras un K.O. o súper en equipo.
           sfx.play(e.kind === 'ayuda' ? 'jump' : e.kind === 'superEquipo' ? 'powerUp' : 'superJump', { pan: pan(e.x) });
@@ -676,6 +725,128 @@ export class FightScene implements Scene {
     this.fx.heart(camLeft + sx, sy - GROUND_SCREEN_Y - this.camOffY, color);
   }
 
+  /** Efectos de agua y rayos al pegar, letras de cómic y el combo que se electrifica. */
+  private elementalHit(e: Extract<SimEvent, { type: 'hit' }>): void {
+    const m = this.match;
+    const att = this.allFighters().find((f) => f.side === e.side && f.def.id === e.by) ?? m.fighters[e.side];
+    const vic = m.fighters[e.side === 0 ? 1 : 0];
+    if (e.look === 'rayo') {
+      this.views.get(vic)?.electrify(30);
+      this.fx.electric(e.x, e.y, 14);
+      this.addShake(4);
+    } else if (e.look === 'rastas') {
+      this.fx.splash(e.x, e.y, true);
+      if (e.last) this.fx.geyser(e.x, 0, 120);
+    } else if (e.look === 'tornado') {
+      this.fx.splash(e.x, e.y, true);
+      this.fx.electric(e.x, e.y, 6);
+      if (e.last) this.stormFinale(att, vic.x);
+    }
+    // Letras de cómic (¡TOC!) de los movimientos que las tienen, una por golpe.
+    const mv = e.move ? att.def.moves[e.move] : undefined;
+    if (e.move && mv?.hitText?.length) {
+      const prev = this.moveHits.get(att);
+      const n = prev && prev.move === e.move && att.state === 'attack' ? prev.n + 1 : 0;
+      this.moveHits.set(att, { move: e.move, n });
+      this.comic(mv.hitText[Math.min(n, mv.hitText.length - 1)], e.x + 18, e.y - 46);
+      if (this.game.sfx.has(`${att.def.id}/toc`)) this.game.sfx.play(`${att.def.id}/toc`);
+    }
+    // Combo eléctrico: chispas desde 3 golpes, brillo de las rastas desde 5, agua desde 8, rayos desde 12.
+    if (att.def.comboFx === 'electrico' && e.combo >= 3) {
+      this.fx.electric(e.x, e.y, 3 + Math.min(e.combo, 12));
+      if (e.combo >= 5) for (let i = 0; i < 2; i++) this.fx.aura(att.x - att.facing * 16, att.y - 112, 0x34e070);
+      if (e.combo >= 8) {
+        this.fx.splash(e.x, e.y, true);
+        this.addShake(2);
+      }
+      if (e.combo >= 12) {
+        this.storm.strike(true);
+        this.impact = Math.max(this.impact, 2);
+      }
+    }
+  }
+
+  /** Remate del súper o ultra de tormenta: rayo gigante, géiser, negativo y trueno. */
+  private stormFinale(owner: Fighter, x: number): void {
+    this.bigBoltT = 16;
+    this.bigBoltX = x;
+    this.impact = 5;
+    this.storm.strike(true);
+    this.addShake(9);
+    this.fx.geyser(x, 0, 170);
+    this.fx.electric(x, -80, 22);
+    const vic = this.match.fighters[owner.side === 0 ? 1 : 0];
+    this.views.get(vic)?.electrify(45);
+    const id = `${owner.def.id}/trueno`;
+    if (this.game.sfx.has(id)) this.game.sfx.play(id);
+  }
+
+  /** Letras de cómic que saltan y se desvanecen (en el mundo, sobre los luchadores). */
+  private comic(text: string, x: number, y: number): void {
+    const t = outlinedText(text, 12, 0xfff4b0, 0x2a0a10, 3);
+    t.anchor.set(0.5);
+    t.position.set(x + (Math.random() * 10 - 5), y);
+    t.rotation = Math.random() * 0.5 - 0.25;
+    this.world.addChild(t);
+    this.comics.push({ text: t, life: 32 });
+  }
+
+  /** Por cuadro de simulación: truenos de los rayos que caen, letras de cómic y cuentas de los efectos. */
+  private stepElemental(): void {
+    for (const p of this.projViews.strikes) {
+      const id = `${p.owner.def.id}/trueno`;
+      if (this.game.sfx.has(id)) this.game.sfx.play(id);
+      this.storm.strike(false);
+      this.addShake(5);
+      this.fx.electric(p.x, -12, 10);
+    }
+    if (this.impact > 0) this.impact--;
+    if (this.bigBoltT > 0) this.bigBoltT--;
+    for (let i = this.comics.length - 1; i >= 0; i--) {
+      const c = this.comics[i];
+      c.life--;
+      c.text.y -= 0.5;
+      const pop = Math.max(0, c.life - 26) / 6;
+      c.text.scale.set(1 + pop * 0.6);
+      c.text.alpha = Math.min(1, c.life / 10);
+      if (c.life <= 0) {
+        c.text.destroy();
+        this.comics.splice(i, 1);
+      }
+    }
+  }
+
+  /** Escenario de reemplazo del ultra que corre (si tiene uno y ya cargó). */
+  private activeBackdrop(): StageView | null {
+    if (!this.match.ultraActive) return null;
+    const o = this.allFighters().find((f) => f.ultraRun);
+    const id = o ? o.def.moves[o.ultraRun!.moveId]?.cinematic?.backdrop : undefined;
+    return (id && this.backdrops.get(id)) || null;
+  }
+
+  /** Por cuadro dibujado: el negativo del impacto, el rayo gigante y el tarro en la cabeza del rival. */
+  private renderElemental(): void {
+    const m = this.match;
+    this.negative.enabled = this.impact > 0;
+    this.bigBolt.clear();
+    if (this.bigBoltT > 0) {
+      const a = Math.min(1, this.bigBoltT / 8);
+      const top = -(GROUND_SCREEN_Y + this.camOffY) - 10;
+      const x = this.bigBoltX;
+      bolt(this.bigBolt, x + (Math.random() * 30 - 15), top, x, 0, 6, a, 6);
+      bolt(this.bigBolt, x + (Math.random() * 60 - 30), top, x + (Math.random() * 8 - 4), 0, 3, a * 0.7, 3);
+    }
+    this.overlayG.clear();
+    for (const f of this.allFighters()) {
+      if (f.state !== 'attack' || !f.connected || f.move?.hitOverlay !== 'tarro') continue;
+      const vic = m.opponent(f);
+      const boxes = vic.hurtboxes().map((h) => vic.worldBox(h));
+      if (!boxes.length) continue;
+      const head = boxes.reduce((a, b) => (b.y0 < a.y0 ? b : a));
+      drawTarro(this.overlayG, (head.x0 + head.x1) / 2, head.y0);
+    }
+  }
+
   private addShake(a: number): void {
     this.shake = Math.max(this.shake, a);
   }
@@ -684,7 +855,9 @@ export class FightScene implements Scene {
   private startLights(): void {
     const o = this.match.freezeOwner;
     const mv = o?.move;
-    if (!o || mv?.cinematic?.lights !== 'disco') return;
+    const lights = mv?.cinematic?.lights;
+    if (!o || !mv?.cinematic || !lights) return;
+    this.lightsKind = lights;
     this.discoOwner = o;
     this.discoProj = mv.projectile ? o.def.projectiles[mv.projectile] ?? null : null;
     this.discoT = 0;
@@ -692,8 +865,9 @@ export class FightScene implements Scene {
     const freeze = mv.cinematic.freeze;
     this.discoMin = freeze + 110;
     this.discoMax = freeze + 210;
-    // La bola baja justo cuando se va el cartel.
-    this.disco.start(Math.max(0, freeze - 18));
+    // La bola baja justo cuando se va el cartel; la tormenta parte de inmediato.
+    if (lights === 'disco') this.disco.start(Math.max(0, freeze - 18));
+    else this.storm.start();
   }
 
   /** Las luces siguen mientras duran el cartel, la animación del súper y su proyectil (máximo ~3,5 s después del cartel). */
@@ -703,15 +877,17 @@ export class FightScene implements Scene {
     if (o) {
       this.discoT++;
       const frozen = m.freeze > 0 && m.freezeOwner === o;
-      const anim = o.state === 'attack' && o.move?.kind === 'super';
+      const anim = (o.state === 'attack' && o.move?.kind === 'super') || !!o.ultraRun;
       const proj = !!this.discoProj && m.projectiles.some((p) => !p.dead && p.owner === o && p.def === this.discoProj);
       const running = frozen || anim || proj || this.discoT < this.discoMin;
-      if (!running || this.discoT > this.discoMax) {
+      if (!running || (this.discoT > this.discoMax && !o.ultraRun)) {
         this.discoOwner = null;
-        this.disco.stop();
+        if (this.lightsKind === 'disco') this.disco.stop();
+        else this.storm.stop();
       }
     }
     this.disco.step();
+    this.storm.step();
   }
 
   render(): void {
@@ -731,10 +907,19 @@ export class FightScene implements Scene {
     const wy = snap(GROUND_SCREEN_Y + this.camOffY + sy);
     this.world.position.set(wx, wy);
     d.fx.position.set(wx, wy);
-    const stage = this.game.assets.stage;
-    stage.setDarkness(this.dark);
+    // El ultra de otro lugar cambia el escenario mientras dura.
+    const backdrop = this.activeBackdrop();
+    const stage = backdrop ?? this.game.assets.stage;
+    if (stage !== this.shownStage) {
+      d.world.removeChild(this.shownStage.container);
+      d.world.addChildAt(stage.container, 0);
+      this.shownStage = stage;
+    }
+    stage.setDarkness(backdrop ? Math.min(this.dark, 0.3) : this.dark);
     stage.update(camLeft - sx, this.camOffY + sy);
     this.disco.update(this.camOffY + sy);
+    this.storm.update(this.camOffY + sy);
+    this.renderElemental();
     for (const [f, v] of this.views) {
       // En 2 VS 2 se ven el punto y los extras (ayuda, el que sale, el caído que se desvanece).
       const point = m.fighters[0] === f || m.fighters[1] === f;
@@ -814,4 +999,18 @@ export class FightScene implements Scene {
       dt.text = lines.join('\n');
     }
   }
+}
+
+/** Un tarro de lata sobre la cabeza (¡Cabeza de tarro!): cilindro con aros, etiqueta roja y brillo. */
+function drawTarro(g: Graphics, cx: number, top: number): void {
+  const w = 30;
+  const h = 26;
+  const x = cx - w / 2;
+  // Calzado en la cabeza: tapa la coronilla y baja hasta la frente.
+  const y = top - 4;
+  g.rect(x, y, w, h).fill({ color: 0xb4bec8 }).stroke({ width: 1.2, color: 0x24242c });
+  g.rect(x, y + h * 0.36, w, h * 0.3).fill({ color: 0xd8402a });
+  for (let i = 1; i < 4; i++) g.moveTo(x, y + (i * h) / 4).lineTo(x + w, y + (i * h) / 4).stroke({ width: 0.7, color: 0x6e7884 });
+  g.rect(x + 3, y + 2, 2.4, h - 4).fill({ color: 0xffffff, alpha: 0.55 });
+  g.ellipse(cx, y, w / 2, 4).fill({ color: 0xdfe6ec }).stroke({ width: 1.2, color: 0x24242c });
 }

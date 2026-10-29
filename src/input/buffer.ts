@@ -66,8 +66,11 @@ const PATTERNS: Record<PatternId, number[][][]> = {
   qcb: [[[3, 2], [1], [4]]],
   dp: [[[6], [1, 2], [3]], [[3], [2], [3]]],
   qcf2: [[[1, 2], [3], [6], [1, 2], [3], [6]]],
+  // La U: tiene que partir atrás (o adelante) y pasar por abajo; las diagonales del medio pueden saltarse.
+  hcf: [[[4, 7], [1, 2], [3], [6]], [[4, 7], [1], [2, 3], [6]]],
+  hcb: [[[6, 9], [3, 2], [1], [4]], [[6, 9], [3], [2, 1], [4]]],
 };
-const WINDOWS: Record<PatternId, number> = { qcf: 16, qcb: 16, dp: 18, qcf2: 34 };
+const WINDOWS: Record<PatternId, number> = { qcf: 16, qcb: 16, dp: 18, qcf2: 34, hcf: 24, hcb: 24 };
 /** → →: cuadros hacia atrás en que tiene que estar todo el doble toque. */
 const FF_WINDOW = 14;
 /** Machacar: pulsaciones del botón y cuadros en que tienen que caer todas. */

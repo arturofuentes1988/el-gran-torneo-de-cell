@@ -1,0 +1,33 @@
+{
+  "voz/intro": "hasta-cuando.mp3",
+  "voz/cotorra": "callate-cotorra.mp3",
+  "voz/noHayLuz": "no-hay-luz.mp3",
+  "voz/tarro": [
+    "cabeza-de-tarro-1.mp3",
+    "cabeza-de-tarro-2.mp3"
+  ],
+  "voz/poder": "mira-lo-que-pasa.mp3",
+  "voz/super": "junten-agua-junten-luz.mp3",
+  "voz/ultra": "hasta-cuando.mp3",
+  "voz/ultra-1": [
+    "cabeza-de-tarro-1.mp3",
+    "cabeza-de-tarro-2.mp3"
+  ],
+  "voz/ultra-2": "callate-cotorra.mp3",
+  "voz/ultra-3": "bolsa-de-basura-corto.mp3",
+  "voz/ultra-4": "junten-agua-corto.mp3",
+  "voz/ultra-5": "guacho-pesao.mp3",
+  "voz/remate": "guacho-pesao.mp3",
+  "voz/victoria": "risa-2.mp3",
+  "voz/risa": "risa.mp3",
+  "voz/burla-risa": "risa.mp3",
+  "voz/burla-camara": "me-veo-negro-camara.mp3",
+  "voz/combo-corto": [
+    "cabeza-de-tarro-1.mp3",
+    "cabeza-de-tarro-2.mp3"
+  ],
+  "voz/combo-medio": "callate-cotorra.mp3",
+  "voz/combo-largo": "bolsa-de-basura-corto.mp3",
+  "voz/combo-viral": "bolsa-de-basura.mp3",
+  "voz/combo-ultra": "guacho-pesao.mp3"
+}

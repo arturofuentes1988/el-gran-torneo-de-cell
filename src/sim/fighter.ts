@@ -393,6 +393,9 @@ export class Fighter {
       if (this.frameIdx + 1 < this.anim.frames.length) {
         this.frameIdx++;
         this.frameTime = 0;
+        // Agarre que no tomó a nadie: salta directo a la recuperación (no le pega al aire).
+        const w = this.state === 'attack' && !this.ultraRun ? this.move?.whiffTo : undefined;
+        if (w && this.frameIdx === w.at && !this.connected) this.frameIdx = Math.min(w.to, this.anim.frames.length - 1);
       } else if (this.anim.loop) {
         this.frameIdx = 0;
         this.frameTime = 0;

@@ -16,7 +16,7 @@ import { FightScene } from './scenes/fight';
 import { TitleScene, loadTitleArena } from './scenes/title';
 
 /** Luchadores con sprites definitivos (carpetas de public/luchadores/), en el orden del plantel. */
-const REAL_FIGHTERS = ['rene', 'pablito'];
+const REAL_FIGHTERS = ['rene', 'pablito', 'flaitiano'];
 
 /** "0,1" → [0, 1] (índices del plantel del jugador 1 y del 2); null si no viene o no sirve. */
 function parsePair(raw: string | null, n: number): [number, number] | null {

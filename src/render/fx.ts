@@ -293,6 +293,38 @@ export class FxLayer {
     }
   }
 
+  /** Salpicadura de agua: gotas celestes que saltan y caen. */
+  splash(x: number, y: number, big: boolean): void {
+    const n = big ? 14 : 3;
+    for (let i = 0; i < n; i++) {
+      const l = Math.round(rand(14, 26));
+      this.spawn(this.tex.dot, true, {
+        x: x + rand(-8, 8), y, vx: rand(-1.6, 1.6), vy: rand(big ? -4.5 : -2.6, -1), life: l, max: l,
+        s0: rand(0.08, big ? 0.2 : 0.13), s1: 0.03, a0: 0.95, a1: 0.2, drag: 0.97, grav: 0.22, stretch: 0, spin: 0,
+      }, Math.random() < 0.6 ? 0x7fdcff : 0xe6f8ff);
+    }
+    if (big) this.ring(x, y, 0.1, 0.7, 0x7fdcff, 14);
+  }
+
+  /** Chispas eléctricas cortas y quebradas (golpes del combo eléctrico, electrocutado). */
+  electric(x: number, y: number, n: number, color = 0x9fe8ff): void {
+    this.sparks(x, y, n, 1, Math.PI, [3, 8], color, [5, 9], 0.32);
+    this.flash(x, y, 0.35 + n * 0.02, 0xe8fbff, 6);
+  }
+
+  /** Géiser: columna de agua que sube y se abre arriba (remate de rastas y del piquero). */
+  geyser(x: number, y: number, h: number): void {
+    for (let i = 0; i < 26; i++) {
+      const l = Math.round(rand(18, 34));
+      this.spawn(this.tex.dot, true, {
+        x: x + rand(-6, 6), y: y - rand(0, 10), vx: rand(-1.2, 1.2), vy: -rand(h * 0.04, h * 0.075), life: l, max: l,
+        s0: rand(0.14, 0.3), s1: 0.06, a0: 0.95, a1: 0.1, drag: 0.98, grav: 0.2, stretch: 0, spin: 0,
+      }, Math.random() < 0.5 ? 0x7fdcff : 0xe6f8ff);
+    }
+    this.ring(x, y, 0.1, 1.1, 0x7fdcff, 16);
+    this.flash(x, y - 10, 1, 0xd8f6ff, 10);
+  }
+
   /** Lanzador que conecta: anillo y chispas hacia arriba. */
   launch(x: number, y: number): void {
     this.flash(x, y, 1, 0xffffff, 10);

@@ -23,7 +23,8 @@ const CARD_X = 14;
 const CARD_W = AREA_X - CARD_X - 10;
 
 export const MOTION: Record<MotionId, string> = {
-  qcf: '↓↘→', qcb: '↓↙←', dp: '→↓↘', qcf2: '↓↘→↓↘→', charge: '← (CARGA) →', ff: '→→', bf: '←→', fbf: '→←→',
+  qcf: '↓↘→', qcb: '↓↙←', dp: '→↓↘', qcf2: '↓↘→↓↘→', hcf: '←↙↓↘→', hcb: '→↘↓↙←',
+  charge: '← (CARGA) →', ff: '→→', bf: '←→', fbf: '→←→',
   mash: 'MACHACA', hold: 'MANTÉN Y SUELTA', chargeSuper: '← (CARGA) →←→',
 };
 

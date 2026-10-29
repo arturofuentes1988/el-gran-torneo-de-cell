@@ -3,9 +3,9 @@
 Juego de pelea 2D para el navegador, estilo arcade (SNK / Marvel vs Capcom)
 con pixel art y efectos modernos. Parodia sin fines de lucro.
 
-**Estado: en desarrollo.** Se puede jugar con Loco René y Pablito Neuquén
-(sprites, voces y poderes definitivos) en los escenarios de René y en Santiago
-de noche. Los demás luchadores del plantel vienen después.
+**Estado: en desarrollo.** Se puede jugar con Loco René, Pablito Neuquén y el
+Flaitiano (sprites, voces y poderes definitivos) en los escenarios de René y en
+Santiago de noche. Los demás luchadores del plantel vienen después.
 
 ## Cómo correrlo
 
@@ -134,6 +134,19 @@ Pablito Neuquén (sin cargar ni mantener: toques de atrás y adelante):
 | Con este chaquetón (contraataque) | atrás, adelante + patada |
 | Súper ¡SÁCATE AL TIRO LAS ZAPATILLAS! (1 barra) | adelante, atrás, adelante + golpe |
 | Ultra ¡YO SOY PABLITO NEUQUÉN! (2 barras, rival en peligro) | adelante, atrás, adelante + patada |
+
+Flaitiano (agua y rayos: "¡junten agua, junten luz!"; la U es media vuelta del stick):
+
+| Movimiento | Comando |
+|---|---|
+| ¡Cállate, cotorra! (sus rastas avanzan por el suelo como olas; se cubre agachado) | U adelante (atrás, abajo, adelante) + golpe |
+| ¡No hay luz! (se corta la luz y cae un rayo; con patada fuerte, sobre el rival) | U adelante + patada |
+| ¡Cabeza de tarro! (agarre: tambor en la cabeza y patada) | U atrás (adelante, abajo, atrás) + golpe |
+| Súper ¡JUNTEN AGUA, JUNTEN LUZ! (tormenta, remolino y rayo gigante; 1 barra) | dos veces abajo, diagonal, adelante + golpe |
+| Ultra ¿HASTA CUÁNDO, AMIGO? (en el lago, con tormenta; 2 barras, rival en peligro) | dos veces abajo, diagonal, adelante + patada |
+
+Sus combos se electrifican mientras más largos: chispas, rastas que brillan,
+agua y, desde 12 golpes, rayos de fondo.
 
 Los toques perdonan el tiempo de una persona: la última flecha y el botón no
 tienen que caer juntos (si el botón cae un pelo antes, el golpe que alcanzó a

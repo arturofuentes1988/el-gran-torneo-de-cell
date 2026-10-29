@@ -139,14 +139,17 @@ export class Projectile {
     public vx: number,
     public hitsLeft: number,
     public life: number,
+    /** Hacia dónde mira (los proyectiles quietos, como un rayo, no tienen velocidad que lo diga). */
+    readonly dir: 1 | -1 = vx < 0 ? -1 : 1,
   ) {
     this.power = def.strength;
+    this.cooldown = def.delay ?? 0;
   }
 
   box(): Aabb {
     const b = this.def.box;
     const y0 = this.y + b.y;
-    if (this.vx >= 0) return { x0: this.x + b.x, y0, x1: this.x + b.x + b.w, y1: y0 + b.h };
+    if (this.dir > 0) return { x0: this.x + b.x, y0, x1: this.x + b.x + b.w, y1: y0 + b.h };
     return { x0: this.x - b.x - b.w, y0, x1: this.x - b.x, y1: y0 + b.h };
   }
 }
@@ -487,7 +490,8 @@ export class Match {
     for (const p of this.projectiles) {
       if (p.dead || p.cosmetic || p.owner.side !== att.side) continue;
       const dx = def.x - p.x;
-      if (Math.sign(dx) === Math.sign(p.vx) && Math.abs(dx) < 150) return true;
+      // Uno quieto (rayo, remolino) amenaza si está encima.
+      if (p.vx === 0 ? Math.abs(dx) < 70 : Math.sign(dx) === Math.sign(p.vx) && Math.abs(dx) < 150) return true;
     }
     return false;
   }
@@ -850,7 +854,11 @@ export class Match {
   spawnProjectile(f: Fighter, id: string): void {
     const pd = f.def.projectiles[id];
     if (!pd) return;
-    const p = new Projectile(f, pd, f.x + pd.offset.x * f.facing, f.y + pd.offset.y, pd.speed * f.facing, pd.hits, pd.life);
+    // Rayo o remolino: cae sobre el rival (su x, en el suelo), aunque esté saltando.
+    const target = pd.at === 'opponent' ? this.opponent(f) : null;
+    const x = target ? target.x + pd.offset.x * f.facing : f.x + pd.offset.x * f.facing;
+    const y = target ? pd.offset.y : f.y + pd.offset.y;
+    const p = new Projectile(f, pd, x, y, pd.speed * f.facing, pd.hits, pd.life, f.facing);
     // La onda de un ultra solo se ve (los golpes los da la secuencia).
     p.cosmetic = !!f.ultraRun;
     p.remate = f.remate && !p.cosmetic;
@@ -923,7 +931,10 @@ export class Match {
         for (let k = 0; k < targets.length && !found; k++) {
           const point = firstOverlap(box, hurts[k]);
           if (!point) continue;
-          results.push({ att, def: targets[k], props: hb.props ? { ...mv.hit, ...hb.props } : mv.hit, group: g, point, proj: null });
+          const props = hb.props ? { ...mv.hit, ...hb.props } : mv.hit;
+          // Un agarre solo toma al que está en el suelo (el primer agarre; los golpes que siguen sí).
+          if (props.groundOnly && !targets[k].grounded && !att.connected) continue;
+          results.push({ att, def: targets[k], props, group: g, point, proj: null });
           found = true;
         }
         if (found) break;
@@ -1033,6 +1044,8 @@ export class Match {
 
     // Lanzador: manda al rival bien alto y abre el combo aéreo (supersalto con arriba).
     const launcher = !proj && att.grounded && att.moveId !== '' && att.moveId === att.launcherId;
+    // Un proyectil de varios golpes (el remolino del súper) sigue pegándole en el aire hasta su último golpe.
+    if (proj && proj.def.hits > 1) def.juggleCap = Math.max(def.juggleCap, def.juggle + proj.hitsLeft + 1);
 
     if (def.health <= 0) {
       def.ko = true;
@@ -1059,6 +1072,7 @@ export class Match {
     this.emit({
       type: 'hit', side: att.side, x: r.point.x, y: r.point.y, dir: dirAway, spark, damage: dmg, combo: def.comboHits,
       by: att.def.id, total: def.comboDamage,
+      ...(proj ? { look: proj.def.look, last: proj.hitsLeft <= 0 } : { move: att.moveId }),
     });
     if (proj && proj.hitsLeft <= 0) this.killProjectile(proj, true);
   }

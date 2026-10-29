@@ -40,6 +40,8 @@ export interface HitProps {
   /** Súper que gana el atacante. */
   meter?: number;
   spark?: SparkKind;
+  /** Agarre: no le pega a un rival en el aire (se combina con guard 'unblockable'). */
+  groundOnly?: boolean;
 }
 
 export interface HitboxDef extends Box {
@@ -125,18 +127,25 @@ export interface SuperCinematic {
   portrait?: string;
   /** Unidades de mundo por pixel del retrato (si falta, se ajusta al alto del cartel). */
   portraitScale?: number;
-  /** Show de luces mientras dura el súper: 'disco' = bola de espejos, focos y manchas de color al ritmo. */
-  lights?: 'disco';
+  /**
+   * Show de luces mientras dura el súper: 'disco' = bola de espejos, focos y manchas de color al
+   * ritmo; 'tormenta' = cielo oscuro, lluvia y relámpagos.
+   */
+  lights?: 'disco' | 'tormenta';
+  /** Escenario que reemplaza al de la pelea mientras dura (ej. el ultra en otro lugar): id de escenario. */
+  backdrop?: string;
   /** Pedazo de canción que suena con el súper: voz propia del luchador ("voz/…"). */
   song?: string;
 }
 
 /**
  * ff: adelante, adelante (→ →). bf: atrás, adelante (← →, sin cargar). fbf: → ← → (sin cargar).
+ * hcf: media vuelta hacia adelante, una U (← ↙ ↓ ↘ →). hcb: media vuelta hacia atrás (→ ↘ ↓ ↙ ←).
  * mash: machacar el botón (varias veces seguidas). hold: mantener el botón apretado medio
  * segundo y soltarlo. chargeSuper: cargar atrás y luego → ← →.
  */
-export type MotionId = 'qcf' | 'qcb' | 'dp' | 'qcf2' | 'charge' | 'ff' | 'bf' | 'fbf' | 'mash' | 'hold' | 'chargeSuper';
+export type MotionId =
+  | 'qcf' | 'qcb' | 'dp' | 'qcf2' | 'hcf' | 'hcb' | 'charge' | 'ff' | 'bf' | 'fbf' | 'mash' | 'hold' | 'chargeSuper';
 export type MoveKind = 'normal' | 'special' | 'super' | 'ultra' | 'throw';
 
 /** Un tramo de la secuencia automática del ultra: una animación del luchador y cuántos golpes da. */
@@ -198,6 +207,12 @@ export interface MoveDef {
   cinematic?: SuperCinematic;
   /** Solo ultra: la secuencia automática (ver UltraDef). */
   ultra?: UltraDef;
+  /** Agarre: si al llegar al cuadro `at` no conectó, salta al cuadro `to` (la recuperación). */
+  whiffTo?: { at: number; to: number };
+  /** Letras de cómic que salen en cada golpe que conecta, en orden (ej. "¡TOC!"). */
+  hitText?: string[];
+  /** Dibujo encima de la cabeza del rival mientras dura el movimiento (ej. 'tarro'). */
+  hitOverlay?: string;
 }
 
 export interface ProjectileDef {
@@ -224,6 +239,15 @@ export interface ProjectileDef {
   strength: number;
   /** Factor de velocidad mientras está golpeando (súper multigolpe). */
   slowOnHit?: number;
+  /**
+   * 'opponent': aparece donde está el rival (en el suelo bajo él, más offset.y) en vez de
+   * delante del que lo lanza; offset.x se suma hacia adelante. Para rayos y remolinos.
+   */
+  at?: 'opponent';
+  /** Cuadros de aviso antes de que pueda golpear (el rayo que va a caer). */
+  delay?: number;
+  /** Dibujo propio en vez de (o además de) sus cuadros: 'rayo', 'tornado', 'rastas', 'geiser'. */
+  look?: string;
 }
 
 /** Filtrado de las texturas: 'linear' para arte HD, 'nearest' para pixel art a escala de mundo. */
@@ -297,6 +321,8 @@ export interface FighterDef {
   combos?: Array<{ name: string; steps: string }>;
   /** Ajustes de las mecánicas avanzadas (opcional). */
   mechanics?: MechanicsDef;
+  /** Efectos que crecen con el largo de sus combos: 'electrico' = chispas, brillo, agua y rayos. */
+  comboFx?: 'electrico';
   /**
    * 2 VS 2: movimiento (id de moves) que hace al entrar como AYUDA. Si falta, el
    * primer especial que lanza un proyectil; si no tiene, el primer especial.

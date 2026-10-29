@@ -39,8 +39,13 @@ def color_fondo(rgb: np.ndarray) -> np.ndarray:
     return np.median(borde, axis=0)
 
 
-def quitar_fondo(rgb: np.ndarray, tolerancia: float) -> np.ndarray:
-    """Devuelve la máscara del personaje (True = personaje)."""
+def quitar_fondo(rgb: np.ndarray, tolerancia: float, huecos_sd: float | None = None) -> np.ndarray:
+    """Devuelve la máscara del personaje (True = personaje).
+
+    huecos_sd: para ropa blanca o gris claro (ej. el Flaitiano), un hueco encerrado solo es
+    fondo si además su luminancia es pareja (desviación menor que esto). El fondo, aun con
+    su degradado, es parejo; una chaqueta blanca tiene luces y sombras.
+    """
     fondo = color_fondo(rgb)
     f = rgb.astype(np.float32)
     dist = np.sqrt(((f - fondo) ** 2).sum(axis=2))
@@ -81,7 +86,12 @@ def quitar_fondo(rgb: np.ndarray, tolerancia: float) -> np.ndarray:
         claro = ndimage.mean(lum, etiq, idx)
         dibujo = np.nan_to_num(ndimage.mean(np.hypot(gx, gy), interior, idx), nan=99)
         gris = float(fondo.mean())
-        quitar = [i + 1 for i in range(n) if tam[i] > 300 and dibujo[i] < 3.6 and gris - 6 <= claro[i] <= 228]
+        if huecos_sd is None:
+            parejo = [True] * n
+        else:
+            desv = np.sqrt(np.maximum(0, np.asarray(ndimage.mean(lum ** 2, etiq, idx)) - np.asarray(claro) ** 2))
+            parejo = desv < huecos_sd
+        quitar = [i + 1 for i in range(n) if tam[i] > 300 and dibujo[i] < 3.6 and gris - 6 <= claro[i] <= 228 and parejo[i]]
         if quitar:
             personaje &= ~np.isin(etiq, quitar)
     # Un pixel menos de borde para sacar el halo del fondo.
@@ -106,6 +116,7 @@ def main() -> None:
     ap.add_argument("salida", type=Path)
     ap.add_argument("--fps", type=int, default=24)
     ap.add_argument("--tolerancia", type=float, default=30)
+    ap.add_argument("--huecos-sd", type=float, default=None, help="ropa blanca: solo quita huecos de luminancia pareja")
     args = ap.parse_args()
 
     tmp = Path(tempfile.mkdtemp(prefix="cuadros_"))
@@ -114,7 +125,7 @@ def main() -> None:
         rgbas, cajas = [], []
         for ruta in rutas:
             rgb = np.asarray(Image.open(ruta).convert("RGB"))
-            masc = quitar_fondo(rgb, args.tolerancia)
+            masc = quitar_fondo(rgb, args.tolerancia, args.huecos_sd)
             rgba = np.dstack([rgb, (masc * 255).astype(np.uint8)])
             rgbas.append(rgba)
             ys, xs = np.nonzero(masc)
