@@ -1,14 +1,15 @@
 import { BlurFilter, Container, Graphics, Sprite, type Texture } from 'pixi.js';
-import { VIEW_H, VIEW_W } from '../config';
+import { STAGE_W, VIEW_H, VIEW_W } from '../config';
 import { autoFullscreen } from '../app/fullscreen';
 import type { Game, Scene } from '../app/game';
 import type { FighterAsset } from '../content/mannequin/fighters';
 import { attackKeys } from '../input/devices';
 import { FxLayer } from '../render/fx';
+import { StageView } from '../render/stage';
 import { outlinedText } from '../render/text';
 import type { FighterDef } from '../sim/types';
+import { backdrop } from './backdrop';
 import { ModeSelectScene } from './modeSelect';
-import { TournamentBackdrop } from './tournament';
 
 /** Alto en pantalla de cada luchador (de cuerpo entero) y dónde quedan sus pies. */
 const ALTO = 112;
@@ -75,6 +76,13 @@ interface Burst {
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 
+/** Fondo del título: el ring del torneo de artes marciales (public/torneo/, ilustración con video en loop). */
+let arenaLoad: Promise<StageView> | null = null;
+export function loadTitleArena(): Promise<StageView> {
+  arenaLoad ??= StageView.load('torneo/escenario.json');
+  return arenaLoad;
+}
+
 /**
  * Pantalla de título: "EL GRAN TORNEO DE CELL". Los luchadores entran uno por
  * uno como en los Power Rangers (salto, explosión de su color detrás y pose),
@@ -94,8 +102,10 @@ export class TitleScene implements Scene {
   /** Un clic en el título pone la pantalla completa (y el sonido) sin pasar al menú. */
   private onPointer = (): void => autoFullscreen();
   private logoBig = outlinedText('DE CELL', 28, 0xffd040, 0x5a0a10, 3);
-  /** De fondo, el ring del torneo de artes marciales. */
-  private arena = new TournamentBackdrop();
+  /** De fondo, el ring del torneo de artes marciales (si no carga, el show de luces de los menús). */
+  private arena: StageView | null = null;
+  private lights = false;
+  private active = false;
   private glows = new Container();
   private shadows = new Container();
   private cast = new Container();
@@ -255,7 +265,21 @@ export class TitleScene implements Scene {
 
   enter(): void {
     const d = this.game.display;
-    d.world.addChildAt(this.arena.container, 0);
+    this.active = true;
+    loadTitleArena().then(
+      (arena) => {
+        if (!this.active) return;
+        this.arena = arena;
+        arena.setDarkness(0);
+        d.world.addChildAt(arena.container, 0);
+      },
+      (err) => {
+        console.warn('No se pudo cargar el fondo del título; quedan las luces de los menús.', err);
+        if (!this.active) return;
+        this.lights = true;
+        backdrop.attach(this.game);
+      },
+    );
     d.fx.position.set(0, 0);
     d.fx.addChild(this.fx.container);
     d.hud.addChild(this.ui);
@@ -265,8 +289,9 @@ export class TitleScene implements Scene {
   exit(): void {
     window.removeEventListener('pointerdown', this.onPointer);
     const d = this.game.display;
-    d.world.removeChild(this.arena.container);
-    this.arena.destroy();
+    this.active = false;
+    if (this.arena) d.world.removeChild(this.arena.container);
+    if (this.lights) backdrop.detach(this.game);
     d.fx.removeChild(this.fx.container);
     d.hud.removeChild(this.ui);
     this.fx.clear();
@@ -340,7 +365,9 @@ export class TitleScene implements Scene {
   }
 
   render(): void {
-    this.arena.render();
+    // Cámara quieta al centro del ring; el video del escenario le da vida.
+    this.arena?.update((STAGE_W - VIEW_W) / 2, 0);
+    if (this.lights) backdrop.render();
     for (const a of this.actors) {
       const air = Math.max(0, PIES_Y - a.sprite.y);
       a.shadow.visible = a.sprite.visible;

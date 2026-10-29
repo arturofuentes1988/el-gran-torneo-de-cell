@@ -3,9 +3,9 @@
 Juego de pelea 2D para el navegador, estilo arcade (SNK / Marvel vs Capcom)
 con pixel art y efectos modernos. Parodia sin fines de lucro.
 
-**Estado: Etapa 1, prototipo jugable.** El motor de pelea está completo y se
-prueba con dos luchadores provisorios (Luchador Rojo y Luchador Azul) en un
-escenario de prueba. Los personajes y escenarios definitivos vienen después.
+**Estado: en desarrollo.** Se puede jugar con Loco René y Pablito Neuquén
+(sprites, voces y poderes definitivos) en los escenarios de René y en Santiago
+de noche. Los demás luchadores del plantel vienen después.
 
 ## Cómo correrlo
 
@@ -26,6 +26,12 @@ npm run preview  # sirve dist/ para probar el build
 La carpeta `dist/` es un sitio estático: se puede subir tal cual a itch.io,
 GitHub Pages o Netlify.
 
+El repositorio trae `.github/workflows/pages.yml`: cada vez que se sube algo a
+`main`, GitHub arma el juego y lo publica en GitHub Pages. Pages funciona con el
+repositorio público (con uno privado hace falta una cuenta de pago). Las carpetas
+`arte/` (originales 4K, videos, clips) y `referencias/` (fotos) no se suben:
+quedan solo en el computador de trabajo.
+
 ## Al abrir el juego
 
 Aparece directo el título (**PRESIONA ENTER**). El navegador
@@ -38,10 +44,11 @@ en los Power Rangers: saltan desde su lado, aterrizan con explosiones y una
 columna de fuego de sus colores y hacen su pose de victoria. Al final gritan
 todos juntos con el aura encendida, se desvanecen y el ciclo vuelve a empezar
 (`src/scenes/title.ts`; entra cada luchador con sprites definitivos). De fondo
-está un boceto del ring del torneo de artes marciales (el de Dragon Ball): ring
-de baldosas de piedra, el templo de techos curvos con su puerta en arco,
-palmeras, graderías con público que salta y nubes que pasan, todo dibujado en
-código (`src/scenes/tournament.ts`). Los menús usan otro fondo, un show de luces
+está el ring del torneo de artes marciales (el de Dragon Ball) al atardecer:
+ilustración con el mismo estilo de los escenarios, con video en loop (palmeras,
+faroles, banderines y nubes que se mueven). Se arma con
+`herramientas/armar_escenario.py arte/titulo/torneo.json` en `public/torneo/` y
+no aparece en la lista de escenarios de pelea. Los menús usan otro fondo, un show de luces
 (focos que barren, estrellas y un piso de neón que avanza:
 `src/scenes/backdrop.ts`). Un clic en el título pone la pantalla completa y el
 sonido sin pasar al menú.

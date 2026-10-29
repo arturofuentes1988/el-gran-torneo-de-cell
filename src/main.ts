@@ -13,7 +13,7 @@ import { Gamepads, Keyboard, MenuInput } from './input/devices';
 import { StageView } from './render/stage';
 import { setTextResolution } from './render/text';
 import { FightScene } from './scenes/fight';
-import { TitleScene } from './scenes/title';
+import { TitleScene, loadTitleArena } from './scenes/title';
 
 /** Luchadores con sprites definitivos (carpetas de public/luchadores/), en el orden del plantel. */
 const REAL_FIGHTERS = ['rene', 'pablito'];
@@ -39,6 +39,8 @@ async function main(): Promise<void> {
   const display = new Display();
   await display.init();
   installFullscreen();
+  // El fondo del título (imagen y video) se carga mientras tanto, junto con los luchadores.
+  void loadTitleArena().catch(() => undefined);
   setTextResolution(display.textResolution);
   display.onResize(() => setTextResolution(display.textResolution));
 

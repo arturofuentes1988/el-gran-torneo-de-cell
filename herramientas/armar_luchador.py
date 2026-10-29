@@ -58,6 +58,27 @@ class Clip:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
 
+def fijar_boca(rgb: np.ndarray, ref: np.ndarray, zona: list[int], radio: int = 10) -> np.ndarray:
+    """Pega en `rgb` la boca del cuadro `ref` (zona x0,y0,x1,y1 en pixeles del video), así la
+    guardia no abre y cierra la boca. Sigue a la cabeza: busca el corrimiento con que mejor
+    calza la franja de la cara justo encima (nariz y ojos) y pega con el borde difuminado."""
+    x0, y0, x1, y1 = zona
+    h, w = y1 - y0, x1 - x0
+    plantilla = ref[y0 - h:y0, x0:x1].astype(np.float32)
+    mejor, dx, dy = np.inf, 0, 0
+    for oy in range(-radio, radio + 1):
+        for ox in range(-radio, radio + 1):
+            e = np.abs(rgb[y0 - h + oy:y0 + oy, x0 + ox:x1 + ox].astype(np.float32) - plantilla).mean()
+            if e < mejor:
+                mejor, dx, dy = e, ox, oy
+    bordes = np.minimum(np.minimum(np.arange(h), np.arange(h)[::-1])[:, None], np.minimum(np.arange(w), np.arange(w)[::-1])[None, :])
+    a = np.clip(bordes / 5, 0, 1)[..., None]
+    out = rgb.copy()
+    destino = out[y0 + dy:y1 + dy, x0 + dx:x1 + dx].astype(np.float32)
+    out[y0 + dy:y1 + dy, x0 + dx:x1 + dx] = (ref[y0:y1, x0:x1] * a + destino * (1 - a)).round().astype(np.uint8)
+    return out
+
+
 def caja(m: np.ndarray) -> tuple[int, int, int, int] | None:
     ys, xs = np.nonzero(m)
     if not len(xs):
@@ -245,8 +266,13 @@ def main() -> None:
         activos = set(spec.get("activos", []))
         extras = spec.get("extra", {})
         frames = []
+        boca = spec.get("boca_fija")
         for j, (i, dur) in enumerate(zip(indices, durs)):
             rgb, m = c.cuadro(i)
+            # "boca_fija": {"cuadro": n, "zona": [x0, y0, x1, y1]} deja la boca del cuadro n en todos.
+            if boca and i != boca["cuadro"]:
+                rgb = fijar_boca(rgb, c.cuadro(boca["cuadro"])[0], boca["zona"])
+                m = quitar_fondo(rgb, tol)
             # "centrar": alinea el tronco (caminar, rodar); "pies": el apoyo va en los
             # pies del propio cuadro (cuadros en el aire: el motor ya pone la altura).
             dx = centro_torso(m) - torso0 if spec.get("centrar") or spec.get("pies") else 0.0

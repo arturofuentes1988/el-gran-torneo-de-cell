@@ -50,10 +50,14 @@ def quitar_fondo(rgb: np.ndarray, tolerancia: float) -> np.ndarray:
     maximo = f.max(axis=2)
     saturacion = (maximo - f.min(axis=2)) / np.maximum(maximo, 1)
     parecido = (dist < tolerancia) | ((f.mean(axis=2) > 150) & (saturacion < 0.12))
-    # Solo es fondo lo parecido que está conectado con el borde.
-    etiquetas, _ = ndimage.label(parecido)
+    # Solo es fondo lo parecido que está conectado con el borde. El contorno se
+    # engruesa 2 px para que la inundación no se cuele por los cortes del trazo
+    # (entraba a las zapatillas); después recupera ese fondo pegado al contorno.
+    cerrado = parecido & ~ndimage.binary_dilation(~parecido, iterations=2)
+    etiquetas, _ = ndimage.label(cerrado)
     borde = np.unique(np.concatenate([etiquetas[0], etiquetas[-1], etiquetas[:, 0], etiquetas[:, -1]]))
     es_fondo = np.isin(etiquetas, borde[borde > 0])
+    es_fondo = ndimage.binary_dilation(es_fondo, iterations=3, mask=parecido)
     personaje = ~es_fondo
     # Limpieza: se queda con las manchas grandes y rellena hoyos chicos.
     etiq, n = ndimage.label(personaje)
@@ -62,15 +66,22 @@ def quitar_fondo(rgb: np.ndarray, tolerancia: float) -> np.ndarray:
         grandes = np.isin(etiq, np.nonzero(tam >= max(200, tam.max() * 0.02))[0] + 1)
         personaje = grandes
     personaje = ndimage.binary_fill_holes(personaje) & ~(es_fondo & ~ndimage.binary_fill_holes(personaje))
-    # Huecos de fondo encerrados (por ejemplo dentro del lazo de una cadena):
-    # manchas grandes de gris claro sin color. Las zapatillas y los dientes son
-    # más blancos y más chicos, así que se quedan.
+    # Huecos de fondo encerrados (entre el brazo y el cuerpo, dentro del lazo de
+    # una cadena): manchas grandes y lisas, del gris del fondo o algo más claras.
+    # Las partes grises o blancas de la ropa (zapatillas, dientes) tienen dibujo
+    # por dentro, o son más oscuras o más blancas que el fondo, así que se quedan.
     hueco = parecido & personaje
     etiq, n = ndimage.label(hueco)
     if n:
-        tam = ndimage.sum(hueco, etiq, range(1, n + 1))
-        lum = ndimage.mean(f.mean(axis=2), etiq, range(1, n + 1))
-        quitar = [i + 1 for i in range(n) if tam[i] > 300 and lum[i] < 238]
+        idx = range(1, n + 1)
+        lum = f.mean(axis=2)
+        gy, gx = np.gradient(ndimage.gaussian_filter(lum, 1))
+        interior = etiq * ndimage.binary_erosion(hueco, iterations=2)
+        tam = ndimage.sum(hueco, etiq, idx)
+        claro = ndimage.mean(lum, etiq, idx)
+        dibujo = np.nan_to_num(ndimage.mean(np.hypot(gx, gy), interior, idx), nan=99)
+        gris = float(fondo.mean())
+        quitar = [i + 1 for i in range(n) if tam[i] > 300 and dibujo[i] < 3.6 and gris - 6 <= claro[i] <= 228]
         if quitar:
             personaje &= ~np.isin(etiq, quitar)
     # Un pixel menos de borde para sacar el halo del fondo.
