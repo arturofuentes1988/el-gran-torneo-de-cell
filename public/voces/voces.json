@@ -1,0 +1,13 @@
+{
+  "voz/round1": "round1.mp3",
+  "voz/round2": "round2.mp3",
+  "voz/round3": "round3.mp3",
+  "voz/round4": "round4.mp3",
+  "voz/final": "final.mp3",
+  "voz/fight": "fight.mp3",
+  "voz/ko": "ko.mp3",
+  "voz/doubleKo": "doubleKo.mp3",
+  "voz/perfect": "perfect.mp3",
+  "voz/time": "time.mp3",
+  "voz/draw": "draw.mp3"
+}

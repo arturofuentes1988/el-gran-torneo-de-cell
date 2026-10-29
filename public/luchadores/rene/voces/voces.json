@@ -1,0 +1,45 @@
+{
+  "voz/queriToo": [
+    "queri-too-1.mp3",
+    "queri-too-2.mp3",
+    "queri-too-3.mp3"
+  ],
+  "voz/viral": "toy-de-campeon.mp3",
+  "voz/remate": [
+    "to-yo-corto.mp3",
+    "toy-de-campeon.mp3"
+  ],
+  "voz/ultra": "to-yo.mp3",
+  "voz/victoria": [
+    "toy-de-campeon.mp3",
+    "risa-1.mp3"
+  ],
+  "voz/burla-cabreate": "cabreate-de-grabar.mp3",
+  "voz/burla-pueblo": "pueblo-bajo.mp3",
+  "voz/combo-corto": [
+    "queri-too-1.mp3",
+    "queri-too-2.mp3",
+    "queri-too-3.mp3"
+  ],
+  "voz/combo-medio": "cabreate-de-grabar.mp3",
+  "voz/combo-largo": "toy-de-campeon.mp3",
+  "voz/combo-viral": "to-yo-corto.mp3",
+  "voz/combo-ultra": "to-yo-corto.mp3",
+  "voz/risa": [
+    "risa-1.mp3",
+    "risa-2.mp3",
+    "risa-3.mp3",
+    "risa-4.mp3"
+  ],
+  "voz/meRio": "me-rio-toa-la-noche.mp3",
+  "voz/shipitia": "shipitia.mp3",
+  "voz/ultra-1": [
+    "queri-too-1.mp3",
+    "queri-too-2.mp3",
+    "queri-too-3.mp3"
+  ],
+  "voz/ultra-2": "cabreate-de-grabar.mp3",
+  "voz/ultra-3": "me-rio-corto.mp3",
+  "voz/ultra-4": "toy-de-campeon.mp3",
+  "voz/poder": "toy-de-campeon.mp3"
+}

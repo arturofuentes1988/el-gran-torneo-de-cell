@@ -1,0 +1,53 @@
+{
+  "id": "rene-cabana",
+  "name": "LA CABAÑA DEL LAGO",
+  "layers": [
+    {
+      "src": "fondo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -315.895,
+      "left": -5.6
+    },
+    {
+      "video": "fondo.mp4",
+      "scale": 0.280978,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -315.895,
+      "left": -5.6
+    },
+    {
+      "src": "suelo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -29.929,
+      "floor": {
+        "strips": 64
+      }
+    }
+  ],
+  "particles": [
+    {
+      "type": "polvo",
+      "count": 18,
+      "color": 16777215,
+      "alpha": 0.35,
+      "size": 1.4,
+      "band": [
+        -190,
+        -30
+      ],
+      "parallax": 0.8
+    }
+  ],
+  "music": "rene-cabana"
+}

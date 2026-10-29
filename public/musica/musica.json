@@ -1,0 +1,20 @@
+{
+  "titulo": {
+    "archivo": "titulo.mp3",
+    "bpm": 144.86,
+    "loopStart": 5.8,
+    "loopEnd": 112.2116
+  },
+  "rene-cabana": {
+    "archivo": "rene-cabana.mp3",
+    "bpm": 117.5,
+    "loopStart": 2.0,
+    "loopEnd": 104.4174
+  },
+  "rene-plaza": {
+    "archivo": "rene-plaza.mp3",
+    "bpm": 100.08,
+    "loopStart": 19.7,
+    "loopEnd": 77.2616
+  }
+}

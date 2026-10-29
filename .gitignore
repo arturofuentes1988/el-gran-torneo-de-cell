@@ -1,0 +1,8 @@
+node_modules/
+dist/
+__pycache__/
+*.log
+# Material de trabajo pesado (originales 4K, videos, clips sin cortar) y fotos de referencia:
+# quedan solo en este computador. El juego publicado usa lo que está en public/.
+arte/
+referencias/

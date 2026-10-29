@@ -1,0 +1,25 @@
+[
+  {
+    "id": "rene-cabana",
+    "nombre": "LA CABAÑA DEL LAGO",
+    "json": "rene-cabana/escenario.json",
+    "miniatura": "rene-cabana/miniatura.webp",
+    "luchador": "rene",
+    "orden": 1
+  },
+  {
+    "id": "rene-plaza",
+    "nombre": "LA PLAZA DE LA POBLA",
+    "json": "rene-plaza/escenario.json",
+    "miniatura": "rene-plaza/miniatura.webp",
+    "luchador": "rene",
+    "orden": 2
+  },
+  {
+    "id": "santiago",
+    "nombre": "SANTIAGO DE NOCHE",
+    "json": "../titulo/escenario.json",
+    "miniatura": "../titulo/miniatura.webp",
+    "orden": 3
+  }
+]
