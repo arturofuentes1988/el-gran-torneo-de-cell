@@ -47,7 +47,7 @@ export class FighterView {
     this.zapGlow.tint = 0x7fd8ff;
     this.zapGlow.visible = false;
     layers.fighters.addChild(this.zapGlow);
-    const filter = costumeFilter(costume);
+    const filter = costumeFilter(costume, fighter.def.costume);
     if (filter) this.sprite.filters = [filter];
   }
 

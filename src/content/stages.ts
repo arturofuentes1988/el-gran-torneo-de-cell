@@ -21,6 +21,14 @@ export interface StageEntry {
   json?: string;
   /** Miniatura 16:9 (~480x270). */
   miniatura?: string;
+  /** Dónde queda en el mapa del ARCADE (latitud y longitud) y cómo se llama el lugar. */
+  lugar?: StagePlace;
+}
+
+export interface StagePlace {
+  nombre: string;
+  lat: number;
+  lon: number;
 }
 
 /** Id del escenario de prueba procedural (respaldo si no hay escenarios HD; también ?escenario=prueba). */
@@ -32,6 +40,7 @@ interface RawEntry {
   luchador?: string;
   json?: string;
   miniatura?: string;
+  lugar?: StagePlace;
 }
 
 export class StageLibrary {
@@ -60,7 +69,7 @@ export class StageLibrary {
         const list = (await res.json()) as unknown;
         for (const e of Array.isArray(list) ? (list as RawEntry[]) : []) {
           if (!e?.id || !e.json || e.id === BUILTIN_STAGE || entries.some((x) => x.id === e.id)) continue;
-          entries.push({ id: e.id, nombre: e.nombre ?? e.id, luchador: e.luchador, json: abs(e.json), miniatura: abs(e.miniatura) });
+          entries.push({ id: e.id, nombre: e.nombre ?? e.id, luchador: e.luchador, json: abs(e.json), miniatura: abs(e.miniatura), lugar: e.lugar });
         }
       }
     } catch (err) {

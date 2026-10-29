@@ -109,8 +109,11 @@ Menús: flechas (o cruceta) para moverse, Enter, Espacio o A para aceptar, Esc
 o Retroceso para volver. El **MENÚ PRINCIPAL** tiene:
 
 - **ARCADE**: eliges tu luchador y le ganas a cada uno de los demás contra la
-  CPU (la última pelea es un poco más difícil). Si pierdes, ¿CONTINUAR? repite
-  esa pelea; si les ganas a todos, ¡CAMPEÓN!
+  CPU. Antes de cada pelea, un mapa de Chile (acostado, el norte a la izquierda)
+  muestra el avión viajando a la sede: cada rival pelea en su escenario o en uno
+  libre, y la final es en el ring de EL GRAN TORNEO (la última pelea es un poco
+  más difícil). Si pierdes, ¿CONTINUAR? repite esa pelea; si les ganas a todos,
+  ¡CAMPEÓN!
 - **CASUAL**: 1 VS CPU, 1 VS 1, 2 VS 2 y PRÁCTICA.
 - **OPCIONES**: PERSONAJES, MOVIMIENTOS, ESCENARIOS, CONTROLES y DIFICULTAD
   (izquierda / derecha).
@@ -268,7 +271,9 @@ con la cara de cada luchador (las que todavía no tienen uno, bloqueadas) y
 ALEATORIO; a los lados, en grande, el luchador de cada jugador, en gris mientras
 se marca y a color cuando se elige. Después se elige el **color de la ropa**
 con izquierda / derecha y se confirma (el mismo luchador no puede repetir
-color en una pelea). En 1 VS CPU y práctica el jugador 1 elige el suyo y
+color en una pelea). Solo cambia la ropa que dice su definición (`costume`:
+ropa oscura, clara o ciertos tonos); la cara, el pelo y las zapatillas quedan
+igual. En 1 VS CPU y práctica el jugador 1 elige el suyo y
 después el rival (CPU o muñeco); en 1 VS 1 cada uno elige con su cursor al mismo
 tiempo (el jugador 2 con sus teclas o el segundo joystick). Esc / Retroceso
 vuelve un paso atrás o al menú. Las caras salen de `herramientas/caras.py`. El plantel son los luchadores con sprites

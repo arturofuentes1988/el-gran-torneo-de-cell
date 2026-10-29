@@ -323,11 +323,26 @@ export interface FighterDef {
   mechanics?: MechanicsDef;
   /** Efectos que crecen con el largo de sus combos: 'electrico' = chispas, brillo, agua y rayos. */
   comboFx?: 'electrico';
+  /** Cuál es su ropa, para los colores alternativos (ver render/costume.ts). */
+  costume?: CostumeDef;
   /**
    * 2 VS 2: movimiento (id de moves) que hace al entrar como AYUDA. Si falta, el
    * primer especial que lanza un proyectil; si no tiene, el primer especial.
    */
   assist?: string;
+}
+
+/**
+ * La ropa que cambia de color: oscura (negra o gris oscuro), clara (blanca o gris claro)
+ * y/o rangos de tono [desde, hasta, saturación mínima] (0..1, el tono puede dar la vuelta).
+ * head / feet: fracción de arriba y de abajo de cada cuadro que no se toca (cara, zapatillas).
+ */
+export interface CostumeDef {
+  dark?: boolean;
+  light?: boolean;
+  hues?: Array<[number, number, number]>;
+  head?: number;
+  feet?: number;
 }
 
 /** Una frase de la pelá con su voz (la voz suena al empezar la burla, junto con el globo). */

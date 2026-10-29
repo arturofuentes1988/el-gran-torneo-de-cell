@@ -84,10 +84,10 @@ export function loadTitleArena(): Promise<StageView> {
 }
 
 /**
- * Pantalla de título: "EL GRAN TORNEO DE CELL". Los luchadores entran uno por
- * uno como en los Power Rangers (salto, explosión de su color detrás y pose),
- * al final posan todos juntos, se desvanecen y el ciclo vuelve a empezar.
- * De fondo, el ring del torneo de artes marciales (los menús usan el show de luces).
+ * Pantalla de título: "EL GRAN TORNEO DE CELL". En cada vuelta salen dos luchadores
+ * al azar: entra uno saltando desde la izquierda y después el otro desde la derecha
+ * (salto, explosión de su color detrás y pose), posan juntos, se desvanecen y sale
+ * otra pareja. De fondo, el ring del torneo de artes marciales (los menús usan el show de luces).
  */
 export class TitleScene implements Scene {
   /** El tema de la pantalla de título sigue sonando en los menús. */
@@ -111,6 +111,9 @@ export class TitleScene implements Scene {
   private cast = new Container();
   private whiteout = new Graphics();
   private actors: Actor[] = [];
+  /** La pareja que sale en esta vuelta (y la anterior, para no repetirla seguida). */
+  private pair: Actor[] = [];
+  private lastPair = '';
   private bursts: Burst[] = [];
   private finalAt = 0;
   private fadeAt = 0;
@@ -143,12 +146,9 @@ export class TitleScene implements Scene {
       .filter((fr) => fr.tex);
   }
 
-  /** Los luchadores con sprites definitivos (los provisorios no salen), repartidos a lo ancho mirando al centro. */
+  /** Los luchadores con sprites definitivos (los provisorios no salen); su puesto lo da cada vuelta. */
   private buildCast(reales: FighterAsset[]): void {
-    const n = reales.length;
-    const centro = (n - 1) / 2;
-    const paso = Math.min(140, (VIEW_W - 100) / Math.max(1, n - 1));
-    reales.forEach((f, j) => {
+    reales.forEach((f) => {
       const def = f.def;
       const idle = this.frames(def, 'idle');
       if (!idle.length) return;
@@ -166,43 +166,67 @@ export class TitleScene implements Scene {
         win: pick('win', idle),
         power: pick('powerUp', idle),
       };
-      const x = Math.round(VIEW_W / 2 + (j - centro) * paso);
-      const from: -1 | 0 | 1 = j < centro ? -1 : j > centro ? 1 : 0;
-      const mira: 1 | -1 = j > centro ? -1 : 1;
       // El cuadro de guardia mide ~150 unidades de mundo de alto: se escala a ALTO unidades de pantalla.
       const k = (ALTO * (def.texScale ?? 1)) / 150;
       const sprite = new Sprite(idle[0].tex);
-      sprite.scale.set(k * mira, k);
-      const glow = new Graphics().circle(x, PIES_Y - 75 * S, 62 * S).fill({ color: def.ui.fx });
+      const glow = new Graphics().circle(0, PIES_Y - 75 * S, 62 * S).fill({ color: def.ui.fx });
       glow.filters = [new BlurFilter({ strength: 22, quality: 4 })];
       glow.blendMode = 'add';
       this.glows.addChild(glow);
       this.cast.addChild(sprite);
       // Sombra sobre el ring (se achica y aclara mientras va en el aire).
       const shadow = new Graphics().ellipse(0, 0, 30 * S, 6 * S).fill({ color: 0x000000, alpha: 0.3 });
-      shadow.position.set(x, PIES_Y);
+      shadow.visible = false;
       this.shadows.addChild(shadow);
       this.actors.push({
         def, sprite, shadow, glow, anims, cur: 'idle', frames: idle, i: 0, t: 0, hold: false, after: null,
-        x, from, mira, k, start: INICIO + j * ENTRADA, landed: -1,
+        x: VIEW_W / 2, from: 0, mira: 1, k, start: Number.MAX_SAFE_INTEGER, landed: -1,
       });
     });
-    const last = Math.max(0, this.actors.length - 1);
-    this.finalAt = INICIO + last * ENTRADA + SALTO + ESPERA_FINAL;
+    // Entran dos, uno después del otro.
+    this.finalAt = INICIO + ENTRADA + SALTO + ESPERA_FINAL;
     this.fadeAt = this.finalAt + POSE_FINAL;
   }
 
-  /** Deja todo listo para que vuelvan a entrar. */
+  /** Elige la pareja de esta vuelta (al azar, distinta de la anterior si se puede) y la deja lista para entrar. */
   private reset(): void {
     this.cycle = 0;
     this.bursts = [];
     for (const a of this.actors) {
       a.sprite.visible = false;
+      a.shadow.visible = false;
       a.sprite.alpha = 1;
       a.glow.alpha = 0;
       a.landed = -1;
+      a.start = Number.MAX_SAFE_INTEGER;
       this.play(a, 'idle');
     }
+    const n = this.actors.length;
+    if (!n) return;
+    let pick: Actor[] = [];
+    for (let tries = 0; tries < 8; tries++) {
+      const i = Math.floor(Math.random() * n);
+      let j = Math.floor(Math.random() * (n - 1));
+      if (j >= i) j++;
+      pick = n > 1 ? [this.actors[i], this.actors[j]] : [this.actors[i]];
+      const key = pick.map((a) => a.def.id).sort().join('+');
+      if (key !== this.lastPair || n <= 2) {
+        this.lastPair = key;
+        break;
+      }
+    }
+    this.pair = pick;
+    // El primero entra por la izquierda y el segundo por la derecha; se miran.
+    pick.forEach((a, slot) => {
+      const solo = pick.length === 1;
+      a.x = solo ? VIEW_W / 2 : slot === 0 ? VIEW_W / 2 - 92 : VIEW_W / 2 + 92;
+      a.from = solo ? 0 : slot === 0 ? -1 : 1;
+      a.mira = slot === 0 ? 1 : -1;
+      a.sprite.scale.set(a.k * a.mira, a.k);
+      a.glow.position.x = a.x;
+      a.shadow.position.set(a.x, PIES_Y);
+      a.start = INICIO + slot * ENTRADA;
+    });
   }
 
   private play(a: Actor, anim: Anim, hold = false, after: Anim | null = null): void {
@@ -250,9 +274,9 @@ export class TitleScene implements Scene {
     this.play(a, 'land', false, 'win');
   }
 
-  /** Todos juntos: gritan con el aura encendida, explosiones de todos los colores y el logo da un golpe. */
+  /** Los dos juntos: gritan con el aura encendida, explosiones de sus colores y el logo da un golpe. */
   private finale(): void {
-    for (const a of this.actors) {
+    for (const a of this.pair) {
       this.play(a, 'power', true);
       this.pyro(a.x, [a.def.ui.fx, a.def.ui.color, 0xffd040], 7);
       a.landed = 0;
@@ -303,7 +327,10 @@ export class TitleScene implements Scene {
 
     for (const a of this.actors) {
       const s = c - a.start;
-      if (s === 0) a.sprite.visible = true;
+      if (s === 0) {
+        a.sprite.visible = true;
+        a.shadow.visible = true;
+      }
       if (s >= 0 && s < SALTO) {
         // En el aire: cruza desde su lado (o cae desde arriba) hasta su puesto.
         const p = (s + 1) / SALTO;
@@ -317,8 +344,9 @@ export class TitleScene implements Scene {
         if (a.cur !== want) this.play(a, want, true);
       }
       if (s === SALTO) this.land(a);
-      if (c === this.finalAt + GRITO) this.play(a, 'idle');
-      if (c >= this.finalAt && c < this.finalAt + GRITO) this.fx.powerAura(a.x / S, PIES_Y / S, a.def.ui.fx, c);
+      const inPair = this.pair.includes(a);
+      if (inPair && c === this.finalAt + GRITO) this.play(a, 'idle');
+      if (inPair && c >= this.finalAt && c < this.finalAt + GRITO) this.fx.powerAura(a.x / S, PIES_Y / S, a.def.ui.fx, c);
       this.advance(a);
       // La luz de su color se enciende y queda suave, y detrás sube una columna de fuego de sus colores.
       if (a.landed >= 0) {

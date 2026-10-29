@@ -443,7 +443,7 @@ export class CharacterSelectScene implements Scene {
     const k = ((asset.def.texScale ?? 1) * BIG_H) / 160;
     // Los dos miran al centro.
     b.sprite.scale.set(side === 0 ? k : -k, k);
-    const costume = picked ? costumeFilter(this.colors[side]) : null;
+    const costume = picked ? costumeFilter(this.colors[side], asset.def.costume) : null;
     b.sprite.filters = picked ? (costume ? [costume] : []) : [this.grey[side]];
   }
 

@@ -5,7 +5,12 @@
     "json": "rene-cabana/escenario.json",
     "miniatura": "rene-cabana/miniatura.webp",
     "luchador": "rene",
-    "orden": 1
+    "orden": 1,
+    "lugar": {
+      "nombre": "SUR DE CHILE",
+      "lat": -41.15,
+      "lon": -72.8
+    }
   },
   {
     "id": "rene-plaza",
@@ -13,13 +18,23 @@
     "json": "rene-plaza/escenario.json",
     "miniatura": "rene-plaza/miniatura.webp",
     "luchador": "rene",
-    "orden": 2
+    "orden": 2,
+    "lugar": {
+      "nombre": "SANTIAGO",
+      "lat": -33.52,
+      "lon": -70.6
+    }
   },
   {
     "id": "santiago",
     "nombre": "SANTIAGO DE NOCHE",
     "json": "../titulo/escenario.json",
     "miniatura": "../titulo/miniatura.webp",
-    "orden": 3
+    "orden": 3,
+    "lugar": {
+      "nombre": "SANTIAGO",
+      "lat": -33.42,
+      "lon": -70.65
+    }
   }
 ]

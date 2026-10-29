@@ -1,35 +1,70 @@
 // ARCADE: el jugador elige su luchador y tiene que ganarle a cada uno de los demás,
 // uno tras otro, contra la CPU (la última pelea es un poco más difícil).
-// Entre peleas: la pantalla VS (con el escenario del rival). Si pierde: ¿CONTINUAR?
-// (cuenta regresiva; con aceptar repite esa pelea). Si gana todas: ¡CAMPEÓN!
+// Antes de cada pelea, el MAPA: Chile acostado (el norte a la izquierda), en neón, con
+// un avión que vuela de la sede anterior a la siguiente (como en Street Fighter II).
+// Cada rival pelea en su escenario (o en uno libre) y la final es en el ring de
+// EL GRAN TORNEO (el del título). Después del mapa, la pantalla VS. Si pierde:
+// ¿CONTINUAR? (cuenta regresiva; con aceptar repite esa pelea). Si gana todas: ¡CAMPEÓN!
 
-import { Container, Graphics, Sprite, type Filter, type Text, type Texture } from 'pixi.js';
+import { ColorMatrixFilter, Container, Graphics, Sprite, type Filter, type Text, type Texture } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
 import type { Game, Scene } from '../app/game';
 import { loadDifficulty } from '../app/settings';
 import { costumeFilter } from '../render/costume';
 import { NEON_CYAN, NEON_PINK } from '../render/live';
 import { arcade, outlinedText } from '../render/text';
+import type { StagePlace } from '../content/stages';
 import { DIFFICULTIES } from '../sim/difficulty';
 import { FightScene } from './fight';
 import { MainMenuScene } from './modeSelect';
+import { loadTitleArena } from './title';
 import { backdrop } from './backdrop';
 
-/** Una partida de ARCADE: el luchador del jugador (índice del plantel), su color y los rivales en orden. */
+/** Dónde es una pelea: el escenario (null = el ring de EL GRAN TORNEO), su nombre y su lugar en el mapa. */
+interface Venue {
+  stageId: string | null;
+  nombre: string;
+  lugar: StagePlace;
+}
+
+/** La final: el ring del título, en la costa central. */
+const RING: Venue = { stageId: null, nombre: 'EL GRAN TORNEO', lugar: { nombre: 'EL GRAN TORNEO', lat: -33.05, lon: -71.62 } };
+/** De dónde sale el avión en la primera pelea (el extremo norte). */
+const START: StagePlace = { nombre: 'INICIO', lat: -18.48, lon: -70.31 };
+
+/** Una partida de ARCADE: el luchador del jugador (índice del plantel), su color, los rivales y sus sedes. */
 export interface ArcadeRun {
   player: number;
   color: number;
   opponents: number[];
+  venues: Venue[];
   /** Pelea que toca (0 = la primera). */
   index: number;
 }
 
-/** Empieza el ARCADE: los rivales son todos los demás luchadores del plantel. */
+/**
+ * Empieza el ARCADE: los rivales son todos los demás luchadores del plantel. Cada uno
+ * pelea en su escenario (o en uno libre de la lista) y el último, en el ring del torneo;
+ * el viaje va de norte a sur antes de volver a la final.
+ */
 export function startArcade(game: Game, player: number, color: number): Scene {
-  const opponents = game.assets.roster.map((_, i) => i).filter((i) => i !== player);
+  const roster = game.assets.roster;
+  const entries = game.assets.stages.entries.filter((e) => e.json);
+  const ids = roster.map((_, i) => i).filter((i) => i !== player);
   // Con un solo luchador en el plantel, pelea contra sí mismo (de otro color).
-  if (!opponents.length) opponents.push(player);
-  return new ArcadeVsScene(game, { player, color, opponents, index: 0 });
+  if (!ids.length) ids.push(player);
+  const used = new Set<string>();
+  const venueOf = (opp: number): Venue => {
+    const own = entries.find((e) => e.luchador === roster[opp].def.id && !used.has(e.id));
+    const e = own ?? entries.find((x) => !used.has(x.id)) ?? entries[0];
+    if (!e) return RING;
+    used.add(e.id);
+    return { stageId: e.id, nombre: e.nombre, lugar: e.lugar ?? { nombre: e.nombre, lat: -33.45, lon: -70.66 } };
+  };
+  const last = ids.pop()!;
+  const before = ids.map((opp) => ({ opp, venue: venueOf(opp) })).sort((a, b) => b.venue.lugar.lat - a.venue.lugar.lat);
+  const fights = [...before, { opp: last, venue: RING }];
+  return new ArcadeMapScene(game, { player, color, opponents: fights.map((f) => f.opp), venues: fights.map((f) => f.venue), index: 0 });
 }
 
 type Frames = Array<{ tex: Texture; dur: number }>;
@@ -121,8 +156,8 @@ class ArcadeVsScene extends ArcadeScreen {
     const n = run.opponents.length;
     this.text('ARCADE', 12, VIEW_W / 2, 18, 0xfff4e0, 0x5a0a10);
     this.text(arcade(run.index === n - 1 && n > 1 ? `PELEA FINAL · ${n} DE ${n}` : `PELEA ${run.index + 1} DE ${n}`), 8, VIEW_W / 2, 36, 0xffd040);
-    this.left = new BigFighter(game, run.player, 'idle', 160, 1, costumeFilter(run.color));
-    this.right = new BigFighter(game, opp, 'idle', 160, -1, opp === run.player ? costumeFilter(run.color + 1) : null);
+    this.left = new BigFighter(game, run.player, 'idle', 160, 1, costumeFilter(run.color, game.assets.roster[run.player].def.costume));
+    this.right = new BigFighter(game, opp, 'idle', 160, -1, opp === run.player ? costumeFilter(run.color + 1, roster[opp].def.costume) : null);
     this.left.sprite.position.set(104, 226);
     this.right.sprite.position.set(VIEW_W - 104, 226);
     const glowL = new Graphics().ellipse(104, 226, 52, 9).fill({ color: NEON_PINK, alpha: 0.3 });
@@ -132,23 +167,19 @@ class ArcadeVsScene extends ArcadeScreen {
     this.text(arcade(roster[opp].def.name.toUpperCase()), 9, VIEW_W - 104, 240, NEON_CYAN);
     this.text('VS', 34, VIEW_W / 2, 118, 0xffd040, 0x5a0a10);
     this.go = this.text('', 7, VIEW_W / 2, 196, 0xd8d0e8);
-    // El escenario del rival (o, si no tiene, uno de la lista según la pelea).
-    const lib = game.assets.stages;
-    const owned = lib.entries.find((e) => e.luchador === roster[opp].def.id);
-    const entry = owned ?? lib.entries[run.index % Math.max(1, lib.entries.length)];
-    this.text(arcade(entry ? entry.nombre : ''), 7, VIEW_W / 2, 150, 0xffffff);
-    if (entry) {
-      lib.get(entry.id).then(
-        (st) => {
-          game.assets.stage = st;
-          this.loaded = true;
-        },
-        () => {
-          this.loaded = true;
-          this.failed = true;
-        },
-      );
-    } else this.loaded = true;
+    const venue = run.venues[run.index];
+    this.text(arcade(venue.nombre), 7, VIEW_W / 2, 150, 0xffffff);
+    const load = venue.stageId ? game.assets.stages.get(venue.stageId) : loadTitleArena();
+    load.then(
+      (st) => {
+        game.assets.stage = st;
+        this.loaded = true;
+      },
+      () => {
+        this.loaded = true;
+        this.failed = true;
+      },
+    );
   }
 
   step(): void {
@@ -183,7 +214,7 @@ class ArcadeVsScene extends ArcadeScreen {
         difficulty: DIFFICULTIES[level],
         next: (winner) => {
           if (winner !== 0) return new ArcadeContinueScene(g, run);
-          if (run.index + 1 < n) return new ArcadeVsScene(g, { ...run, index: run.index + 1 });
+          if (run.index + 1 < n) return new ArcadeMapScene(g, { ...run, index: run.index + 1 });
           return new ArcadeEndScene(g, run);
         },
       }),
@@ -192,6 +223,187 @@ class ArcadeVsScene extends ArcadeScreen {
 
   override render(): void {
     super.render();
+  }
+}
+
+/** Contorno simplificado de Chile (latitud, longitud): la costa de norte a sur y la frontera de vuelta. */
+const CHILE: ReadonlyArray<[number, number]> = [
+  [-17.5, -70.4], [-18.5, -70.3], [-20.2, -70.15], [-22.1, -70.2], [-23.6, -70.4], [-25.4, -70.5], [-27.1, -70.9],
+  [-29.9, -71.35], [-31.6, -71.55], [-33.0, -71.65], [-34.5, -72.05], [-36.8, -73.15], [-37.6, -73.65], [-39.8, -73.4],
+  [-41.5, -73.9], [-41.9, -74.0], [-43.4, -74.3], [-44.5, -74.6], [-46.5, -75.6], [-48.5, -75.5], [-50.5, -75.4],
+  [-52.4, -74.9], [-53.5, -73.5], [-54.5, -71.5], [-55.4, -69.5], [-55.9, -67.3], [-54.9, -66.8], [-53.0, -68.6],
+  [-52.6, -68.6], [-52.3, -69.0], [-52.0, -71.0], [-51.0, -72.3], [-49.5, -73.2], [-48.0, -72.4], [-46.5, -71.8],
+  [-45.0, -71.6], [-43.5, -71.8], [-42.0, -71.8], [-40.5, -71.9], [-39.0, -71.4], [-37.5, -71.1], [-36.0, -70.7],
+  [-34.5, -70.3], [-33.0, -70.0], [-31.0, -70.1], [-29.0, -69.9], [-27.3, -68.8], [-25.0, -68.4], [-23.0, -67.2],
+  [-21.5, -68.3], [-19.5, -68.6], [-18.0, -69.2], [-17.5, -69.5],
+];
+
+/** Chile acostado: el norte a la izquierda, el Pacífico abajo. */
+function mapXY(p: { lat: number; lon: number }): { x: number; y: number } {
+  return { x: 22 + (-p.lat - 17) * 11, y: 150 + (-71 - p.lon) * 9.5 };
+}
+
+/** Cuadros que dura el vuelo. */
+const TRAVEL = 150;
+
+/** El mapa: el avión vuela hasta la sede de la próxima pelea; las caras marcan a cada rival. */
+class ArcadeMapScene extends ArcadeScreen {
+  private map = new Graphics();
+  private route = new Graphics();
+  private plane = new Graphics();
+  private marks = new Graphics();
+  private from: { x: number; y: number };
+  private to: { x: number; y: number };
+  private ctrl: { x: number; y: number };
+  private arrived: Text;
+
+  constructor(game: Game, private run: ArcadeRun) {
+    super(game);
+    const roster = game.assets.roster;
+    const n = run.opponents.length;
+    const venue = run.venues[run.index];
+    this.from = mapXY(run.index === 0 ? START : run.venues[run.index - 1].lugar);
+    this.to = mapXY(venue.lugar);
+    // El vuelo hace una curva por arriba (por el lado de la cordillera).
+    this.ctrl = { x: (this.from.x + this.to.x) / 2, y: Math.min(this.from.y, this.to.y) - 46 };
+    this.drawMap();
+    this.ui.addChild(this.map, this.route, this.marks);
+    this.text('ARCADE', 12, VIEW_W / 2, 16, 0xfff4e0, 0x5a0a10);
+    const final = run.index === n - 1 && n > 1;
+    this.text(arcade(final ? `PELEA FINAL · RUMBO A ${venue.nombre}` : `PELEA ${run.index + 1} DE ${n} · RUMBO A ${venue.nombre}`), 7, VIEW_W / 2, 34, 0xffd040);
+    if (venue.lugar.nombre !== venue.nombre) this.text(arcade(venue.lugar.nombre), 6, VIEW_W / 2, 46, 0xd8d0e8);
+    // Las caras de los rivales sobre su sede: los ya vencidos en gris con una X.
+    run.venues.forEach((v, i) => {
+      const at = mapXY(v.lugar);
+      const face = roster[run.opponents[i]].face;
+      // Si dos sedes caen juntas, las caras se separan hacia los lados.
+      const twin = run.venues.findIndex((w, j) => j !== i && Math.abs(mapXY(w.lugar).x - at.x) < 18);
+      const dx = twin < 0 ? 0 : i < twin ? -15 : 15;
+      const fx = at.x + dx;
+      const fy = 72;
+      const frame = new Graphics();
+      frame.moveTo(at.x, at.y - 4).lineTo(fx, fy + 12).stroke({ color: 0x8a7aa8, width: 0.8, alpha: 0.7 });
+      frame.roundRect(fx - 12, fy - 12, 24, 24, 3).fill({ color: 0x140a24 }).stroke({ color: i === run.index ? NEON_CYAN : i < run.index ? 0x5a4a6a : 0xc89a3a, width: i === run.index ? 1.6 : 1 });
+      this.ui.addChild(frame);
+      if (face) {
+        const s = new Sprite(face);
+        s.anchor.set(0.5);
+        s.width = 22;
+        s.height = 22;
+        s.position.set(fx, fy);
+        if (i < run.index) {
+          const grey = new ColorMatrixFilter();
+          grey.desaturate();
+          grey.brightness(0.55, true);
+          s.filters = [grey];
+        }
+        this.ui.addChild(s);
+      }
+      if (i < run.index) {
+        const x = new Graphics();
+        x.moveTo(fx - 9, fy - 9).lineTo(fx + 9, fy + 9).moveTo(fx + 9, fy - 9).lineTo(fx - 9, fy + 9).stroke({ color: 0xff3348, width: 2.2 });
+        this.ui.addChild(x);
+      }
+    });
+    this.ui.addChild(this.plane);
+    const opp = roster[run.opponents[run.index]];
+    this.text(arcade(`PRÓXIMO RIVAL: ${opp.def.name.toUpperCase()}`), 8, VIEW_W / 2, 228, NEON_CYAN);
+    this.arrived = this.text('¡A PELEAR!', 16, VIEW_W / 2, 250, 0xffd040, 0x5a0a10);
+    this.arrived.visible = false;
+  }
+
+  /** Chile en neón, con el océano y la cordillera insinuados y las sedes del torneo. */
+  private drawMap(): void {
+    const g = this.map;
+    // Paralelos tenues cada 5 grados.
+    for (let lat = -20; lat >= -55; lat -= 5) {
+      const { x } = mapXY({ lat, lon: -70 });
+      g.moveTo(x, 92).lineTo(x, 212).stroke({ color: 0x3a2a5a, width: 0.6, alpha: 0.6 });
+    }
+    const pts = CHILE.map(([lat, lon]) => mapXY({ lat, lon }));
+    g.poly(pts.flatMap((p) => [p.x, p.y])).fill({ color: 0x1c1040, alpha: 0.92 });
+    for (const [w, a] of [[5, 0.12], [2.6, 0.3], [1.1, 1]] as const) {
+      g.poly(pts.flatMap((p) => [p.x, p.y])).stroke({ color: NEON_CYAN, width: w, alpha: a, join: 'round' });
+    }
+    const label = (s: string, x: number, y: number, color: number, size = 6): void => {
+      const t = outlinedText(arcade(s), size, color, 0x0a0610, 1);
+      t.anchor.set(0.5);
+      t.position.set(x, y);
+      t.alpha = 0.75;
+      this.ui.addChild(t);
+    };
+    label('OCÉANO PACÍFICO', VIEW_W / 2, 206, 0x6aa8d8);
+    label('N', 14, 150, 0xffd040, 7);
+    const arrow = new Graphics();
+    arrow.moveTo(20, 158).lineTo(10, 158).moveTo(10, 158).lineTo(14, 155).moveTo(10, 158).lineTo(14, 161).stroke({ color: 0xffd040, width: 1 });
+    this.ui.addChild(arrow);
+    // Sedes: un punto por pelea, con su nombre.
+    this.run.venues.forEach((v, i) => {
+      const at = mapXY(v.lugar);
+      g.circle(at.x, at.y, 2.4).fill({ color: i < this.run.index ? 0x5a4a6a : i === this.run.index ? 0xffd040 : 0xff8ac8 });
+    });
+  }
+
+  step(): void {
+    this.t++;
+    const m = this.game.menu;
+    if (m.back && this.t > 10) {
+      this.game.sfx.play('menuBack');
+      this.game.setScene(new MainMenuScene(this.game));
+      return;
+    }
+    if (this.t === TRAVEL) this.game.sfx.play('menuConfirm');
+    this.arrived.visible = this.t > TRAVEL && Math.floor(this.t / 12) % 2 === 0;
+    if ((m.confirm && this.t > 15) || this.t >= TRAVEL + 70) this.game.setScene(new ArcadeVsScene(this.game, this.run));
+  }
+
+  /** Punto de la curva del vuelo (0..1). */
+  private at(k: number): { x: number; y: number } {
+    const u = 1 - k;
+    return {
+      x: u * u * this.from.x + 2 * u * k * this.ctrl.x + k * k * this.to.x,
+      y: u * u * this.from.y + 2 * u * k * this.ctrl.y + k * k * this.to.y,
+    };
+  }
+
+  override render(): void {
+    super.render();
+    const k = Math.min(1, this.t / TRAVEL);
+    const e = k * k * (3 - 2 * k);
+    // Estela punteada desde la salida hasta el avión.
+    const r = this.route;
+    r.clear();
+    for (let i = 0; i < 40; i++) {
+      const a = i / 40;
+      if (a > e) break;
+      if (i % 2) continue;
+      const p0 = this.at(a);
+      const p1 = this.at(Math.min(e, a + 1 / 40));
+      r.moveTo(p0.x, p0.y).lineTo(p1.x, p1.y);
+    }
+    r.stroke({ color: 0xffffff, width: 1.2, alpha: 0.75 });
+    // Destino que late y salida.
+    const mk = this.marks;
+    mk.clear();
+    const pulse = 0.5 + 0.5 * Math.sin(this.t / 6);
+    mk.circle(this.to.x, this.to.y, 5 + pulse * 5).stroke({ color: 0xffd040, width: 1.2, alpha: 0.4 + pulse * 0.5 });
+    mk.circle(this.from.x, this.from.y, 3).fill({ color: 0xffffff, alpha: 0.6 });
+    if (this.t > TRAVEL) mk.circle(this.to.x, this.to.y, 4 + (this.t - TRAVEL) * 0.8).stroke({ color: 0xffffff, width: 1, alpha: Math.max(0, 1 - (this.t - TRAVEL) / 25) });
+    // El avión, mirando hacia donde va.
+    const p = this.at(e);
+    const q = this.at(Math.min(1, e + 0.01));
+    const ang = Math.atan2(q.y - p.y, q.x - p.x) || 0;
+    const pl = this.plane;
+    pl.clear();
+    const rot = (x: number, y: number): [number, number] => [p.x + x * Math.cos(ang) - y * Math.sin(ang), p.y + x * Math.sin(ang) + y * Math.cos(ang)];
+    const shape = (pts: Array<[number, number]>, color: number): void => {
+      pl.poly(pts.flatMap(([x, y]) => rot(x, y))).fill({ color }).stroke({ color: 0x0a0610, width: 0.8 });
+    };
+    shape([[-6, -1.2], [6, -1], [8, 0], [6, 1], [-6, 1.2]], 0xffffff);
+    shape([[0, -1], [-3, -7], [-5, -7], [-3, -1]], 0xe0e8ff);
+    shape([[0, 1], [-3, 7], [-5, 7], [-3, 1]], 0xe0e8ff);
+    shape([[-5, -1], [-7, -3.5], [-8, -3.5], [-7, -1]], 0xff5a7a);
+    shape([[-5, 1], [-7, 3.5], [-8, 3.5], [-7, 1]], 0xff5a7a);
   }
 }
 
@@ -205,7 +417,7 @@ class ArcadeContinueScene extends ArcadeScreen {
 
   constructor(game: Game, private run: ArcadeRun) {
     super(game);
-    this.fighter = new BigFighter(game, run.player, 'lose', 130, 1, costumeFilter(run.color));
+    this.fighter = new BigFighter(game, run.player, 'lose', 130, 1, costumeFilter(run.color, game.assets.roster[run.player].def.costume));
     this.fighter.sprite.position.set(VIEW_W / 2, 236);
     this.fighter.sprite.alpha = 0.85;
     this.ui.addChild(this.fighter.sprite);
@@ -252,7 +464,7 @@ class ArcadeEndScene extends ArcadeScreen {
     super(game);
     const a = game.assets.roster[run.player];
     this.ui.addChild(this.sparks);
-    this.fighter = new BigFighter(game, run.player, 'win', 170, 1, costumeFilter(run.color));
+    this.fighter = new BigFighter(game, run.player, 'win', 170, 1, costumeFilter(run.color, game.assets.roster[run.player].def.costume));
     this.fighter.sprite.position.set(VIEW_W / 2, 238);
     this.ui.addChild(this.fighter.sprite);
     this.text('¡CAMPEÓN!', 30, VIEW_W / 2, 34, 0xffd040, 0x5a0a10);
