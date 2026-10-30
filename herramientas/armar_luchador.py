@@ -154,6 +154,48 @@ def caja_golpe(m: np.ndarray, guardia: np.ndarray, dx: float, dy: float, direcci
     return a_mundo((gx1 - 10, ay - alto * 0.78, gx1 + alto * 0.18, ay - alto * 0.55), ax, ay, k)
 
 
+def con_cabeza(rgb: np.ndarray, m: np.ndarray, ref: np.ndarray, ref_m: np.ndarray, margen: int = 48) -> tuple[np.ndarray, np.ndarray, bool]:
+    """Si el video cortó la punta de la cabeza (el cuerpo toca el borde de arriba), agranda el
+    cuadro hacia arriba y completa la cabeza con la de `ref` (la guardia: misma cámara, mismo
+    tamaño). Busca en la guardia la fila donde la cabeza tiene el mismo ancho que el corte, la
+    alinea por el centro y pega lo que falta encima. Devuelve (rgb, máscara, si cambió)."""
+    filas = np.nonzero(m.any(axis=1))[0]
+    if not len(filas) or filas[0] > 2:
+        return rgb, m, False
+    corte = filas[0]
+    xs = np.nonzero(m[corte])[0]
+    ancho, centro = xs.max() - xs.min(), (xs.max() + xs.min()) / 2
+    ry0 = np.nonzero(ref_m.any(axis=1))[0][0]
+    # La primera fila de la guardia (desde la punta) tan ancha como el corte.
+    dy = None
+    for r in range(ry0, ry0 + margen):
+        rx = np.nonzero(ref_m[r])[0]
+        if len(rx) and rx.max() - rx.min() >= ancho:
+            dy = r - ry0
+            break
+    if not dy:
+        return rgb, m, False
+    rx = np.nonzero(ref_m[ry0 + dy])[0]
+    corr = int(round(centro - (rx.max() + rx.min()) / 2))
+    h, w = m.shape
+    nuevo = np.empty((h + margen, w, 3), dtype=rgb.dtype)
+    nuevo[:] = np.median(rgb[h // 2:, :8].reshape(-1, 3), axis=0)  # el gris del fondo
+    nm = np.zeros((h + margen, w), dtype=bool)
+    nuevo[margen:] = rgb
+    nm[margen:] = m
+    # Lo que falta: las filas de la guardia desde la punta hasta la del corte, corridas al centro.
+    for r in range(dy):
+        fila = ry0 + r
+        destino = margen + corte - dy + r
+        src = np.nonzero(ref_m[fila])[0]
+        for x in src:
+            xd = x + corr
+            if 0 <= xd < w:
+                nuevo[destino, xd] = ref[fila, x]
+                nm[destino, xd] = True
+    return nuevo, nm, True
+
+
 def sin_objeto(rgb: np.ndarray, m: np.ndarray, x_min: int) -> np.ndarray:
     """Quita de la máscara las manchas blancas lisas grandes a la derecha de x_min, con su contorno.
     La piel (colores saturados) se queda aunque esté encima."""
@@ -264,7 +306,7 @@ def main() -> None:
         return clips[nombre]
 
     # Referencia: alto de la guardia y pies.
-    _, guardia = clip(cfg["referencia"]).cuadro(0)
+    guardia_rgb, guardia = clip(cfg["referencia"]).cuadro(0)
     gx0, gy0, gx1, gy1 = caja(guardia)
     alto = gy1 - gy0
     ys, xs = np.nonzero(guardia[gy1 - max(4, int(alto * 0.08)):gy1])
@@ -300,12 +342,19 @@ def main() -> None:
             borrar = spec.get("borrar_objeto")
             if borrar and borrar["desde"] <= i <= borrar["hasta"]:
                 m = sin_objeto(rgb, m, borrar["x_min"])
+            # "cabeza": true completa la punta de la cabeza (el gorro) si el video la cortó
+            # arriba, con la de la guardia. Solo en cuadros con "pies" (el apoyo sale del cuadro).
+            arreglada = False
+            if spec.get("cabeza"):
+                if not spec.get("pies"):
+                    raise SystemExit(f"{nombre}: \"cabeza\" necesita \"pies\"")
+                rgb, m, arreglada = con_cabeza(rgb, m, guardia_rgb, guardia)
             # "centrar": alinea el tronco (caminar, rodar); "pies": el apoyo va en los
             # pies del propio cuadro (cuadros en el aire: el motor ya pone la altura).
             dx = centro_torso(m) - torso0 if spec.get("centrar") or spec.get("pies") else 0.0
             dy = caja(m)[3] - ay0 if spec.get("pies") else 0.0
             ax, ay = ax0 + dx, ay0 + dy
-            tex = f"{id_}/{spec['clip']}/{i}" + ("c" if dx or dy else "")
+            tex = f"{id_}/{spec['clip']}/{i}" + ("c" if dx or dy else "") + ("h" if arreglada else "")
             if tex not in texturas:
                 img, cx0, cy0 = recorte(rgb, m, escala)
                 texturas[tex] = {"img": img, "ax": (ax - cx0) * escala, "ay": (ay - cy0) * escala}

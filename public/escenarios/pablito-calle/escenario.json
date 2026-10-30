@@ -1,0 +1,78 @@
+{
+  "id": "pablito-calle",
+  "name": "LA CALLE DEL PABLITO",
+  "layers": [
+    {
+      "src": "fondo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -324.67,
+      "left": -5.6
+    },
+    {
+      "video": "fondo.mp4",
+      "scale": 0.280978,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -324.67,
+      "left": -5.6
+    },
+    {
+      "src": "niebla.webp",
+      "scale": 0.351562,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -97.955,
+      "repeatX": true,
+      "scrollX": 0.04,
+      "additive": true,
+      "alpha": 0.14
+    },
+    {
+      "src": "suelo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -43.955,
+      "floor": {
+        "strips": 64
+      }
+    }
+  ],
+  "particles": [
+    {
+      "type": "lluvia",
+      "count": 110,
+      "color": 12638463,
+      "alpha": 0.32,
+      "size": 1.2,
+      "band": [
+        -260,
+        6
+      ],
+      "parallax": 0.9
+    },
+    {
+      "type": "lluvia",
+      "count": 50,
+      "color": 16763080,
+      "alpha": 0.22,
+      "size": 1.0,
+      "band": [
+        -260,
+        0
+      ],
+      "parallax": 0.75
+    }
+  ],
+  "music": "pablito-calle"
+}

@@ -26,11 +26,24 @@
     }
   },
   {
+    "id": "pablito-calle",
+    "nombre": "LA CALLE DEL PABLITO",
+    "json": "pablito-calle/escenario.json",
+    "miniatura": "pablito-calle/miniatura.webp",
+    "luchador": "pablito",
+    "orden": 3,
+    "lugar": {
+      "nombre": "VALDIVIA",
+      "lat": -39.81,
+      "lon": -73.25
+    }
+  },
+  {
     "id": "santiago",
     "nombre": "SANTIAGO DE NOCHE",
     "json": "../titulo/escenario.json",
     "miniatura": "../titulo/miniatura.webp",
-    "orden": 3,
+    "orden": 4,
     "lugar": {
       "nombre": "SANTIAGO",
       "lat": -33.42,

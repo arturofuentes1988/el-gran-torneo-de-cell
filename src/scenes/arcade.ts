@@ -29,7 +29,7 @@ interface Venue {
 
 /** La final: el ring del título, en la costa central. */
 const RING: Venue = { stageId: null, nombre: 'EL GRAN TORNEO', lugar: { nombre: 'EL GRAN TORNEO', lat: -33.05, lon: -71.62 } };
-/** De dónde sale el avión en la primera pelea (el extremo norte). */
+/** De dónde sale el avión si el luchador del jugador no tiene ciudad (el extremo norte). */
 const START: StagePlace = { nombre: 'INICIO', lat: -18.48, lon: -70.31 };
 
 /** Una partida de ARCADE: el luchador del jugador (índice del plantel), su color, los rivales y sus sedes. */
@@ -38,14 +38,16 @@ export interface ArcadeRun {
   color: number;
   opponents: number[];
   venues: Venue[];
+  /** De dónde sale el viaje: la ciudad del luchador del jugador. */
+  home: StagePlace;
   /** Pelea que toca (0 = la primera). */
   index: number;
 }
 
 /**
- * Empieza el ARCADE: los rivales son todos los demás luchadores del plantel. Cada uno
- * pelea en su escenario (o en uno libre de la lista) y el último, en el ring del torneo;
- * el viaje va de norte a sur antes de volver a la final.
+ * Empieza el ARCADE: los rivales son todos los demás luchadores del plantel. El viaje sale
+ * de la ciudad del jugador y va a la de cada rival (de norte a sur), que pelea en su
+ * escenario (o en uno libre de esa ciudad o de la lista); el último, en el ring del torneo.
  */
 export function startArcade(game: Game, player: number, color: number): Scene {
   const roster = game.assets.roster;
@@ -55,16 +57,45 @@ export function startArcade(game: Game, player: number, color: number): Scene {
   if (!ids.length) ids.push(player);
   const used = new Set<string>();
   const venueOf = (opp: number): Venue => {
-    const own = entries.find((e) => e.luchador === roster[opp].def.id && !used.has(e.id));
-    const e = own ?? entries.find((x) => !used.has(x.id)) ?? entries[0];
+    const city = roster[opp].def.ciudad;
+    const free = (x: (typeof entries)[number]) => !used.has(x.id);
+    const mine = (x: (typeof entries)[number]) => x.luchador === roster[opp].def.id;
+    const here = (x: (typeof entries)[number]) => !!city && x.lugar?.nombre === city.nombre;
+    const e =
+      entries.find((x) => free(x) && mine(x) && here(x)) ??
+      entries.find((x) => free(x) && here(x)) ??
+      entries.find((x) => free(x) && mine(x)) ??
+      entries.find(free) ??
+      entries[0];
     if (!e) return RING;
     used.add(e.id);
-    return { stageId: e.id, nombre: e.nombre, lugar: e.lugar ?? { nombre: e.nombre, lat: -33.45, lon: -70.66 } };
+    // En el mapa va en la ciudad del rival (si se sabe); si no, donde queda el escenario.
+    return { stageId: e.id, nombre: e.nombre, lugar: city ?? e.lugar ?? { nombre: e.nombre, lat: -33.45, lon: -70.66 } };
   };
-  const last = ids.pop()!;
-  const before = ids.map((opp) => ({ opp, venue: venueOf(opp) })).sort((a, b) => b.venue.lugar.lat - a.venue.lugar.lat);
+  // La final (en el ring) es contra quien no tiene escenario propio; si todos tienen, contra
+  // el que tiene más (así los demás pelean en su escenario, en su ciudad).
+  const ownStages = (opp: number) => entries.filter((e) => e.luchador === roster[opp].def.id).length;
+  const finalist = ids.reduce((best, opp) => {
+    const a = ownStages(opp);
+    const b = ownStages(best);
+    return (a === 0) !== (b === 0) ? (a === 0 ? opp : best) : a >= b ? opp : best;
+  }, ids[ids.length - 1]);
+  ids.splice(ids.indexOf(finalist), 1);
+  const last = finalist;
+  const home = roster[player].def.ciudad ?? START;
+  // La ruta: desde la casa del jugador, siempre a la ciudad más cercana que falte.
+  const pending = ids.map((opp) => ({ opp, venue: venueOf(opp) }));
+  const before: typeof pending = [];
+  let here: StagePlace = home;
+  while (pending.length) {
+    const d = (v: Venue) => (v.lugar.lat - here.lat) ** 2 + (v.lugar.lon - here.lon) ** 2;
+    const k = pending.reduce((best, f, i) => (d(f.venue) < d(pending[best].venue) ? i : best), 0);
+    const [next] = pending.splice(k, 1);
+    before.push(next);
+    here = next.venue.lugar;
+  }
   const fights = [...before, { opp: last, venue: RING }];
-  return new ArcadeMapScene(game, { player, color, opponents: fights.map((f) => f.opp), venues: fights.map((f) => f.venue), index: 0 });
+  return new ArcadeMapScene(game, { player, color, opponents: fights.map((f) => f.opp), venues: fights.map((f) => f.venue), home, index: 0 });
 }
 
 type Frames = Array<{ tex: Texture; dur: number }>;
@@ -254,7 +285,8 @@ class ArcadeMapScene extends ArcadeScreen {
   private marks = new Graphics();
   private from: { x: number; y: number };
   private to: { x: number; y: number };
-  private ctrl: { x: number; y: number };
+  private c1: { x: number; y: number };
+  private c2: { x: number; y: number };
   private arrived: Text;
 
   constructor(game: Game, private run: ArcadeRun) {
@@ -262,27 +294,47 @@ class ArcadeMapScene extends ArcadeScreen {
     const roster = game.assets.roster;
     const n = run.opponents.length;
     const venue = run.venues[run.index];
-    this.from = mapXY(run.index === 0 ? START : run.venues[run.index - 1].lugar);
+    this.from = mapXY(run.index === 0 ? run.home : run.venues[run.index - 1].lugar);
     this.to = mapXY(venue.lugar);
-    // El vuelo hace una curva por arriba (por el lado de la cordillera).
-    this.ctrl = { x: (this.from.x + this.to.x) / 2, y: Math.min(this.from.y, this.to.y) - 46 };
+    if (Math.hypot(this.to.x - this.from.x, this.to.y - this.from.y) < 8) {
+      // Pelea en la misma ciudad: el avión da una vuelta en el aire y vuelve a bajar.
+      this.c1 = { x: this.from.x - 40, y: this.from.y - 52 };
+      this.c2 = { x: this.to.x + 40, y: this.to.y - 52 };
+    } else {
+      // El vuelo hace una curva por arriba (por el lado de la cordillera).
+      const ctrl = { x: (this.from.x + this.to.x) / 2, y: Math.min(this.from.y, this.to.y) - 46 };
+      this.c1 = { x: this.from.x + ((ctrl.x - this.from.x) * 2) / 3, y: this.from.y + ((ctrl.y - this.from.y) * 2) / 3 };
+      this.c2 = { x: this.to.x + ((ctrl.x - this.to.x) * 2) / 3, y: this.to.y + ((ctrl.y - this.to.y) * 2) / 3 };
+    }
     this.drawMap();
     this.ui.addChild(this.map, this.route, this.marks);
     this.text('ARCADE', 12, VIEW_W / 2, 16, 0xfff4e0, 0x5a0a10);
     const final = run.index === n - 1 && n > 1;
-    this.text(arcade(final ? `PELEA FINAL · RUMBO A ${venue.nombre}` : `PELEA ${run.index + 1} DE ${n} · RUMBO A ${venue.nombre}`), 7, VIEW_W / 2, 34, 0xffd040);
-    if (venue.lugar.nombre !== venue.nombre) this.text(arcade(venue.lugar.nombre), 6, VIEW_W / 2, 46, 0xd8d0e8);
-    // Las caras de los rivales sobre su sede: los ya vencidos en gris con una X.
-    run.venues.forEach((v, i) => {
-      const at = mapXY(v.lugar);
+    this.text(arcade(final ? `PELEA FINAL · RUMBO A ${venue.lugar.nombre}` : `PELEA ${run.index + 1} DE ${n} · RUMBO A ${venue.lugar.nombre}`), 7, VIEW_W / 2, 34, 0xffd040);
+    if (venue.lugar.nombre !== venue.nombre) this.text(arcade(venue.nombre), 6, VIEW_W / 2, 46, 0xd8d0e8);
+    // Las caras de los rivales sobre su ciudad (el de la final también, aunque pelee en el
+    // ring), con el nombre de la ciudad debajo: los ya vencidos en gris con una X.
+    const homes = run.opponents.map((o, i) => roster[o].def.ciudad ?? run.venues[i].lugar);
+    const named = new Set<string>();
+    homes.forEach((h, i) => {
+      const at = mapXY(h);
       const face = roster[run.opponents[i]].face;
-      // Si dos sedes caen juntas, las caras se separan hacia los lados.
-      const twin = run.venues.findIndex((w, j) => j !== i && Math.abs(mapXY(w.lugar).x - at.x) < 18);
-      const dx = twin < 0 ? 0 : i < twin ? -15 : 15;
+      // Si dos ciudades caen juntas, las caras se separan hacia los lados.
+      const twins = homes.map((_, j) => j).filter((j) => Math.abs(mapXY(homes[j]).x - at.x) < 18);
+      const slot = twins.indexOf(i);
+      const dx = (slot - (twins.length - 1) / 2) * 30;
       const fx = at.x + dx;
       const fy = 72;
+      if (!named.has(h.nombre)) {
+        named.add(h.nombre);
+        const city = outlinedText(arcade(h.nombre), 5, 0xd8d0e8, 0x0a0610, 1);
+        city.anchor.set(0.5, 0);
+        city.position.set(at.x, fy + 14);
+        this.ui.addChild(city);
+      }
       const frame = new Graphics();
-      frame.moveTo(at.x, at.y - 4).lineTo(fx, fy + 12).stroke({ color: 0x8a7aa8, width: 0.8, alpha: 0.7 });
+      frame.moveTo(at.x, at.y - 4).lineTo(fx, fy + 22).stroke({ color: 0x8a7aa8, width: 0.8, alpha: 0.7 });
+      frame.circle(at.x, at.y, 1.8).fill({ color: 0xd8d0e8 });
       frame.roundRect(fx - 12, fy - 12, 24, 24, 3).fill({ color: 0x140a24 }).stroke({ color: i === run.index ? NEON_CYAN : i < run.index ? 0x5a4a6a : 0xc89a3a, width: i === run.index ? 1.6 : 1 });
       this.ui.addChild(frame);
       if (face) {
@@ -305,6 +357,23 @@ class ArcadeMapScene extends ArcadeScreen {
         this.ui.addChild(x);
       }
     });
+    const homeAt = mapXY(run.home);
+    const myFace = roster[run.player].face;
+    if (myFace && run.index === 0) {
+      const fy = 228 - 30;
+      const frame = new Graphics();
+      frame.moveTo(homeAt.x, homeAt.y + 4).lineTo(homeAt.x, fy - 12).stroke({ color: 0x8a7aa8, width: 0.8, alpha: 0.7 });
+      frame.roundRect(homeAt.x - 12, fy - 12, 24, 24, 3).fill({ color: 0x140a24 }).stroke({ color: NEON_PINK, width: 1.6 });
+      const s = new Sprite(myFace);
+      s.anchor.set(0.5);
+      s.width = 22;
+      s.height = 22;
+      s.position.set(homeAt.x, fy);
+      const tag = outlinedText(arcade(`SALIDA: ${run.home.nombre}`), 5, NEON_PINK, 0x0a0610, 1);
+      tag.anchor.set(0.5, 0);
+      tag.position.set(homeAt.x, fy + 13);
+      this.ui.addChild(frame, s, tag);
+    }
     this.ui.addChild(this.plane);
     const opp = roster[run.opponents[run.index]];
     this.text(arcade(`PRÓXIMO RIVAL: ${opp.def.name.toUpperCase()}`), 8, VIEW_W / 2, 228, NEON_CYAN);
@@ -332,7 +401,9 @@ class ArcadeMapScene extends ArcadeScreen {
       t.alpha = 0.75;
       this.ui.addChild(t);
     };
-    label('OCÉANO PACÍFICO', VIEW_W / 2, 206, 0x6aa8d8);
+    const homeX = mapXY(this.run.home).x;
+    const oceanX = this.run.index > 0 || Math.abs(homeX - VIEW_W / 2) > 80 ? VIEW_W / 2 : homeX < VIEW_W / 2 ? homeX + 110 : homeX - 110;
+    label('OCÉANO PACÍFICO', oceanX, 206, 0x6aa8d8);
     label('N', 14, 150, 0xffd040, 7);
     const arrow = new Graphics();
     arrow.moveTo(20, 158).lineTo(10, 158).moveTo(10, 158).lineTo(14, 155).moveTo(10, 158).lineTo(14, 161).stroke({ color: 0xffd040, width: 1 });
@@ -360,9 +431,13 @@ class ArcadeMapScene extends ArcadeScreen {
   /** Punto de la curva del vuelo (0..1). */
   private at(k: number): { x: number; y: number } {
     const u = 1 - k;
+    const a = u * u * u;
+    const b = 3 * u * u * k;
+    const c = 3 * u * k * k;
+    const d = k * k * k;
     return {
-      x: u * u * this.from.x + 2 * u * k * this.ctrl.x + k * k * this.to.x,
-      y: u * u * this.from.y + 2 * u * k * this.ctrl.y + k * k * this.to.y,
+      x: a * this.from.x + b * this.c1.x + c * this.c2.x + d * this.to.x,
+      y: a * this.from.y + b * this.c1.y + c * this.c2.y + d * this.to.y,
     };
   }
 

@@ -325,6 +325,8 @@ export interface FighterDef {
   comboFx?: 'electrico';
   /** Cuál es su ropa, para los colores alternativos (ver render/costume.ts). */
   costume?: CostumeDef;
+  /** De dónde es (para el mapa del ARCADE): nombre de la ciudad, latitud y longitud. */
+  ciudad?: { nombre: string; lat: number; lon: number };
   /**
    * 2 VS 2: movimiento (id de moves) que hace al entrar como AYUDA. Si falta, el
    * primer especial que lanza un proyectil; si no tiene, el primer especial.

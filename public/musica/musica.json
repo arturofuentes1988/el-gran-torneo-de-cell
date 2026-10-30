@@ -16,5 +16,11 @@
     "bpm": 100.08,
     "loopStart": 19.7,
     "loopEnd": 77.2616
+  },
+  "pablito-calle": {
+    "archivo": "pablito-calle.mp3",
+    "bpm": 100.02,
+    "loopStart": 21.05,
+    "loopEnd": 81.0348
   }
 }

@@ -390,8 +390,10 @@ el fondo con paralaje 0,7, el piso en franjas, las luces de la imagen como capas
 que laten (máscaras por brillo y saturación), una bruma que se desplaza, las
 partículas, la miniatura, y la entrada en `escenarios.json`. Se ajustan
 `corte_suelo` (dónde empieza el piso: bajo la base de lo que está atrás) y `pies`
-(dónde pisan los luchadores). Ver `arte/escenarios/rene/puente.json` y
-los prompts en `arte/escenarios/prompts.md`.
+(dónde pisan los luchadores). `lugar` (`{nombre, lat, lon}`) dice dónde queda, para
+el mapa del ARCADE. Ver `arte/escenarios/rene/puente.json`,
+`arte/escenarios/pablito/calle.json` (con lluvia) y los prompts en
+`arte/escenarios/prompts.md`.
 
 ## 10. Efectos HD
 

@@ -4,8 +4,8 @@ Juego de pelea 2D para el navegador, estilo arcade (SNK / Marvel vs Capcom)
 con pixel art y efectos modernos. Parodia sin fines de lucro.
 
 **Estado: en desarrollo.** Se puede jugar con Loco René, Pablito Neuquén y el
-Flaitiano (sprites, voces y poderes definitivos) en los escenarios de René y en
-Santiago de noche. Los demás luchadores del plantel vienen después.
+Flaitiano (sprites, voces y poderes definitivos) en los escenarios de René, en
+la calle del Pablito (Valdivia, con lluvia) y en Santiago de noche. Los demás luchadores del plantel vienen después.
 
 ## Cómo correrlo
 
@@ -74,7 +74,8 @@ música baja un poco mientras alguien habla.
 |---|---|---|
 | Título y menús | `titulo.mp3` | Suno V6 (vía kie.ai), versión 2 |
 | La cabaña del lago | `rene-cabana.mp3` | Suno V6, versión 2 |
-| La plaza de la pobla | `rene-plaza.mp3` | Suno V6, versión 2 |
+| La cancha | `rene-plaza.mp3` | Suno V6, versión 2 |
+| La calle del Pablito | `pablito-calle.mp3` | ACE-Step 1.5 (local), versión 2, con lluvia |
 | Santiago de noche (arena) | `titulo.mp3` | El mismo tema del título |
 
 Las dos versiones de cada tema están en `arte/musica/suno/`. Para cambiar de
@@ -84,7 +85,10 @@ une el final con el inicio sin corte, iguala el volumen y actualiza `musica.json
 `herramientas/musica_suno.py` pide temas nuevos a Suno (la clave de kie.ai va en
 la variable `KIE_API_KEY`, nunca en el proyecto). También quedan
 `herramientas/musica.py` (temas sintetizados en código, de reemplazo, guardados en
-`arte/musica/sintetizados/`) y `herramientas/musica_ia.py` (ACE-Step, local).
+`arte/musica/sintetizados/`) y `herramientas/musica_ia.py` (ACE-Step, local: corre
+en la tarjeta de video, sin créditos; sus versiones quedan en `arte/musica/ia/`).
+`herramientas/musica_lluvia.py` mezcla una lluvia suave bajo un tema (la cumbia
+sureña de la calle del Pablito).
 
 ## Controles
 
@@ -110,9 +114,12 @@ o Retroceso para volver. El **MENÚ PRINCIPAL** tiene:
 
 - **ARCADE**: eliges tu luchador y le ganas a cada uno de los demás contra la
   CPU. Antes de cada pelea, un mapa de Chile (acostado, el norte a la izquierda)
-  muestra el avión viajando a la sede: cada rival pelea en su escenario o en uno
-  libre, y la final es en el ring de EL GRAN TORNEO (la última pelea es un poco
-  más difícil). Si pierdes, ¿CONTINUAR? repite esa pelea; si les ganas a todos,
+  muestra el avión saliendo de la ciudad de tu luchador (el campo `ciudad` de su
+  definición: René y el Flaitiano son de Santiago, Pablito de Valdivia) hacia la
+  ciudad de cada rival, siempre a la más cercana. Cada rival pelea en su
+  escenario (o en uno de su ciudad), y la final es en el ring de EL GRAN TORNEO,
+  contra quien no tenga escenario propio (la última pelea es un poco más
+  difícil). Si pierdes, ¿CONTINUAR? repite esa pelea; si les ganas a todos,
   ¡CAMPEÓN!
 - **CASUAL**: 1 VS CPU, 1 VS 1, 2 VS 2 y PRÁCTICA.
 - **OPCIONES**: PERSONAJES, MOVIMIENTOS, ESCENARIOS, CONTROLES y DIFICULTAD

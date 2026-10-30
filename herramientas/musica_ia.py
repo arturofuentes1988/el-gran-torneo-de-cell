@@ -45,6 +45,17 @@ TEMAS = {
         ),
         'bpm': 100, 'keyscale': 'A minor', 'duration': 100,
     },
+    # La calle del Pablito (Valdivia, de noche con lluvia). Se usó la versión 2, con la cama de
+    # lluvia de herramientas/musica_lluvia.py a -17 dB.
+    'pablito-calle': {
+        'caption': (
+            'Chilean southern cumbia (cumbia surena) instrumental for a video game fighting stage: '
+            'lively accordion lead melody, twangy clean electric requinto guitar riffs, bouncy electric bass, '
+            'guiro, congas and timbales, warm melancholic minor key, rainy winter night in a small southern town, '
+            'soft sound of rain in the background, energetic danceable groove, retro 1990s Chilean cumbia ranchera production'
+        ),
+        'bpm': 100, 'keyscale': 'A minor', 'duration': 100,
+    },
 }
 
 
