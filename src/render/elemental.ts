@@ -2,13 +2,14 @@
 // vectores para que se vean nítidos en HD:
 // - bolt(): un rayo quebrado con ramas, núcleo blanco y halo celeste.
 // - ProjectileLook: el dibujo propio de un proyectil con `look` ('rayo', 'rastas',
-//   'tornado'), cuadro a cuadro según su edad.
+//   'tornado'; y los del Vendedor de Leña, en render/fuego.ts), cuadro a cuadro según su edad.
 // - StormShow: la tormenta del súper (cinematic.lights = 'tormenta'): cielo oscuro,
 //   lluvia y relámpagos, detrás de los luchadores, en unidades de pantalla (480x270).
 
 import { Container, Graphics } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
 import type { Projectile } from '../sim/match';
+import { drawSilbido, drawSonico, drawTronco, drawTroncos } from './fuego';
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 
@@ -75,7 +76,8 @@ export class ProjectileLook {
 
   /** Cuadros que se sigue viendo después de que el proyectil desaparece (el rayo se apaga, el remolino se deshace). */
   get linger(): number {
-    return this.kind === 'rayo' ? 14 : this.kind === 'tornado' ? 18 : 0;
+    const linger: Record<string, number> = { rayo: 14, tornado: 18, troncos: 16, sonico: 20 };
+    return linger[this.kind] ?? 0;
   }
 
   /** Dibuja el proyectil; `after` = cuadros desde que desapareció (para que se apague suave). */
@@ -85,6 +87,10 @@ export class ProjectileLook {
     if (this.kind === 'rayo') this.rayo(p, after);
     else if (this.kind === 'rastas') this.rastas(p);
     else if (this.kind === 'tornado') this.tornado(p, after);
+    else if (this.kind === 'silbido') drawSilbido(this.base, this.g, p);
+    else if (this.kind === 'tronco') drawTronco(this.base, this.g, p);
+    else if (this.kind === 'troncos') drawTroncos(this.base, this.g, p, after);
+    else if (this.kind === 'sonico') drawSonico(this.g, p, after);
   }
 
   /** Aviso (nube que chispea arriba y un brillo en el suelo) y después el rayo que cae. */

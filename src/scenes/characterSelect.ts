@@ -425,7 +425,9 @@ export class CharacterSelectScene implements Scene {
     const cell = this.cells[this.pos[side]];
     const asset = picked ? roster[this.picks[side]] : cell.asset;
     const key = `${picked ? 'p' : 'h'}:${asset?.def.id ?? (cell.random ? 'random' : 'none')}:${picked ? this.colors[side] : -1}`;
-    b.colorText.text = this.stages[side] === 'color' ? arcade(`◄ COLOR ${this.colors[side] + 1} ►`) : '';
+    // La ropa de visita (color 1 de quien la tiene) se nombra así.
+    const away = this.colors[side] === 1 && !!asset?.def.costume?.visita;
+    b.colorText.text = this.stages[side] === 'color' ? arcade(away ? '◄ VISITA ►' : `◄ COLOR ${this.colors[side] + 1} ►`) : '';
     if (b.shown === key) return;
     b.shown = key;
     b.question.visible = !asset;

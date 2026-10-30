@@ -39,11 +39,24 @@
     }
   },
   {
+    "id": "lena-valparaiso",
+    "nombre": "LOS CERROS DE VALPARAÍSO",
+    "json": "lena-valparaiso/escenario.json",
+    "miniatura": "lena-valparaiso/miniatura.webp",
+    "luchador": "lena",
+    "orden": 4,
+    "lugar": {
+      "nombre": "VALPARAÍSO",
+      "lat": -33.047,
+      "lon": -71.612
+    }
+  },
+  {
     "id": "santiago",
     "nombre": "SANTIAGO DE NOCHE",
     "json": "../titulo/escenario.json",
     "miniatura": "../titulo/miniatura.webp",
-    "orden": 4,
+    "orden": 5,
     "lugar": {
       "nombre": "SANTIAGO",
       "lat": -33.42,

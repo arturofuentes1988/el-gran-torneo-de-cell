@@ -1,0 +1,42 @@
+{
+  "voz/intro": "aqui-estamos.mp3",
+  "voz/silbidito": "un-silbidito.mp3",
+  "voz/paseo": [
+    "te-paseo.mp3",
+    "te-paseamos.mp3"
+  ],
+  "voz/lena": "numero-uno-del-party.mp3",
+  "voz/poder": "dia-del-legendario.mp3",
+  "voz/super": "un-silbidito.mp3",
+  "voz/super-remate": "esferas-del-dragon.mp3",
+  "voz/ultra": "numero-uno-del-party.mp3",
+  "voz/ultra-1": [
+    "te-paseo.mp3",
+    "te-paseamos.mp3"
+  ],
+  "voz/ultra-2": "ni-un-brillo.mp3",
+  "voz/ultra-3": "un-silbidito.mp3",
+  "voz/ultra-4": "yo-soy-tu-taita.mp3",
+  "voz/remate": "yo-soy-tu-taita.mp3",
+  "voz/victoria": [
+    "yo-soy-tu-taita.mp3",
+    "numero-uno-del-party.mp3"
+  ],
+  "voz/risa": "ni-un-brillo.mp3",
+  "voz/burla-brillo": "ni-un-brillo.mp3",
+  "voz/burla-taita": "yo-soy-tu-taita.mp3",
+  "voz/combo-corto": [
+    "te-paseo.mp3",
+    "te-paseamos.mp3"
+  ],
+  "voz/combo-medio": "ni-un-brillo.mp3",
+  "voz/combo-largo": "numero-uno-del-party.mp3",
+  "voz/combo-viral": "yo-soy-tu-taita.mp3",
+  "voz/combo-ultra": "esferas-del-dragon.mp3",
+  "silbido/corto": "silbido-corto.mp3",
+  "silbido/largo": [
+    "silbido-pebre-1.mp3",
+    "silbido-pebre-2.mp3"
+  ],
+  "silbido/ultra": "silbido-ultra.mp3"
+}

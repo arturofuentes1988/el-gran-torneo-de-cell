@@ -129,9 +129,10 @@ export interface SuperCinematic {
   portraitScale?: number;
   /**
    * Show de luces mientras dura el súper: 'disco' = bola de espejos, focos y manchas de color al
-   * ritmo; 'tormenta' = cielo oscuro, lluvia y relámpagos.
+   * ritmo; 'tormenta' = cielo oscuro, lluvia y relámpagos; 'ultrainstinto' = pantalla oscura,
+   * aura plateada y destellos (el Vendedor de Leña); 'fiesta' = focos de colores, confeti y fuegos artificiales.
    */
-  lights?: 'disco' | 'tormenta';
+  lights?: LightsKind;
   /** Escenario que reemplaza al de la pelea mientras dura (ej. el ultra en otro lugar): id de escenario. */
   backdrop?: string;
   /** Pedazo de canción que suena con el súper: voz propia del luchador ("voz/…"). */
@@ -144,8 +145,11 @@ export interface SuperCinematic {
  * mash: machacar el botón (varias veces seguidas). hold: mantener el botón apretado medio
  * segundo y soltarlo. chargeSuper: cargar atrás y luego → ← →.
  */
+/** Show de luces de un súper (ver CinematicDef.lights). */
+export type LightsKind = 'disco' | 'tormenta' | 'ultrainstinto' | 'fiesta';
+
 export type MotionId =
-  | 'qcf' | 'qcb' | 'dp' | 'qcf2' | 'hcf' | 'hcb' | 'charge' | 'ff' | 'bf' | 'fbf' | 'mash' | 'hold' | 'chargeSuper';
+  | 'qcf' | 'qcb' | 'dp' | 'qcf2' | 'hcf' | 'hcb' | 'charge' | 'ff' | 'bb' | 'dd' | 'bf' | 'fbf' | 'mash' | 'hold' | 'chargeSuper';
 export type MoveKind = 'normal' | 'special' | 'super' | 'ultra' | 'throw';
 
 /** Un tramo de la secuencia automática del ultra: una animación del luchador y cuántos golpes da. */
@@ -246,7 +250,10 @@ export interface ProjectileDef {
   at?: 'opponent';
   /** Cuadros de aviso antes de que pueda golpear (el rayo que va a caer). */
   delay?: number;
-  /** Dibujo propio en vez de (o además de) sus cuadros: 'rayo', 'tornado', 'rastas', 'geiser'. */
+  /**
+   * Dibujo propio en vez de (o además de) sus cuadros: 'rayo', 'tornado', 'rastas', 'geiser' (el Flaitiano);
+   * 'silbido', 'tronco', 'troncos', 'sonico' (el Vendedor de Leña).
+   */
   look?: string;
 }
 
@@ -321,8 +328,11 @@ export interface FighterDef {
   combos?: Array<{ name: string; steps: string }>;
   /** Ajustes de las mecánicas avanzadas (opcional). */
   mechanics?: MechanicsDef;
-  /** Efectos que crecen con el largo de sus combos: 'electrico' = chispas, brillo, agua y rayos. */
-  comboFx?: 'electrico';
+  /**
+   * Efectos que crecen con el largo de sus combos: 'electrico' = chispas, brillo, agua y rayos;
+   * 'fuego' = brasas, aura de llamas, estallidos y un pilar de fuego.
+   */
+  comboFx?: 'electrico' | 'fuego';
   /** Cuál es su ropa, para los colores alternativos (ver render/costume.ts). */
   costume?: CostumeDef;
   /** De dónde es (para el mapa del ARCADE): nombre de la ciudad, latitud y longitud. */
@@ -345,6 +355,15 @@ export interface CostumeDef {
   hues?: Array<[number, number, number]>;
   head?: number;
   feet?: number;
+  /** El color 1 es su ropa de visita: la ropa de los rangos de tono queda blanca (un luchador repetido la usa). */
+  visita?: boolean;
+  /**
+   * Fracción de arriba del cuadro en que se reconoce la cara por la piel de alrededor (dientes,
+   * ojos, labios quedan como estaban; la ropa de los hombros se tiñe). Con esto `head` puede ser 0.
+   */
+  face?: number;
+  /** Cuántos de los 8 vecinos tienen que ser piel para que un pixel cuente como cara (por defecto 3). */
+  faceNeighbors?: number;
 }
 
 /** Una frase de la pelá con su voz (la voz suena al empezar la burla, junto con el globo). */

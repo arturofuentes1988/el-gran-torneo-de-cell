@@ -180,7 +180,17 @@ del súper y su retrato (mientras no haya retrato se muestra la silueta).
 - `portraitScale`: unidades de mundo por pixel del retrato. Si falta, el retrato se
   ajusta solo a 1,2 veces el alto de la banda.
 - Sin retrato se usa la silueta del luchador al doble de tamaño (respeta `texScale`).
-- `lights`: `"disco"` llena el escenario de luces de discoteca mientras dura el súper.
+- `lights`: show de luces mientras dura el súper. `"disco"` llena el escenario de luces
+  de discoteca; `"tormenta"` pone cielo oscuro, lluvia y relámpagos (el Flaitiano);
+  `"ultrainstinto"` oscurece la pantalla con haces y destellos plateados y un aura
+  plateada en quien lo hace; `"fiesta"` trae focos de colores, confeti y fuegos
+  artificiales (el Vendedor de Leña, `src/render/fuego.ts`).
+- Proyectiles con dibujo propio (`look`): `"silbido"` (remolino de viento con notas que
+  deja mareado), `"tronco"` (el tronco lanzado que gira), `"troncos"` (troncos ardiendo que caen
+  sobre el rival, uno por golpe: el primero al terminar `delay` y luego cada
+  `hitInterval`) y `"sonico"` (rayo plateado; su último golpe triza la pantalla).
+  `hitOverlay: "remolino"` dibuja fuego girando alrededor del rival durante el agarre.
+- Los nombres largos se achican solos para caber en el cartel.
 - `song`: voz propia del luchador (`"voz/shipitia"`) con un pedazo de canción que
   suena al empezar el súper, por el canal de voz del luchador (sección 12).
 - El primer cuadro de la animación del súper se ve durante todo el congelamiento.

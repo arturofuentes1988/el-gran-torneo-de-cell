@@ -287,6 +287,9 @@ export class Hud {
     const tx = left ? 150 : VIEW_W - 150;
     this.cutinFighter.position.set(tx, CUT_Y + 14);
     this.cutinName.position.set(tx, CUT_Y + 30);
+    // Los nombres largos ("SILBIDO DE LA MUERTE: ULTRA INSTINTO") se achican para caber en el cartel.
+    this.cutinName.scale.set(1);
+    this.cutinName.scale.set(Math.min(1, (VIEW_W - 160) / Math.max(1, this.cutinName.width)));
     this.cutin.visible = true;
   }
 

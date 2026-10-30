@@ -210,6 +210,8 @@ export class Match {
   roundWinner: 0 | 1 | -1 | null = null;
   matchWinner: 0 | 1 | -1 | null = null;
   over = false;
+  /** Un solo round (DEMOSTRACIÓN). */
+  private readonly singleRound: boolean;
 
   /** Modo práctica: sin tiempo, sin K.O. ni fin de round. */
   readonly practice: boolean;
@@ -229,9 +231,12 @@ export class Match {
       teams?: readonly [readonly FighterDef[], readonly FighterDef[]];
       /** Cuadros que esperan en el round 1 las frases de entrada de los luchadores antes del "ROUND 1". */
       introDelay?: number;
+      /** La pelea dura un solo round (la DEMOSTRACIÓN cambia de luchadores en cada uno). */
+      singleRound?: boolean;
     } = {},
   ) {
     this.rng = new Rng(seed);
+    this.singleRound = !!opts.singleRound;
     this.practice = !!opts.practice;
     this.introDelay = Math.max(0, Math.round(opts.introDelay ?? 0));
     const teams = opts.teams && !this.practice && opts.teams[0].length && opts.teams[1].length ? opts.teams : null;
@@ -475,7 +480,7 @@ export class Match {
       b.wins++;
     }
     // 2 VS 2: un solo round (termina cuando cae un equipo completo o se acaba el tiempo).
-    const done = !!this.teams || a.wins >= ROUNDS_TO_WIN || b.wins >= ROUNDS_TO_WIN || this.round >= MAX_ROUNDS;
+    const done = !!this.teams || this.singleRound || a.wins >= ROUNDS_TO_WIN || b.wins >= ROUNDS_TO_WIN || this.round >= MAX_ROUNDS;
     if (!done) {
       this.round++;
       this.startRound();

@@ -56,6 +56,17 @@ TEMAS = {
         ),
         'bpm': 100, 'keyscale': 'A minor', 'duration': 100,
     },
+    # Los cerros de Valparaíso (el Vendedor de Leña): música de videojuego de los 90. Se usó la
+    # versión 2 recortada a 63,5 s (después tiene un pedazo que suena casi a voz).
+    'lena-valparaiso': {
+        'caption': (
+            '16-bit 1990s video game music for a fighting game stage, Super Nintendo and Sega Genesis style, '
+            'FM synthesis and chiptune instruments, upbeat energetic melody for a sunny seaside port city on '
+            'colorful hills at sunset, catchy synth lead with a Latin flavor, funky slap synth bass, punchy arcade '
+            'drum machine, bright arpeggios, joyful and heroic, retro SNES soundtrack, instrumental, no vocals'
+        ),
+        'bpm': 140, 'keyscale': 'D major', 'duration': 100,
+    },
 }
 
 

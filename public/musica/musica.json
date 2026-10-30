@@ -22,5 +22,11 @@
     "bpm": 100.02,
     "loopStart": 21.05,
     "loopEnd": 81.0348
+  },
+  "lena-valparaiso": {
+    "archivo": "lena-valparaiso.mp3",
+    "bpm": 140.0,
+    "loopStart": 19.5,
+    "loopEnd": 55.5
   }
 }

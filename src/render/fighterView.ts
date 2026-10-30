@@ -3,6 +3,7 @@ import type { Fighter } from '../sim/fighter';
 import type { Match, Projectile } from '../sim/match';
 import { costumeFilter } from './costume';
 import { ProjectileLook } from './elemental';
+import { logLandFrame } from './fuego';
 import type { FxLayer } from './fx';
 import { snap } from './scale';
 
@@ -24,8 +25,9 @@ export class FighterView {
   readonly sprite = new Sprite();
   private shadow = new Graphics();
   private ghosts: Ghost[] = [];
-  /** Cuadros que le quedan electrocutado (parpadea en azul). */
+  /** Cuadros que le quedan electrocutado (parpadea en azul) o quemado (en naranjo). */
   zap = 0;
+  private zapTint = 0x7fc8ff;
   private baseTint: number;
   /** Copia que brilla en azul encima del luchador mientras está electrocutado. */
   private zapGlow = new Sprite();
@@ -54,6 +56,15 @@ export class FighterView {
   /** Lo electrocuta un rayo: parpadea en azul eléctrico unos cuadros. */
   electrify(frames: number): void {
     this.zap = Math.max(this.zap, frames);
+    this.zapTint = 0x7fc8ff;
+    this.zapGlow.tint = 0x7fd8ff;
+  }
+
+  /** Lo quema el fuego: parpadea en naranjo unos cuadros. */
+  burn(frames: number): void {
+    this.zap = Math.max(this.zap, frames);
+    this.zapTint = 0xffb070;
+    this.zapGlow.tint = 0xff7a1a;
   }
 
   /** En 2 VS 2 el que descansa fuera de la pantalla no se dibuja. */
@@ -117,7 +128,7 @@ export class FighterView {
     this.sprite.position.set(x, snap(f.y));
     this.sprite.scale.set(f.facing * k, k);
     const zapOn = this.zap > 0 && Math.floor(this.zap / 2) % 2 === 0;
-    this.sprite.tint = zapOn ? 0x7fc8ff : this.baseTint;
+    this.sprite.tint = zapOn ? this.zapTint : this.baseTint;
     this.zapGlow.visible = zapOn && this.sprite.visible;
     if (this.zapGlow.visible) {
       this.zapGlow.texture = tex;
@@ -149,6 +160,8 @@ export class ProjectileViews {
   private fading: Array<{ look: ProjectileLook; p: Projectile; t: number }> = [];
   /** Rayos que cayeron en el último cuadro de simulación (para el trueno y el corte de luz). */
   readonly strikes: Projectile[] = [];
+  /** Troncos que cayeron al suelo en el último cuadro de simulación (para el golpe seco y el polvo). */
+  readonly landings: Array<{ x: number; owner: Projectile['owner'] }> = [];
 
   constructor(
     private textures: Record<string, Texture>,
@@ -158,8 +171,12 @@ export class ProjectileViews {
 
   step(m: Match): void {
     this.strikes.length = 0;
+    this.landings.length = 0;
     for (const p of m.projectiles) {
       if (p.dead) continue;
+      if (p.def.look === 'troncos') {
+        for (let i = 0; i < p.def.hits; i++) if (p.frame === logLandFrame(p, i)) this.landings.push({ x: p.x, owner: p.owner });
+      }
       if (p.frame % 2 === 0 && p.vx !== 0) this.fx.trail(p.x - Math.sign(p.vx) * 10, p.y, p.def.glow, p.def.glowSize);
       if (p.def.look === 'rayo' && p.frame === (p.def.delay ?? 0)) this.strikes.push(p);
       // Las rastas salpican agua al avanzar por el suelo.

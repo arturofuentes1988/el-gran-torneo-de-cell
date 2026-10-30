@@ -58,7 +58,7 @@ export const CHARGE_FRAMES = 30;
 /** Cuadros de tolerancia para soltar la carga y apretar adelante. */
 const CHARGE_GRACE = 16;
 
-type PatternId = Exclude<MotionId, 'charge' | 'ff' | 'bf' | 'fbf' | 'mash' | 'hold' | 'chargeSuper'>;
+type PatternId = Exclude<MotionId, 'charge' | 'ff' | 'bb' | 'dd' | 'bf' | 'fbf' | 'mash' | 'hold' | 'chargeSuper'>;
 
 /** Patrones en direcciones RELATIVAS (6 = adelante). */
 const PATTERNS: Record<PatternId, number[][][]> = {
@@ -240,7 +240,9 @@ export class InputBuffer {
       for (let a = 0; a <= fromAge + CHARGE_FWD_SLACK && !fwd; a++) fwd = isForward(this.dir(a));
       return fwd && (this.chargeValid > 0 || this.chargeBack >= CHARGE_FRAMES);
     }
-    if (id === 'ff') return this.doubleTap(fromAge);
+    if (id === 'ff') return this.doubleTap(fromAge, isForward);
+    if (id === 'bb') return this.doubleTap(fromAge, isBack);
+    if (id === 'dd') return this.doubleTap(fromAge, isDown);
     if (id === 'dp') {
       // El →↓↘ termina en ↘ (o abajo): así no se confunde con ↓↘→, que termina en →.
       // Se mira la última dirección no neutra de los cuadros recientes (tolera soltar el stick).
@@ -306,21 +308,22 @@ export class InputBuffer {
   }
 
   /**
-   * → →: adelante, cualquier otra dirección (el neutro sirve) y adelante otra
-   * vez, todo dentro de FF_WINDOW cuadros y el último → a 3 cuadros o menos del
-   * botón. Caminar manteniendo → no cuenta: hace falta soltarlo entre los dos toques.
+   * Doble toque (→ →, ← ←, ↓ ↓): la dirección, cualquier otra (el neutro sirve) y la
+   * misma otra vez, todo dentro de FF_WINDOW cuadros y el último toque a 3 cuadros o
+   * menos del botón. Mantenerla (caminar, cubrirse, agacharse) no cuenta: hay que soltarla
+   * entre los dos toques.
    */
-  private doubleTap(fromAge: number): boolean {
+  private doubleTap(fromAge: number, is: (d: number) => boolean): boolean {
     const last = Math.min(this.count - 1, fromAge + FF_WINDOW);
     let a = fromAge;
     // Segundo toque: reciente.
-    while (a <= fromAge + 3 && a <= last && !isForward(this.dir(a))) a++;
+    while (a <= fromAge + 3 && a <= last && !is(this.dir(a))) a++;
     if (a > fromAge + 3 || a > last) return false;
     // Recorre ese toque hacia atrás.
-    while (a <= last && isForward(this.dir(a))) a++;
-    // Hueco sin adelante (al menos un cuadro).
+    while (a <= last && is(this.dir(a))) a++;
+    // Hueco sin esa dirección (al menos un cuadro).
     const gap = a;
-    while (a <= last && !isForward(this.dir(a))) a++;
+    while (a <= last && !is(this.dir(a))) a++;
     // Primer toque dentro de la ventana.
     return a > gap && a <= last;
   }

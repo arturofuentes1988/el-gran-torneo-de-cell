@@ -325,6 +325,19 @@ export class FxLayer {
     this.flash(x, y - 10, 1, 0xd8f6ff, 10);
   }
 
+  /** Fuego: llamas y brasas que suben desde (x, y) hasta ~h de alto (combos y especiales de fuego). */
+  fire(x: number, y: number, h: number): void {
+    for (let i = 0; i < 30; i++) {
+      const l = Math.round(rand(16, 30));
+      this.spawn(this.tex.dot, true, {
+        x: x + rand(-12, 12), y: y - rand(0, 12), vx: rand(-0.8, 0.8), vy: -rand(h * 0.03, h * 0.06), life: l, max: l,
+        s0: rand(0.25, 0.5), s1: 0.05, a0: 0.95, a1: 0, drag: 0.96, grav: -0.02, stretch: 0, spin: 0,
+      }, Math.random() < 0.35 ? 0xfff1a8 : Math.random() < 0.6 ? 0xff9a22 : 0xff4a12);
+    }
+    this.ring(x, y, 0.1, 1, 0xff8a1e, 16);
+    this.flash(x, y - 20, 1, 0xffd080, 10);
+  }
+
   /** Lanzador que conecta: anillo y chispas hacia arriba. */
   launch(x: number, y: number): void {
     this.flash(x, y, 1, 0xffffff, 10);

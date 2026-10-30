@@ -1,7 +1,7 @@
 // Menús después del título (mismo estilo: panel centrado, cursor y barra):
 // - MENÚ PRINCIPAL: ARCADE, CASUAL, OPCIONES y SALIR.
 // - CASUAL: 1 VS CPU, 1 VS 1, 2 VS 2 y PRÁCTICA.
-// - OPCIONES: PERSONAJES, MOVIMIENTOS, ESCENARIOS, CONTROLES y DIFICULTAD.
+// - OPCIONES: PERSONAJES, MOVIMIENTOS, ESCENARIOS, DEMOSTRACIÓN, CONTROLES, DIFICULTAD y SONIDO.
 
 import { Container, Graphics, type Text } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
@@ -12,6 +12,7 @@ import { DIFFICULTIES, DIFFICULTY_NAME, type DifficultyId } from '../sim/difficu
 import { CharacterSelectScene } from './characterSelect';
 import { CharactersScene } from './characters';
 import { ControlsScene } from './controls';
+import { DemoScene } from './demo';
 import { MoveListScene } from './moveList';
 import { StageViewerScene } from './stageViewer';
 import { TeamSelectScene } from './teamSelect';
@@ -182,6 +183,7 @@ export class OptionsMenuScene extends MenuScene {
       { id: 'personajes', label: 'PERSONAJES' },
       { id: 'movimientos', label: 'MOVIMIENTOS' },
       { id: 'escenarios', label: 'ESCENARIOS' },
+      { id: 'demo', label: 'DEMOSTRACIÓN' },
       { id: 'controles', label: 'CONTROLES' },
       { id: 'dificultad', label: '' },
       { id: 'sonido', label: '' },
@@ -238,6 +240,8 @@ export class OptionsMenuScene extends MenuScene {
     // Los escenarios a pantalla completa, con su animación y su tema.
     else if (id === 'escenarios') this.go(new StageViewerScene(g, here));
     else if (id === 'controles') this.go(new ControlsScene(g, here));
+    // La CPU contra la CPU en MUY DIFÍCIL, cambiando de luchadores en cada round.
+    else if (id === 'demo') this.go(new DemoScene(g, here));
     else if (id === 'dificultad') this.changeDifficulty(1);
     else if (id === 'sonido') this.toggleSound();
     else this.back();

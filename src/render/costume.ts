@@ -4,6 +4,11 @@
 // un chaleco azul). Solo esos pixeles cambian al color elegido; la piel, el pelo, la
 // cara y los dientes quedan igual, y la franja de arriba (cabeza) y la de abajo
 // (zapatillas) de cada cuadro no se tocan. El color 0 es el original (sin filtro).
+// Con `face`, la franja de arriba deja de ser fija: en la parte de arriba del cuadro solo
+// quedan como estaban los pixeles rodeados de piel (dientes, ojos, labios), así la ropa de
+// los hombros y la capucha se tiñe entera aunque el luchador se agache o se incline.
+// Con `visita`, el color 1 es su ropa de visita: la ropa de los rangos de tono queda
+// blanca (la polera roja del Vendedor de Leña pasa a blanca), conservando luz y sombra.
 
 import { Filter, GlProgram, UniformGroup, defaultFilterVert } from 'pixi.js';
 import type { CostumeDef } from '../sim/types';
@@ -21,6 +26,9 @@ uniform vec3 uHue1;
 uniform vec3 uHue2;
 uniform float uHead;
 uniform float uFeet;
+uniform float uWhite;
+uniform float uFace;
+uniform float uFaceN;
 
 vec3 rgb2hsv(vec3 c) {
   vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -42,6 +50,14 @@ bool inHue(float h, float s, vec3 r) {
   return r.x <= r.y ? (h >= r.x && h <= r.y) : (h >= r.x || h <= r.y);
 }
 
+// ¿Hay piel en ese punto? (para reconocer la cara: dientes, ojos y labios tienen piel alrededor).
+float skinAt(vec2 uv) {
+  vec4 t = texture(uTexture, uv);
+  if (t.a < 0.5) return 0.0;
+  vec3 h = rgb2hsv(t.rgb / t.a);
+  return (h.x < 0.125 && h.y > 0.15 && h.y < 0.7 && h.z > 0.12) ? 1.0 : 0.0;
+}
+
 void main(void) {
   vec4 src = texture(uTexture, vTextureCoord);
   if (src.a <= 0.002) {
@@ -58,12 +74,32 @@ void main(void) {
   vec3 hsv = rgb2hsv(c);
   bool skin = hsv.x < 0.125 && hsv.y > 0.15 && hsv.y < 0.62;
   vec3 outc = c;
-  if (!skin && (inHue(hsv.x, hsv.y, uHue1) || inHue(hsv.x, hsv.y, uHue2))) {
-    outc = hsv2rgb(vec3(uTarget, hsv.y, hsv.z));
-  } else if (uDark > 0.5 && hsv.z > 0.08 && hsv.z < 0.5 && hsv.y < 0.35) {
+  bool hueHit = !skin && (uWhite < 0.5 || hsv.z > 0.14) && (uFace <= 0.0 || hsv.z > 0.18) && (inHue(hsv.x, hsv.y, uHue1) || inHue(hsv.x, hsv.y, uHue2));
+  bool darkHit = uDark > 0.5 && hsv.z > 0.08 && hsv.z < 0.5 && hsv.y < 0.35;
+  bool lightHit = uLight > 0.5 && hsv.z > 0.45 && hsv.y < 0.2;
+  if (!(hueHit || darkHit || lightHit)) {
+    finalColor = src;
+    return;
+  }
+  // Parte de arriba: lo que tiene piel alrededor es la cara y queda igual.
+  if (uFace > 0.0 && y < uFace) {
+    vec2 d = uInputSize.zw * max(2.0, 3.0 * uOutputFrame.w / 440.0);
+    float n = skinAt(vTextureCoord + vec2(d.x, 0.0)) + skinAt(vTextureCoord - vec2(d.x, 0.0))
+      + skinAt(vTextureCoord + vec2(0.0, d.y)) + skinAt(vTextureCoord - vec2(0.0, d.y))
+      + skinAt(vTextureCoord + d) + skinAt(vTextureCoord - d)
+      + skinAt(vTextureCoord + vec2(d.x, -d.y)) + skinAt(vTextureCoord + vec2(-d.x, d.y));
+    if (n >= uFaceN) {
+      finalColor = src;
+      return;
+    }
+  }
+  if (hueHit) {
+    // Ropa de visita: blanca, con el relieve de la original (sombras grises suaves, apenas cálidas).
+    outc = uWhite > 0.5 ? clamp(0.38 + 0.7 * hsv.z, 0.0, 1.0) * vec3(1.0, 0.985, 0.96) : hsv2rgb(vec3(uTarget, hsv.y, hsv.z));
+  } else if (darkHit) {
     // Ropa oscura: se colorea manteniendo su luz y sombra (los contornos negros quedan).
     outc = hsv2rgb(vec3(uTarget, 0.72, clamp(hsv.z * 1.65 + 0.05, 0.0, 1.0)));
-  } else if (uLight > 0.5 && hsv.z > 0.45 && hsv.y < 0.2) {
+  } else if (lightHit) {
     // Ropa clara: se tiñe del color, más mientras más clara.
     outc = mix(c, hsv2rgb(vec3(uTarget, 0.55, hsv.z)), 0.88);
   }
@@ -98,6 +134,9 @@ export function costumeFilter(n: number, def: CostumeDef | undefined): Filter | 
     uHue2: { value: new Float32Array(c.hues?.[1] ?? OFF), type: 'vec3<f32>' },
     uHead: { value: c.head ?? 0.2, type: 'f32' },
     uFeet: { value: c.feet ?? 0.08, type: 'f32' },
+    uWhite: { value: c.visita && k === 1 ? 1 : 0, type: 'f32' },
+    uFace: { value: c.face ?? 0, type: 'f32' },
+    uFaceN: { value: c.faceNeighbors ?? 3, type: 'f32' },
   });
   return new Filter({ glProgram: program, resources: { costumeUniforms }, resolution: 'inherit', antialias: 'inherit' });
 }

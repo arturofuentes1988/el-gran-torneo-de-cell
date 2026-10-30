@@ -3,9 +3,14 @@
 Juego de pelea 2D para el navegador, estilo arcade (SNK / Marvel vs Capcom)
 con pixel art y efectos modernos. Parodia sin fines de lucro.
 
-**Estado: en desarrollo.** Se puede jugar con Loco René, Pablito Neuquén y el
-Flaitiano (sprites, voces y poderes definitivos) en los escenarios de René, en
-la calle del Pablito (Valdivia, con lluvia) y en Santiago de noche. Los demás luchadores del plantel vienen después.
+**Estado: en desarrollo.** Se puede jugar con Loco René, Pablito Neuquén, el
+Flaitiano y el Vendedor de Leña (sprites, voces y poderes definitivos) en los escenarios de René, en
+la calle del Pablito (Valdivia, con lluvia), en los cerros de Valparaíso y en Santiago de noche. Los demás luchadores del plantel vienen después.
+
+Documentación del proyecto en `docs/`: [estado del proyecto](docs/ESTADO_DEL_PROYECTO.md)
+(qué está hecho, qué falta y las reglas acordadas), [luchadores](docs/LUCHADORES.md),
+[cómo se hace](docs/COMO_SE_HACE.md) un luchador, un escenario o un tema, y el
+[formato técnico](docs/FORMATO_SPRITES.md).
 
 ## Cómo correrlo
 
@@ -76,6 +81,7 @@ música baja un poco mientras alguien habla.
 | La cabaña del lago | `rene-cabana.mp3` | Suno V6, versión 2 |
 | La cancha | `rene-plaza.mp3` | Suno V6, versión 2 |
 | La calle del Pablito | `pablito-calle.mp3` | ACE-Step 1.5 (local), versión 2, con lluvia |
+| Los cerros de Valparaíso | `lena-valparaiso.mp3` | ACE-Step 1.5 (local), versión 2 (estilo videojuego de 16 bits de los 90) |
 | Santiago de noche (arena) | `titulo.mp3` | El mismo tema del título |
 
 Las dos versiones de cada tema están en `arte/musica/suno/`. Para cambiar de
@@ -115,15 +121,17 @@ o Retroceso para volver. El **MENÚ PRINCIPAL** tiene:
 - **ARCADE**: eliges tu luchador y le ganas a cada uno de los demás contra la
   CPU. Antes de cada pelea, un mapa de Chile (acostado, el norte a la izquierda)
   muestra el avión saliendo de la ciudad de tu luchador (el campo `ciudad` de su
-  definición: René y el Flaitiano son de Santiago, Pablito de Valdivia) hacia la
+  definición: René y el Flaitiano son de Santiago, Pablito de Valdivia y el Vendedor de Leña de Valparaíso) hacia la
   ciudad de cada rival, siempre a la más cercana. Cada rival pelea en su
   escenario (o en uno de su ciudad), y la final es en el ring de EL GRAN TORNEO,
   contra quien no tenga escenario propio (la última pelea es un poco más
   difícil). Si pierdes, ¿CONTINUAR? repite esa pelea; si les ganas a todos,
   ¡CAMPEÓN!
 - **CASUAL**: 1 VS CPU, 1 VS 1, 2 VS 2 y PRÁCTICA.
-- **OPCIONES**: PERSONAJES, MOVIMIENTOS, ESCENARIOS, CONTROLES y DIFICULTAD
-  (izquierda / derecha).
+- **OPCIONES**: PERSONAJES, MOVIMIENTOS, ESCENARIOS, DEMOSTRACIÓN, CONTROLES,
+  DIFICULTAD (izquierda / derecha) y SONIDO. **DEMOSTRACIÓN** es la CPU contra la
+  CPU en MUY DIFÍCIL, sin fin: cada round es una pelea nueva con otros dos
+  luchadores (y colores) en otro escenario. Aceptar o volver sale.
 - **SALIR**: deja la pantalla completa y vuelve al título (el navegador no deja
   cerrar la pestaña desde el juego).
 
@@ -165,6 +173,23 @@ Flaitiano (agua y rayos: "¡junten agua, junten luz!"):
 
 Sus combos se electrifican mientras más largos: chispas, rastas que brillan,
 agua y, desde 12 golpes, rayos de fondo.
+
+Vendedor de Leña (leña, fuego y el viento de su "silbido de la muerte"; todos sus
+comandos son dos toques de una dirección y un botón):
+
+| Movimiento | Comando |
+|---|---|
+| ¡Un silbidito! (remolino de viento con notas doradas; deja mareado al rival) | adelante, adelante + golpe |
+| ¡Te paseo! (agarre: lo zamarrea en un remolino de fuego y lo lanza) | adelante, adelante + patada |
+| ¡Leñazo! (lanza un tronco que vuela girando) | atrás, atrás + golpe |
+| ¡Llegó la leña! (troncos ardiendo caen del cielo sobre el rival) | atrás, atrás + patada |
+| Súper SILBIDO DE LA MUERTE: ULTRA INSTINTO (aura plateada, rayo sónico que triza la pantalla; 1 barra) | abajo, abajo + golpe |
+| Ultra ¡EL NÚMERO UNO DEL PARTY! (fiesta con focos, confeti y fuegos artificiales; 2 barras, rival en peligro) | abajo, abajo + patada |
+
+Sus combos se encienden mientras más largos: brasas, aura de llamas,
+estallidos y, desde 12 golpes, un pilar de fuego. Cuando los dos jugadores lo
+eligen, el segundo sale con su ropa de **VISITA** (la polera blanca); también se
+elige como color en ELIGE LUCHADOR.
 
 Los toques perdonan el tiempo de una persona: la última flecha y el botón no
 tienen que caer juntos (si el botón cae un pelo antes, el golpe que alcanzó a

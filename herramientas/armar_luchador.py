@@ -215,6 +215,33 @@ def sin_objeto(rgb: np.ndarray, m: np.ndarray, x_min: int) -> np.ndarray:
     return m & ~(objeto & (sat < 0.25))
 
 
+def sin_tono(rgb: np.ndarray, m: np.ndarray, tono: list[float], sat_min: float = 0.3) -> np.ndarray:
+    """Quita de la máscara las manchas grandes de un tono (0..1, ej. [0.2, 0.45] = verde) que el
+    video dibujó y que no son del personaje, con su contorno oscuro. La piel y la ropa quedan."""
+    f = rgb.astype(np.float32) / 255
+    mx, mn = f.max(axis=2), f.min(axis=2)
+    d = mx - mn + 1e-6
+    r, g, b = f[..., 0], f[..., 1], f[..., 2]
+    h = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) / 6
+    sat = d / np.maximum(mx, 1e-6)
+    mancha = (h >= tono[0]) & (h <= tono[1]) & (sat > sat_min) & m
+    etiq, n = ndimage.label(mancha)
+    if not n:
+        return m
+    tam = ndimage.sum(mancha, etiq, range(1, n + 1))
+    objeto = np.isin(etiq, np.nonzero(tam > 200)[0] + 1)
+    # El contorno y las sombras del objeto: pixeles oscuros o del mismo tono pegados a él.
+    cerca = ndimage.binary_dilation(objeto, iterations=6)
+    borde = cerca & ((mx < 0.32) | ((h >= tono[0] - 0.05) & (h <= tono[1] + 0.05) & (sat > 0.15)))
+    m = m & ~(objeto | borde)
+    # Los pedacitos sueltos que quedan flotando no son del personaje (él es una sola mancha).
+    etiq, n = ndimage.label(m)
+    if n > 1:
+        tam = ndimage.sum(m, etiq, range(1, n + 1))
+        m = np.isin(etiq, np.nonzero(tam >= tam.max() * 0.05)[0] + 1)
+    return m
+
+
 # ---------------------------------------------------------------- imágenes
 
 def recorte(rgb: np.ndarray, m: np.ndarray, escala: float) -> tuple[Image.Image, int, int]:
@@ -342,6 +369,11 @@ def main() -> None:
             borrar = spec.get("borrar_objeto")
             if borrar and borrar["desde"] <= i <= borrar["hasta"]:
                 m = sin_objeto(rgb, m, borrar["x_min"])
+            # "borrar_tono": {"desde": a, "hasta": b, "tono": [h0, h1]} quita una mancha de ese color
+            # que el video dibujó (el rival invisible del agarre del Vendedor de Leña salió verde).
+            borrar_t = spec.get("borrar_tono")
+            if borrar_t and borrar_t["desde"] <= i <= borrar_t["hasta"]:
+                m = sin_tono(rgb, m, borrar_t["tono"], borrar_t.get("sat", 0.3))
             # "cabeza": true completa la punta de la cabeza (el gorro) si el video la cortó
             # arriba, con la de la guardia. Solo en cuadros con "pies" (el apoyo sale del cuadro).
             arreglada = False

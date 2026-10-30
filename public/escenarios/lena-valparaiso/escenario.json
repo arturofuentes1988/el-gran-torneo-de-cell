@@ -1,0 +1,66 @@
+{
+  "id": "lena-valparaiso",
+  "name": "LOS CERROS DE VALPARAÍSO",
+  "layers": [
+    {
+      "src": "fondo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -324.67,
+      "left": -5.6
+    },
+    {
+      "video": "fondo.mp4",
+      "scale": 0.280978,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -324.67,
+      "left": -5.6
+    },
+    {
+      "src": "niebla.webp",
+      "scale": 0.273438,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -85.955,
+      "repeatX": true,
+      "scrollX": 0.03,
+      "additive": true,
+      "alpha": 0.08
+    },
+    {
+      "src": "suelo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -43.955,
+      "floor": {
+        "strips": 64
+      }
+    }
+  ],
+  "particles": [
+    {
+      "type": "polvo",
+      "count": 40,
+      "color": 16768416,
+      "alpha": 0.35,
+      "size": 1.0,
+      "band": [
+        -200,
+        -10
+      ],
+      "parallax": 0.85
+    }
+  ],
+  "music": "lena-valparaiso"
+}

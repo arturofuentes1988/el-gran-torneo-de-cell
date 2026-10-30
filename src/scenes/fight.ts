@@ -10,6 +10,7 @@ import { P1_KEYS, P2_KEYS, PlayerInput, type KeyBindings } from '../input/device
 import { FighterView, ProjectileViews, type WorldLayers } from '../render/fighterView';
 import { DiscoShow } from '../render/disco';
 import { StormShow, bolt } from '../render/elemental';
+import { Grieta, PartyShow, UltraShow, drawMareo, drawRemolino } from '../render/fuego';
 import { FxLayer } from '../render/fx';
 import { Hud, type PracticeHudInfo } from '../render/hud';
 import { LiveShow } from '../render/live';
@@ -25,7 +26,7 @@ import { DUMMY_MODES, DUMMY_NAME, PracticeDummy } from '../sim/dummy';
 import type { Fighter, StateName } from '../sim/fighter';
 import { DEAD_LINGER, Match } from '../sim/match';
 import type { SimEvent } from '../sim/events';
-import type { FighterDef, ProjectileDef } from '../sim/types';
+import type { FighterDef, LightsKind, ProjectileDef } from '../sim/types';
 import { MainMenuScene } from './modeSelect';
 
 /** Estados en que un luchador todavía está "dentro" de un combo o recuperándose. */
@@ -78,6 +79,10 @@ export interface FightOptions {
   difficulty?: DifficultyId;
   /** Qué viene al terminar (ARCADE: la siguiente pelea o CONTINUAR); si falta, el menú principal. */
   next?: (winner: 0 | 1 | -1) => Scene;
+  /** Un solo round (la DEMOSTRACIÓN cambia de luchadores en cada uno). */
+  singleRound?: boolean;
+  /** DEMOSTRACIÓN: adónde vuelve al apretar aceptar o volver. */
+  exit?: () => Scene;
 }
 
 export class FightScene implements Scene {
@@ -105,7 +110,16 @@ export class FightScene implements Scene {
   private discoMax = 0;
   /** Tormenta de los súpers con cinematic.lights = 'tormenta' (el Flaitiano). */
   private storm = new StormShow();
-  private lightsKind: 'disco' | 'tormenta' = 'disco';
+  /** Ultra instinto y fiesta del Vendedor de Leña (cinematic.lights = 'ultrainstinto' / 'fiesta'). */
+  private ultraShow = new UltraShow();
+  private party = new PartyShow();
+  private lightsKind: LightsKind = 'disco';
+  /** La pantalla que se triza con el remate del súper del Vendedor de Leña. */
+  private grieta = new Grieta();
+  /** Fuego que brilla encima de los luchadores (el remolino de "¡Te paseo!"). */
+  private fireG = new Graphics();
+  /** Cuadros que le quedan mareado a cada luchador (las estrellitas del silbido). */
+  private dizzy = new Map<Fighter, number>();
   /** Cuadros de "cuadro de impacto" (la imagen en negativo) después de un golpe enorme. */
   private impact = 0;
   private negative = new ColorMatrixFilter();
@@ -173,7 +187,7 @@ export class FightScene implements Scene {
     private opts: FightOptions = {},
   ) {
     this.seed = seed;
-    this.difficulty = mode === 'demo' ? 'normal' : opts.difficulty ?? loadDifficulty();
+    this.difficulty = mode === 'demo' ? opts.difficulty ?? 'normal' : opts.difficulty ?? loadDifficulty();
     // 2 VS 2: los luchadores de cada equipo salen del plantel; el primero de cada uno parte peleando.
     const roster = game.assets.roster;
     const pick = (idx: number[]) => idx.map((i) => roster[i]?.def).filter((d): d is FighterDef => !!d);
@@ -189,7 +203,7 @@ export class FightScene implements Scene {
       return t + (len > 0 ? len + 0.3 : 0);
     }, 0);
     const introDelay = introLen > 0 ? Math.round((introLen + 0.1) * 60) : 0;
-    this.match = new Match(defs, seed, { practice: mode === 'practica', teams: teams ?? undefined, introDelay });
+    this.match = new Match(defs, seed, { practice: mode === 'practica', teams: teams ?? undefined, introDelay, singleRound: opts.singleRound });
     const kb = game.kb;
     const pads = game.pads;
     const human = (keys: KeyBindings, pad: number): InputSource => {
@@ -236,7 +250,8 @@ export class FightScene implements Scene {
     this.buildPause();
     this.shownStage = game.assets.stage;
     this.bigBolt.blendMode = 'add';
-    this.world.addChild(this.overlayG, this.bigBolt);
+    this.fireG.blendMode = 'add';
+    this.world.addChild(this.overlayG, this.fireG, this.bigBolt, this.grieta.g);
     this.negative.negative(false);
     // Escenarios de reemplazo de los ultras: se cargan ahora para no esperar en plena pelea.
     for (const f of all) {
@@ -355,7 +370,7 @@ export class FightScene implements Scene {
 
   enter(): void {
     const d = this.game.display;
-    d.world.addChild(this.game.assets.stage.container, this.disco.container, this.storm.container, this.world);
+    d.world.addChild(this.game.assets.stage.container, this.disco.container, this.storm.container, this.ultraShow.container, this.party.container, this.world);
     d.fx.addChild(this.fx.container, this.debugG);
     d.hud.addChild(this.hud.container);
     d.overlay.addChild(this.pauseUi);
@@ -368,7 +383,7 @@ export class FightScene implements Scene {
     this.closeMoveList();
     this.closeControls();
     const d = this.game.display;
-    d.world.removeChild(this.shownStage.container, this.disco.container, this.storm.container, this.world);
+    d.world.removeChild(this.shownStage.container, this.disco.container, this.storm.container, this.ultraShow.container, this.party.container, this.world);
     if (this.shownStage !== this.game.assets.stage) this.shownStage.setDarkness(0);
     d.fx.removeChild(this.fx.container, this.debugG);
     d.hud.removeChild(this.hud.container);
@@ -382,6 +397,8 @@ export class FightScene implements Scene {
     this.live.destroy();
     this.disco.destroy();
     this.storm.destroy();
+    this.ultraShow.destroy();
+    this.party.destroy();
     for (const v of this.views.values()) v.destroy();
     this.world.destroy({ children: true });
   }
@@ -391,6 +408,12 @@ export class FightScene implements Scene {
     const pausePressed = g.kb.hit('Escape') || [0, 1, 2, 3].some((i) => g.pads.pressed(i, 9));
     if (this.paused) {
       this.stepPause(pausePressed);
+      return;
+    }
+    // DEMOSTRACIÓN: aceptar o volver sale (no hay pausa).
+    if (this.mode === 'demo' && this.opts.exit && (pausePressed || g.menu.confirm || g.menu.back)) {
+      g.sfx.play('menuBack');
+      g.setScene(this.opts.exit());
       return;
     }
     if (pausePressed && this.mode !== 'demo') {
@@ -434,13 +457,13 @@ export class FightScene implements Scene {
     if (this.shake > 0) this.shake = Math.max(0, this.shake - 0.35);
     // Un rayo que avisa corta la luz: el escenario parpadea a oscuras.
     const blackout = this.projViews.blackout(m) * (0.7 + Math.random() * 0.3);
-    const targetDark = Math.max(m.freeze > 0 ? 0.62 : 0, m.ultraActive ? 0.72 : 0, this.disco.darkness, this.storm.darkness, blackout);
+    const targetDark = Math.max(m.freeze > 0 ? 0.62 : 0, m.ultraActive ? 0.72 : 0, this.disco.darkness, this.storm.darkness, this.ultraShow.darkness, this.party.darkness, blackout);
     this.dark += (targetDark - this.dark) * (targetDark > this.dark ? 0.35 : 0.08);
     if (this.zoomT > 0) this.zoomT--;
 
     if (m.over) {
-      if (this.mode === 'demo') g.setScene(new FightScene(g, 'demo', this.seed + 1, this.opts));
-      else if (this.opts.next) g.setScene(this.opts.next(m.matchWinner ?? -1));
+      if (this.opts.next) g.setScene(this.opts.next(m.matchWinner ?? -1));
+      else if (this.mode === 'demo') g.setScene(new FightScene(g, 'demo', this.seed + 1, this.opts));
       else g.setScene(new MainMenuScene(g));
     }
   }
@@ -678,6 +701,8 @@ export class FightScene implements Scene {
             this.fx.electric(e.x, e.y, e.final ? 20 : 6);
             if (e.final) this.stormFinale(owner!, e.x);
           }
+          const party = !!owner && owner.def.moves[owner.ultraRun!.moveId]?.cinematic?.lights === 'fiesta';
+          if (party) this.partyHit(owner!, e.x, e.y, !!e.final);
           if (e.final) {
             this.fx.superBurst(e.x, e.y, 0xffd040);
             this.fx.explosion(e.x, e.y, 0xff5a3a, true);
@@ -768,6 +793,23 @@ export class FightScene implements Scene {
       this.fx.splash(e.x, e.y, true);
       this.fx.electric(e.x, e.y, 6);
       if (e.last) this.stormFinale(att, vic.x);
+    } else if (e.look === 'silbido') {
+      // El silbido lo deja mareado: estrellitas que giran sobre la cabeza.
+      this.dizzy.set(vic, e.last ? 80 : 50);
+      this.fx.electric(e.x, e.y, 8, 0xfff4c0);
+    } else if (e.look === 'tronco') {
+      // El tronco del leñazo: golpe seco de madera, astillas y polvo.
+      const id = `${att.def.id}/troncoGolpe`;
+      if (this.game.sfx.has(id)) this.game.sfx.play(id);
+      this.fx.dust(e.x, e.y, 6, true);
+      this.addShake(4);
+    } else if (e.look === 'troncos') {
+      this.views.get(vic)?.burn(14);
+      this.fx.explosion(e.x, e.y, 0xff8a1e, !!e.last);
+      this.addShake(e.last ? 6 : 3);
+    } else if (e.look === 'sonico') {
+      this.fx.electric(e.x, e.y, 10, 0xe6eeff);
+      if (e.last) this.shatter(att, e.x, e.y);
     }
     // Letras de cómic (¡TOC!) de los movimientos que las tienen, una por golpe.
     const mv = e.move ? att.def.moves[e.move] : undefined;
@@ -777,6 +819,19 @@ export class FightScene implements Scene {
       this.moveHits.set(att, { move: e.move, n });
       this.comic(mv.hitText[Math.min(n, mv.hitText.length - 1)], e.x + 18, e.y - 46);
       if (this.game.sfx.has(`${att.def.id}/toc`)) this.game.sfx.play(`${att.def.id}/toc`);
+    }
+    // Combo de fuego: brasas desde 3 golpes, aura de llamas desde 5, estallidos desde 8, pilar de fuego desde 12.
+    if (att.def.comboFx === 'fuego' && e.combo >= 3) {
+      this.fx.electric(e.x, e.y, 3 + Math.min(e.combo, 12), 0xffa040);
+      if (e.combo >= 5) for (let i = 0; i < 2; i++) this.fx.powerAura(att.x, att.y, 0xff7a1a, this.t + i);
+      if (e.combo >= 8) {
+        this.fx.explosion(e.x, e.y, 0xff6a1a, false);
+        this.addShake(2);
+      }
+      if (e.combo >= 12) {
+        this.fx.fire(vic.x, 0, 170);
+        this.impact = Math.max(this.impact, 2);
+      }
     }
     // Combo eléctrico: chispas desde 3 golpes, brillo de las rastas desde 5, agua desde 8, rayos desde 12.
     if (att.def.comboFx === 'electrico' && e.combo >= 3) {
@@ -808,6 +863,34 @@ export class FightScene implements Scene {
     if (this.game.sfx.has(id)) this.game.sfx.play(id);
   }
 
+  /** Remate del súper ultra instinto: la pantalla se triza, destello plateado, negativo y vidrio que se rompe. */
+  private shatter(owner: Fighter, x: number, y: number): void {
+    this.grieta.start(x, y);
+    this.ultraShow.strike();
+    this.impact = 6;
+    this.addShake(10);
+    this.fx.superBurst(x, y, 0xd8e6ff);
+    const id = `${owner.def.id}/vidrio`;
+    if (this.game.sfx.has(id)) this.game.sfx.play(id);
+  }
+
+  /** Cada golpe del ultra de fiesta: un fuego artificial sobre el rival; el último, una fogata gigante. */
+  private partyHit(owner: Fighter, x: number, y: number, final: boolean): void {
+    const camLeft = this.match.camX - VIEW_W / 2;
+    const sx = x - camLeft;
+    const sy = GROUND_SCREEN_Y + y + this.camOffY;
+    this.party.burst(sx + (Math.random() * 60 - 30), Math.max(30, sy - 60 - Math.random() * 40), final);
+    const id = `${owner.def.id}/fiesta`;
+    if (final) {
+      for (let i = 0; i < 4; i++) this.party.burst(sx + (i - 1.5) * 70, 50 + Math.random() * 40, true);
+      this.fx.fire(x, 0, 200);
+      this.fx.explosion(x, y, 0xff8a1e, true);
+      if (this.game.sfx.has(id)) this.game.sfx.play(id);
+    } else if (Math.random() < 0.5 && this.game.sfx.has(id)) {
+      this.game.sfx.play(id, { vol: 0.5 });
+    }
+  }
+
   /** Letras de cómic que saltan y se desvanecen (en el mundo, sobre los luchadores). */
   private comic(text: string, x: number, y: number): void {
     const t = outlinedText(text, 12, 0xfff4b0, 0x2a0a10, 3);
@@ -826,6 +909,19 @@ export class FightScene implements Scene {
       this.storm.strike(false);
       this.addShake(5);
       this.fx.electric(p.x, -12, 10);
+    }
+    // Troncos que caen al suelo: golpe seco, polvo y chispas de fuego.
+    for (const l of this.projViews.landings) {
+      const id = `${l.owner.def.id}/troncoCae`;
+      if (this.game.sfx.has(id)) this.game.sfx.play(id);
+      this.fx.dust(l.x, 0, 6, true);
+      this.fx.electric(l.x, -6, 5, 0xffa040);
+      this.addShake(2);
+    }
+    this.grieta.step();
+    for (const [f, n] of this.dizzy) {
+      if (n <= 1) this.dizzy.delete(f);
+      else this.dizzy.set(f, n - 1);
     }
     if (this.impact > 0) this.impact--;
     if (this.bigBoltT > 0) this.bigBoltT--;
@@ -864,14 +960,28 @@ export class FightScene implements Scene {
       bolt(this.bigBolt, x + (Math.random() * 60 - 30), top, x + (Math.random() * 8 - 4), 0, 3, a * 0.7, 3);
     }
     this.overlayG.clear();
+    this.fireG.clear();
     for (const f of this.allFighters()) {
-      if (f.state !== 'attack' || !f.connected || f.move?.hitOverlay !== 'tarro') continue;
+      const ov = f.move?.hitOverlay;
+      if (f.state !== 'attack' || !f.connected || (ov !== 'tarro' && ov !== 'remolino')) continue;
       const vic = m.opponent(f);
       const boxes = vic.hurtboxes().map((h) => vic.worldBox(h));
       if (!boxes.length) continue;
       const head = boxes.reduce((a, b) => (b.y0 < a.y0 ? b : a));
-      drawTarro(this.overlayG, (head.x0 + head.x1) / 2, head.y0);
+      if (ov === 'tarro') drawTarro(this.overlayG, (head.x0 + head.x1) / 2, head.y0);
+      else drawRemolino(this.fireG, vic.x, head.y0, 0, this.t);
     }
+    // Mareado por el silbido: estrellitas sobre la cabeza mientras le dura el golpe.
+    for (const [f, n] of this.dizzy) {
+      if (!BUSY.has(f.state) || f.state === 'blockstun') {
+        if (n < 40) continue;
+      }
+      const boxes = f.hurtboxes().map((h) => f.worldBox(h));
+      if (!boxes.length) continue;
+      const head = boxes.reduce((a, b) => (b.y0 < a.y0 ? b : a));
+      drawMareo(this.overlayG, (head.x0 + head.x1) / 2, head.y0 - 6, this.t);
+    }
+    this.grieta.render();
   }
 
   private addShake(a: number): void {
@@ -894,7 +1004,9 @@ export class FightScene implements Scene {
     this.discoMax = freeze + 210;
     // La bola baja justo cuando se va el cartel; la tormenta parte de inmediato.
     if (lights === 'disco') this.disco.start(Math.max(0, freeze - 18));
-    else this.storm.start();
+    else if (lights === 'tormenta') this.storm.start();
+    else if (lights === 'ultrainstinto') this.ultraShow.start();
+    else this.party.start();
   }
 
   /** Las luces siguen mientras duran el cartel, la animación del súper y su proyectil (máximo ~3,5 s después del cartel). */
@@ -910,11 +1022,21 @@ export class FightScene implements Scene {
       if (!running || (this.discoT > this.discoMax && !o.ultraRun)) {
         this.discoOwner = null;
         if (this.lightsKind === 'disco') this.disco.stop();
-        else this.storm.stop();
+        else if (this.lightsKind === 'tormenta') this.storm.stop();
+        else if (this.lightsKind === 'ultrainstinto') this.ultraShow.stop();
+        else this.party.stop();
       }
+    }
+    // Ultra instinto: aura plateada que sube alrededor de quien lo hace.
+    if (this.discoOwner && this.lightsKind === 'ultrainstinto') {
+      const o = this.discoOwner;
+      this.fx.powerAura(o.x, o.y, 0xe8f0ff, this.discoT);
+      this.fx.aura(o.x, o.y - 60, 0xffffff);
     }
     this.disco.step();
     this.storm.step();
+    this.ultraShow.step();
+    this.party.step();
   }
 
   render(): void {
@@ -946,6 +1068,8 @@ export class FightScene implements Scene {
     stage.update(camLeft - sx, this.camOffY + sy);
     this.disco.update(this.camOffY + sy);
     this.storm.update(this.camOffY + sy);
+    this.ultraShow.update(this.camOffY + sy);
+    this.party.update(this.camOffY + sy);
     this.renderElemental();
     for (const [f, v] of this.views) {
       // En 2 VS 2 se ven el punto y los extras (ayuda, el que sale, el caído que se desvanece).
