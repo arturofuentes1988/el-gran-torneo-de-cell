@@ -174,7 +174,7 @@ export class ProjectileViews {
     this.landings.length = 0;
     for (const p of m.projectiles) {
       if (p.dead) continue;
-      if (p.def.look === 'troncos') {
+      if (p.def.look === 'troncos' || p.def.look === 'letras') {
         for (let i = 0; i < p.def.hits; i++) if (p.frame === logLandFrame(p, i)) this.landings.push({ x: p.x, owner: p.owner });
       }
       if (p.frame % 2 === 0 && p.vx !== 0) this.fx.trail(p.x - Math.sign(p.vx) * 10, p.y, p.def.glow, p.def.glowSize);

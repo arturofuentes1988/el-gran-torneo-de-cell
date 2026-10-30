@@ -26,4 +26,5 @@ export const ROUNDS_TO_WIN = 2;
 export const MAX_ROUNDS = 5;
 
 /** Fuente pixel incluida localmente (@fontsource/press-start-2p). */
-export const PIXEL_FONT = 'Press Start 2P';
+/** Fuente de todo el juego (moderna, con tildes y ñ; viene incluida en el build). */
+export const GAME_FONT = 'Oswald';

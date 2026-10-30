@@ -18,7 +18,7 @@ Archivos de cada luchador (con `<id>` del juego y `<carpeta>` de trabajo):
 | Fotos y videos del usuario | `referencias/<carpeta>/` |
 
 `arte/` y `referencias/` no se suben a GitHub. El orden del plantel está en `REAL_FIGHTERS`
-de `src/main.ts`: `rene`, `pablito`, `flaitiano`, `lena`.
+de `src/main.ts`: `rene`, `pablito`, `flaitiano`, `lena`, `carlitos`.
 
 ---
 
@@ -151,3 +151,47 @@ cortan la frase que está diciendo. Fuera: los chistes de la placa dental del Pa
 **Efectos** (todos con código, `src/render/fuego.ts`): proyectiles `silbido`, `tronco`,
 `troncos` y `sonico`; luces `ultrainstinto` y `fiesta`; el remolino de fuego del agarre
 (`hitOverlay: "remolino"`); las estrellitas del mareo; la pantalla trizada; `FxLayer.fire`.
+
+---
+
+## Carlitos Run
+
+- **id**: `carlitos` · **carpeta**: `arte/carlitos-run/` · **ciudad**: Valdivia
+- **Quién es**: Carlos Andrés Oyarzo, de Valdivia. Partió imitando a Pablito ("Carlitos Neuquén")
+  y le quedó Carlitos Run por el "¡ruuun!" con que termina sus videos. Viral: "quiero mi coca
+  colita". Hace música ("Entrando pa' la discoteca") con su grupo Run Mafia; su mánager es el
+  Tío Trap. Anda siempre en su BMX naranja.
+- **Cuidado especial**: tiene una discapacidad. Se muestra solo como una estrella poderosa, con
+  frases suyas de sus propios videos; sin insultos, sin pistolas, nada sobre su discapacidad ni
+  su salud ("no tomo más Coca-Cola"), ni el reality para adultos. Su mánager pidió que no le
+  hagan bullying.
+- **Diseño**: polera roja con "CARLITOS RUN" en cursiva blanca (sin el logo de Coca-Cola),
+  pantalón de camuflaje gris, zapatillas negras con suela roja. Bajo y macizo. La cara se hizo
+  primero en grande con GPT Image 2.5 desde una foto suya (Nano Banana Pro no lograba el
+  parecido) y después el cuerpo con esa cara de guía.
+- **Escenario**: todavía no tiene propio; en el ARCADE pelea en Valdivia (LA CALLE DEL PABLITO).
+- **Colores**: tono rojo de la polera, `face` 0.3, ropa de visita (polera blanca).
+- **Combos de bebida** (`comboFx: "cola"`): burbujas desde 3 golpes, espuma desde 5, estallidos
+  desde 8, géiser desde 12.
+
+| Movimiento | Comando |
+|---|---|
+| ¡Quiero mi coca colita! (chorro de bebida con espuma) | → → + golpe |
+| ¡Ruuun! (carrera y embestida) | → → + patada |
+| En breve me la llevo en bicicleta (BMX, varios golpes y lanza) | ← ← + golpe |
+| ¡Regálame todo el cajón! (cajón de botellas) | ← ← + patada |
+| Súper ¡ENTRANDO PA' LA DISCOTECA! (neón rojo `lights: "neon"`, letras R-U-N en llamas; 1 barra) | ↓ ↓ + golpe |
+| Ultra ¡RUN MAFIA! (luces de fiesta, 8 tramos; 2 barras, rival en peligro) | ↓ ↓ + patada |
+
+- **Entrada**: saluda y hace un corazón con las manos ("En breve me la llevo en bicicleta").
+- **Victoria**: brazos arriba y corazón con las manos ("Gracias por recuperar mi bicicleta").
+- **Burla**: "¡Run!".
+
+**Voces** (links del usuario): "Quiero mi coca colita, run" (guaracha -QSpwDBOv6s, voz separada),
+"En breve me la llevo en bicicleta" (zccKCqeXZxs, voz separada), "Gracias por recuperar mi
+bicicleta" y "¡Run!" (rBQLgXM5i2o, en la PDI), y para la súper "Entrando pa' la discoteca" con el
+beat (zccKCqeXZxs). Otras frases cortadas para revisar están en
+`referencias/carlitos-run/frases-para-revisar/` (sin confirmar por el usuario).
+
+**Efectos** (código, `src/render/cola.ts`): proyectiles `cola`, `cajon` y `letras`;
+`FxLayer.fizz`; luces `neon` (DiscoShow con paleta roja).

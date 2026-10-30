@@ -20,6 +20,7 @@ LUCHADORES = {
     "pablito": "arte/pablito-neuquen/diseno-final.png",
     "flaitiano": "arte/flaitiano/diseno-final.png",
     "lena": "arte/vendedor-de-lena/diseno-final.png",
+    "carlitos": "arte/carlitos-run/diseno-final.png",
 }
 LADO = 160
 

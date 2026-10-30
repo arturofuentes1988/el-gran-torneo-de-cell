@@ -71,6 +71,38 @@ la ropa. Plantilla que funcionó:
 la silueta del diseño (fondo = mediana de los bordes, diferencia > 30), se escala y se pega.
 Queda en `arte/<carpeta>/guardia-cuadrada.png`.
 
+**Ropa blanca que queda transparente al moverse rápido** (el Flaitiano al saltar y rodar): en el
+`armado.json`, `"estricto": {"rodada": 24, "salto": 24}` hace que en esos clips solo se quite lo
+cercano al color del fondo y que el interior de la silueta quede relleno. Sirve en poses cerradas;
+los cuadros con mucho desenfoque conviene sacarlos. También se cortan brazos o ruedas que se salen
+del borde del video: esos cuadros se dejan fuera (victoria y bicicleta de Carlitos).
+
+**Luchadores pintados (estilo de los fondos) con ropa blanca**: el recorte por color no sirve (el
+gris claro del fondo se come la chaqueta: puños flotando, jeans con hoyos). `"ia": true` en el
+`armado.json` recorta con IA (rembg con isnet-anime, menos de 1 s por cuadro) y le suma lo que es
+claramente oscuro o de color (piel, pelo, bolso, zapatillas); los resplandores blancos que agrega
+el video quedan fuera. El borde queda suave. Se instala con `pip install --user rembg`.
+Con ropa oscura (Pablito) va además `"ropa_blanca": false`: no se rellenan los huecos encerrados
+(el hueco entre la mano y la pierna es fondo; se rellenaba y quedaba una mancha clara). Para los
+próximos luchadores pintados conviene pedir la guardia sobre fondo de color plano (verde, o magenta
+si el luchador tiene verde, como el Flaitiano) y recortar por color.
+
+**Colores alternativos** (`costume` en la definición): revisar con una vista previa de los 3 colores.
+Una franja de cabeza (`head`) que corta una prenda la deja de dos colores (el gorro del polerón de
+Pablito): mejor dejar fuera esa prenda (Pablito conserva el polerón amarillo). Con `face`, subir
+`faceNeighbors` a 6 en arte HD para que la ropa junto a manos y cuello también se tiña.
+
+**Saltos y clavados que se salen por arriba**: se piden a Kling con una guardia achicada al 75 % en
+torno a los pies (`guardia-pintada-chica.png`, con aire arriba y a los lados) poniendo
+`"guardia": URL` en ese clip del `kie.json`, y en el `armado.json` `"reescalar": {"salto": 0.75}`
+los agranda de vuelta al tamaño de los demás.
+
+**Revisar antes de armar** (luchadores pintados): por cada clip, una hoja con el número de cada
+cuadro y una pasada que avise qué cuadros tocan el borde del video. Se rehacen los clips con
+errores de continuidad: objetos que aparecen o quedan flotando (el agarre del Flaitiano), el
+personaje que se achica al alejarse de la cámara (la caída de Pablito) o accesorios que se sacan y
+vuelven a aparecer (las zapatillas del súper de Pablito).
+
 ### 1.3 Clip de prueba y animaciones
 
 Kling 3.0, 3 s, `std`, `sound: off`, 1:1, imagen de inicio y de final = la guardia subida.
@@ -249,6 +281,7 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 | `armar_escenario.py` | Arma un escenario HD (fondo, piso, video, bruma, partículas). |
 | `musica_ia.py` | Temas con ACE-Step (registro de los textos usados). |
 | `musica_suno.py` | Temas con Suno por kie.ai (`KIE_API_KEY`). |
+| `kie_video.py` | Animaciones con Kling 3.0 por kie.ai desde `arte/<luchador>/kie.json` (`KIE_API_KEY`). |
 | `musica_loop.py` | Prepara un tema para sonar en loop y lo agrega a `musica.json`. |
 | `musica_lluvia.py` | Cama de lluvia sintetizada para mezclar bajo un tema. |
 | `musica.py` | Temas sintetizados desde cero (respaldo, sin IA). |

@@ -4,7 +4,7 @@ Juego de pelea 2D para el navegador, estilo arcade (SNK / Marvel vs Capcom)
 con pixel art y efectos modernos. Parodia sin fines de lucro.
 
 **Estado: en desarrollo.** Se puede jugar con Loco René, Pablito Neuquén, el
-Flaitiano y el Vendedor de Leña (sprites, voces y poderes definitivos) en los escenarios de René, en
+Flaitiano, el Vendedor de Leña y Carlitos Run (sprites, voces y poderes definitivos) en los escenarios de René, en
 la calle del Pablito (Valdivia, con lluvia), en los cerros de Valparaíso y en Santiago de noche. Los demás luchadores del plantel vienen después.
 
 Documentación del proyecto en `docs/`: [estado del proyecto](docs/ESTADO_DEL_PROYECTO.md)
@@ -196,6 +196,20 @@ tienen que caer juntos (si el botón cae un pelo antes, el golpe que alcanzó a
 salir se convierte en el especial), y al machacar cuentan también los golpes que
 se aprietan mientras sale el primero. El motor sigue aceptando cargas
 (`charge`, `chargeSuper`) y mantener y soltar (`hold`) para otros luchadores.
+
+Carlitos Run (bebida con gas, velocidad y su BMX; también dos toques y un botón):
+
+| Movimiento | Comando |
+|---|---|
+| ¡Quiero mi coca colita! (chorro de bebida con espuma; el fuerte pega 3 veces y derriba) | adelante, adelante + golpe |
+| ¡Ruuun! (sale corriendo y embiste; el fuerte cruza la pantalla y derriba) | adelante, adelante + patada |
+| En breve me la llevo en bicicleta (pasa encima en su BMX levantando la rueda) | atrás, atrás + golpe |
+| ¡Regálame todo el cajón! (lanza un cajón de botellas que revienta en espuma) | atrás, atrás + patada |
+| Súper ¡ENTRANDO PA' LA DISCOTECA! (discoteca de neón rojo, su canción y las letras R-U-N en llamas que caen sobre el rival; 1 barra) | abajo, abajo + golpe |
+| Ultra ¡RUN MAFIA! (focos y confeti, encadena todos sus golpes; 2 barras, rival en peligro) | abajo, abajo + patada |
+
+Sus combos se llenan de bebida: burbujas, espuma, estallidos y, desde 12 golpes,
+un géiser. Su ropa de visita es la polera blanca.
 
 Luchadores provisorios:
 

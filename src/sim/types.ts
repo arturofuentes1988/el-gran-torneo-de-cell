@@ -146,7 +146,7 @@ export interface SuperCinematic {
  * segundo y soltarlo. chargeSuper: cargar atrás y luego → ← →.
  */
 /** Show de luces de un súper (ver CinematicDef.lights). */
-export type LightsKind = 'disco' | 'tormenta' | 'ultrainstinto' | 'fiesta';
+export type LightsKind = 'disco' | 'tormenta' | 'ultrainstinto' | 'fiesta' | 'neon';
 
 export type MotionId =
   | 'qcf' | 'qcb' | 'dp' | 'qcf2' | 'hcf' | 'hcb' | 'charge' | 'ff' | 'bb' | 'dd' | 'bf' | 'fbf' | 'mash' | 'hold' | 'chargeSuper';
@@ -332,7 +332,7 @@ export interface FighterDef {
    * Efectos que crecen con el largo de sus combos: 'electrico' = chispas, brillo, agua y rayos;
    * 'fuego' = brasas, aura de llamas, estallidos y un pilar de fuego.
    */
-  comboFx?: 'electrico' | 'fuego';
+  comboFx?: 'electrico' | 'fuego' | 'cola';
   /** Cuál es su ropa, para los colores alternativos (ver render/costume.ts). */
   costume?: CostumeDef;
   /** De dónde es (para el mapa del ARCADE): nombre de la ciudad, latitud y longitud. */

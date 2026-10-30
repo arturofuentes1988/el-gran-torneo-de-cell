@@ -42,6 +42,38 @@ TEMAS = {
                   'vinyl scratches, crowd hype, gritty urban, 90s arcade video game music, 100 bpm, A minor, '
                   'instrumental, seamless loop'),
     },
+    # Segunda vuelta (30 oct 2026): el usuario pidió más estilo arcade de los 80 y 90, como
+    # el título y la pobla. Se guardan aparte para no pisar las versiones anteriores.
+    'rene-cabana-v2': {
+        'title': 'La Cabana del Lago (Arcade)',
+        'style': ('90s arcade fighting game stage theme, Capcom CPS2 and Neo Geo style, sunny lakeside cabin party '
+                  'in southern Chile, upbeat 80s synth funk, bright FM synth lead with a catchy heroic hook, '
+                  'slap bass, gated reverb drums, synth brass stabs, a touch of charango, energetic, joyful, '
+                  '128 bpm, D major, instrumental, seamless loop'),
+    },
+    'pablito-calle-v2': {
+        'title': 'La Calle del Pablito (Arcade)',
+        'style': ('90s arcade fighting game stage theme, Neo Geo style, rainy night street in a southern Chilean '
+                  'neighborhood, dark electro cumbia fused with 80s synthwave, accordion-like FM synth lead with a '
+                  'catchy hook, cumbia guiro groove on a punchy drum machine, deep synth bass, moody, energetic, '
+                  '104 bpm, D minor, instrumental, seamless loop'),
+    },
+    # Tercera vuelta del Pablito (30 oct 2026): el usuario no quiere cumbia.
+    'pablito-calle-v3': {
+        'title': 'La Calle del Pablito (Noche de Lluvia)',
+        'style': ('90s arcade fighting game stage theme, Neo Geo style, rainy night street in southern Chile, '
+                  'moody 80s synthwave with dark synth rock, driving drum machine, pulsing bass arpeggio, '
+                  'catchy melancholic FM synth lead hook, electric guitar riffs, energetic, '
+                  '112 bpm, E minor, instrumental, seamless loop'),
+        'negativo': 'cumbia, accordion, guiro, latin percussion, tropical',
+    },
+    'lena-valparaiso-v2': {
+        'title': 'Los Cerros de Valparaiso (Arcade)',
+        'style': ('90s arcade fighting game stage theme, Capcom CPS2 style, sunset over the hills and harbor of '
+                  'Valparaiso, energetic synth rock, catchy FM synth lead and electric guitar melody, '
+                  'accordion touches, driving rock drums, slap bass, orchestra hits, adventurous, '
+                  '136 bpm, A minor, instrumental, seamless loop'),
+    },
 }
 
 
@@ -62,7 +94,8 @@ def main(nombres: list[str]) -> None:
             'model': 'ai-music-api/generate',
             'input': {
                 'custom_mode': True, 'instrumental': True, 'model': 'V6',
-                'title': t['title'], 'style': t['style'], 'negative_tags': SIN_VOZ, 'duration': 120,
+                'title': t['title'], 'style': t['style'],
+                'negative_tags': SIN_VOZ + (', ' + t['negativo'] if t.get('negativo') else ''), 'duration': 120,
             },
         })
         if res.get('code') != 200:

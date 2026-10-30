@@ -26,7 +26,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).parent))
-from video_a_cuadros import quitar_fondo  # noqa: E402
+from video_a_cuadros import alfa_ia, color_fondo, quitar_fondo  # noqa: E402
 
 PAGINA = 4096
 MARGEN = 2
@@ -37,7 +37,8 @@ MARGEN = 2
 class Clip:
     """Cuadros de un video (a 24 por segundo) con su máscara, cargados a pedido."""
 
-    def __init__(self, ruta: Path, tolerancia: float, huecos_sd: float | None = None):
+    def __init__(self, ruta: Path, tolerancia: float, huecos_sd: float | None = None, estricto: bool = False,
+                 ia: bool = False, ropa_blanca: bool = True):
         self.tmp = Path(tempfile.mkdtemp(prefix="clip_"))
         subprocess.run(
             ["ffmpeg", "-loglevel", "error", "-y", "-i", str(ruta), "-vf", "fps=24", str(self.tmp / "%04d.png")],
@@ -46,14 +47,56 @@ class Clip:
         self.rutas = sorted(self.tmp.glob("*.png"))
         self.tolerancia = tolerancia
         self.huecos_sd = huecos_sd
+        self.estricto = estricto
+        self.ia = ia
+        self.ropa_blanca = ropa_blanca
         self.cache: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+        self.alfas: dict[int, np.ndarray] = {}
+        self.factor = 1.0
+        self.borde = 0
+
+    def reescalar(self, factor: float, pies: tuple[float, float], borde: int) -> None:
+        """El video se hizo con la guardia achicada a `factor` en torno a los pies (para que
+        un salto o un clavado no se salga del cuadro): sus cuadros se agrandan de vuelta y
+        se pegan en un lienzo con `borde` pixeles de aire por lado."""
+        self.factor, self.pies, self.borde = factor, pies, borde
+
+    def _agrandar(self, rgb: np.ndarray, alfa: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        s, b = 1 / self.factor, self.borde
+        fx, fy = self.pies
+        alto, ancho = alfa.shape
+        tam = (round(ancho * s), round(alto * s))
+        pos = (round(fx + b - fx * s), round(fy + b - fy * s))
+        lienzo = Image.new("RGB", (ancho + 2 * b, alto + 2 * b), tuple(int(v) for v in color_fondo(rgb)))
+        lienzo.paste(Image.fromarray(rgb).resize(tam, Image.LANCZOS), pos)
+        capa = Image.new("L", lienzo.size, 0)
+        capa.paste(Image.fromarray(alfa).resize(tam, Image.LANCZOS), pos)
+        return np.asarray(lienzo), np.asarray(capa)
 
     def cuadro(self, i: int) -> tuple[np.ndarray, np.ndarray]:
         i = max(0, min(len(self.rutas) - 1, i))
         if i not in self.cache:
             rgb = np.asarray(Image.open(self.rutas[i]).convert("RGB"))
-            self.cache[i] = (rgb, quitar_fondo(rgb, self.tolerancia, self.huecos_sd))
+            if self.ia:
+                alfa = alfa_ia(rgb, self.ropa_blanca)
+            else:
+                m = quitar_fondo(rgb, self.tolerancia, self.huecos_sd, self.estricto)
+                alfa = None
+            if self.factor != 1.0:
+                rgb, alfa = self._agrandar(rgb, alfa if alfa is not None else (m * 255).astype(np.uint8))
+                m = alfa > 127
+                if not self.ia:
+                    alfa = None
+            elif alfa is not None:
+                m = alfa > 127
+            if alfa is not None:
+                self.alfas[i] = alfa
+            self.cache[i] = (rgb, m)
         return self.cache[i]
+
+    def alfa(self, i: int) -> np.ndarray | None:
+        """Alfa suave del cuadro (solo con "ia"; si no, la máscara es dura)."""
+        return self.alfas.get(max(0, min(len(self.rutas) - 1, i)))
 
     def cerrar(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -244,12 +287,17 @@ def sin_tono(rgb: np.ndarray, m: np.ndarray, tono: list[float], sat_min: float =
 
 # ---------------------------------------------------------------- imágenes
 
-def recorte(rgb: np.ndarray, m: np.ndarray, escala: float) -> tuple[Image.Image, int, int]:
+def recorte(rgb: np.ndarray, m: np.ndarray, escala: float, alfa: np.ndarray | None = None) -> tuple[Image.Image, int, int]:
     b = caja(m)
     x0, y0, x1, y1 = b
-    x0, y0 = max(0, x0 - MARGEN), max(0, y0 - MARGEN)
-    x1, y1 = min(m.shape[1], x1 + MARGEN), min(m.shape[0], y1 + MARGEN)
-    rgba = np.dstack([rgb[y0:y1, x0:x1], (m[y0:y1, x0:x1] * 255).astype(np.uint8)])
+    x0, y0 = max(0, x0 - MARGEN - 2), max(0, y0 - MARGEN - 2)
+    x1, y1 = min(m.shape[1], x1 + MARGEN + 2), min(m.shape[0], y1 + MARGEN + 2)
+    if alfa is not None and alfa.shape == m.shape:
+        # Borde suave de la IA, pero solo junto a la máscara (lo borrado a mano no vuelve).
+        a = np.where(ndimage.binary_dilation(m, iterations=2), alfa, 0).astype(np.uint8)
+    else:
+        a = (m * 255).astype(np.uint8)
+    rgba = np.dstack([rgb[y0:y1, x0:x1], a[y0:y1, x0:x1]])
     im = Image.fromarray(rgba, "RGBA").convert("RGBa")
     w = max(1, round((x1 - x0) * escala))
     h = max(1, round((y1 - y0) * escala))
@@ -324,12 +372,31 @@ def main() -> None:
     tol = cfg.get("tolerancia", 30)
     # Ropa blanca o gris claro: los huecos encerrados solo son fondo si son parejos (ver quitar_fondo).
     huecos_sd = cfg.get("huecos_sd")
+    # "estricto": {clip: tolerancia} quita solo lo cercano al color del fondo en esos clips (ropa
+    # blanca con el contorno cortado por el movimiento; ver quitar_fondo).
+    estrictos = cfg.get("estricto", {})
+    # "ia": true (o una lista de clips) recorta con IA (ver alfa_ia): ropa blanca sobre gris claro.
+    ia = cfg.get("ia", False)
+    # "ropa_blanca": false para luchadores de ropa oscura: el resplandor del video no queda (ver alfa_ia).
+    ropa_blanca = cfg.get("ropa_blanca", True)
+    # "reescalar": {clip: factor} para clips hechos con la guardia achicada (ver Clip.reescalar).
+    reescalar = cfg.get("reescalar", {})
+    pies_ref: list[tuple[float, float]] = []
 
     clips: dict[str, Clip] = {}
 
     def clip(nombre: str) -> Clip:
         if nombre not in clips:
-            clips[nombre] = Clip(videos / f"{nombre}.mp4", tol, huecos_sd)
+            if nombre in estrictos:
+                clips[nombre] = Clip(videos / f"{nombre}.mp4", estrictos[nombre], huecos_sd, True)
+            else:
+                clips[nombre] = Clip(videos / f"{nombre}.mp4", tol, huecos_sd, ia=ia is True or nombre in (ia or []), ropa_blanca=ropa_blanca)
+            if nombre in reescalar:
+                if nombre == cfg["referencia"] or not pies_ref:
+                    raise SystemExit(f"{nombre}: la referencia no se puede reescalar")
+                f = reescalar[nombre]
+                fx, fy = pies_ref[0]
+                clips[nombre].reescalar(f, (fx, fy), int(np.ceil(max(fy, fx, 1440 - fx) * (1 / f - 1))) + 8)
         return clips[nombre]
 
     # Referencia: alto de la guardia y pies.
@@ -339,6 +406,7 @@ def main() -> None:
     ys, xs = np.nonzero(guardia[gy1 - max(4, int(alto * 0.08)):gy1])
     ax0, ay0 = float(xs.mean()), float(gy1)
     torso0 = centro_torso(guardia)
+    pies_ref.append((ax0, ay0))
     escala = cfg["alto_px"] / alto
     tex_scale = cfg["alto_mundo"] / cfg["alto_px"]
     k = cfg["alto_mundo"] / alto  # unidades de mundo por pixel de video
@@ -363,7 +431,8 @@ def main() -> None:
             # "boca_fija": {"cuadro": n, "zona": [x0, y0, x1, y1]} deja la boca del cuadro n en todos.
             if boca and i != boca["cuadro"]:
                 rgb = fijar_boca(rgb, c.cuadro(boca["cuadro"])[0], boca["zona"])
-                m = quitar_fondo(rgb, tol, huecos_sd)
+                if not c.ia:  # la boca no cambia la silueta: con IA se queda la del cuadro
+                    m = quitar_fondo(rgb, tol, huecos_sd)
             # "borrar_objeto": {"desde": a, "hasta": b, "x_min": px} quita un objeto blanco liso que
             # el video dibujó en sus manos (la cabeza de un rival invisible), dejando la piel.
             borrar = spec.get("borrar_objeto")
@@ -383,16 +452,18 @@ def main() -> None:
                 rgb, m, arreglada = con_cabeza(rgb, m, guardia_rgb, guardia)
             # "centrar": alinea el tronco (caminar, rodar); "pies": el apoyo va en los
             # pies del propio cuadro (cuadros en el aire: el motor ya pone la altura).
-            dx = centro_torso(m) - torso0 if spec.get("centrar") or spec.get("pies") else 0.0
-            dy = caja(m)[3] - ay0 if spec.get("pies") else 0.0
-            ax, ay = ax0 + dx, ay0 + dy
+            # Un clip reescalado vive en un lienzo con `borde` de aire: la guardia queda corrida.
+            b = c.borde
+            dx = centro_torso(m) - (torso0 + b) if spec.get("centrar") or spec.get("pies") else 0.0
+            dy = caja(m)[3] - (ay0 + b) if spec.get("pies") else 0.0
+            ax, ay = ax0 + b + dx, ay0 + b + dy
             tex = f"{id_}/{spec['clip']}/{i}" + ("c" if dx or dy else "") + ("h" if arreglada else "")
             if tex not in texturas:
-                img, cx0, cy0 = recorte(rgb, m, escala)
+                img, cx0, cy0 = recorte(rgb, m, escala, c.alfa(i))
                 texturas[tex] = {"img": img, "ax": (ax - cx0) * escala, "ay": (ay - cy0) * escala}
             fr = {"tex": tex, "dur": dur, "hurt": cajas_dano(m, ax, ay, k)}
             if j in activos:
-                hb = caja_golpe(m, guardia, dx, dy, spec.get("golpe", "frente"), ax, ay, alto, k)
+                hb = caja_golpe(m, np.pad(guardia, b) if b else guardia, dx, dy, spec.get("golpe", "frente"), ax, ay, alto, k)
                 grupos = spec.get("grupos", {})
                 hb["group"] = grupos.get(str(j), 0)
                 # "props_grupo": {"4": {...}} cambia las propiedades de un golpe (ej. el último lanza).

@@ -1,15 +1,17 @@
 import { CanvasSource, Container, Graphics, Sprite, Texture } from 'pixi.js';
-import { VIEW_H, VIEW_W } from '../config';
+import { STAGE_W, VIEW_H, VIEW_W } from '../config';
 import type { Game } from '../app/game';
+import type { StageView } from '../render/stage';
+import { loadTitleArena } from './titleArena';
 
-// Fondo de las pantallas de menú (título, ELIGE MODO, ELIGE LUCHADOR, …): un
-// escenario de show que no es ninguno de los de pelea. Cielo oscuro con
-// estrellas, dos focos que barren y un piso de neón que avanza hacia la
-// pantalla. Es uno solo y sigue donde iba al pasar de una
-// pantalla a otra.
+// Fondo de las pantallas de menú (ELIGE MODO, ELIGE LUCHADOR, …): el ring del
+// torneo con el templo (el mismo del título), teñido de morado, con dos focos
+// que barren y un piso de neón que avanza hacia la pantalla. Mientras el ring
+// carga (o si no carga) se ve un cielo morado con estrellas. Es uno solo y
+// sigue donde iba al pasar de una pantalla a otra.
 
-/** Línea del horizonte: ahí empieza el piso. */
-const HORIZON_Y = 178;
+/** Línea del horizonte: ahí empieza el piso del ring (y donde nace el neón). */
+const HORIZON_Y = 194;
 const N_STARS = 46;
 
 function canvasTexture(w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void): Texture {
@@ -37,6 +39,10 @@ class MenuBackdrop {
   private grid = new Graphics();
   private stars = new Graphics();
   private starList: Star[] = [];
+  /** El ring del torneo; lo comparte con el título, que lo saca de aquí mientras se muestra. */
+  private arena: StageView | null = null;
+  private arenaHolder = new Container();
+  private sky: Sprite | null = null;
   /** Segundos de animación. */
   private t = 0;
   private last = 0;
@@ -61,6 +67,26 @@ class MenuBackdrop {
       }),
     );
     sky.scale.set(0.5);
+    this.sky = sky;
+    loadTitleArena().then(
+      (arena) => {
+        this.arena = arena;
+      },
+      () => undefined,
+    );
+    // Velo morado sobre el ring: lo tiñe y deja leer los menús.
+    const veil = new Sprite(
+      canvasTexture(4, 256, (ctx) => {
+        const g = ctx.createLinearGradient(0, 0, 0, 256);
+        g.addColorStop(0, 'rgba(26,6,48,0.55)');
+        g.addColorStop(0.62, 'rgba(48,10,78,0.38)');
+        g.addColorStop(1, 'rgba(14,3,26,0.7)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, 4, 256);
+      }),
+    );
+    veil.width = VIEW_W;
+    veil.height = VIEW_H;
 
     // Focos: un cono de luz difuso, uno rosado y uno celeste, que barren desde arriba.
     const cone = canvasTexture(128, 512, (ctx) => {
@@ -119,7 +145,7 @@ class MenuBackdrop {
       });
     }
     this.grid.blendMode = 'add';
-    this.root.addChild(sky, this.stars, ...this.spots, this.grid, glow);
+    this.root.addChild(sky, this.stars, this.arenaHolder, veil, ...this.spots, this.grid, glow);
   }
 
   /** Pone el fondo en el mundo (al entrar a una pantalla de menú). */
@@ -141,11 +167,19 @@ class MenuBackdrop {
     this.last = now;
     this.t += dt;
     const t = this.t;
+    // El título se lleva el ring a su pantalla; al volver a un menú se recupera.
+    if (this.arena) {
+      if (this.arena.container.parent !== this.arenaHolder) this.arenaHolder.addChild(this.arena.container);
+      this.arena.setDarkness(0);
+      this.arena.update((STAGE_W - VIEW_W) / 2, 0);
+      this.stars.visible = false;
+      if (this.sky) this.sky.visible = false;
+    }
     this.spots[0].rotation = -0.42 + Math.sin(t * 0.55) * 0.32;
     this.spots[1].rotation = 0.42 + Math.sin(t * 0.55 + 2.2) * 0.32;
 
     this.stars.clear();
-    for (const s of this.starList) {
+    if (!this.arena) for (const s of this.starList) {
       this.stars.circle(s.x, s.y, s.r).fill({ color: 0xffffff, alpha: 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(t * s.f + s.ph)) });
     }
 

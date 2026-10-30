@@ -1,4 +1,5 @@
-import '@fontsource/press-start-2p/400.css';
+import '@fontsource/oswald/500.css';
+import '@fontsource/oswald/700.css';
 import type { Texture } from 'pixi.js';
 import { Display } from './app/display';
 import { autoFullscreen, installFullscreen } from './app/fullscreen';
@@ -6,7 +7,7 @@ import { installQaBridge } from './app/qa';
 import { Game, type FightMode } from './app/game';
 import { loadMuted } from './app/settings';
 import { Sfx } from './audio/sfx';
-import { FRAME_MS, PIXEL_FONT } from './config';
+import { FRAME_MS, GAME_FONT } from './config';
 import { loadFighterFolder, validateFighter } from './content/loadFighter';
 import { BUILTIN_STAGE, StageLibrary } from './content/stages';
 import { buildPlaceholderFighters, type FighterAsset } from './content/mannequin/fighters';
@@ -17,7 +18,7 @@ import { FightScene } from './scenes/fight';
 import { TitleScene, loadTitleArena } from './scenes/title';
 
 /** Luchadores con sprites definitivos (carpetas de public/luchadores/), en el orden del plantel. */
-const REAL_FIGHTERS = ['rene', 'pablito', 'flaitiano', 'lena'];
+const REAL_FIGHTERS = ['rene', 'pablito', 'flaitiano', 'lena', 'carlitos'];
 
 /** "0,1" → [0, 1] (índices del plantel del jugador 1 y del 2); null si no viene o no sirve. */
 function parsePair(raw: string | null, n: number): [number, number] | null {
@@ -34,8 +35,8 @@ function parseTeams(raw: string | null, n: number): [number[], number[]] | null 
 }
 
 async function main(): Promise<void> {
-  // La fuente pixel viene incluida en el build (sin descargas en tiempo de ejecución).
-  await Promise.all([8, 16, 24, 32, 40].map((s) => document.fonts.load(`${s}px "${PIXEL_FONT}"`)));
+  // La fuente viene incluida en el build (sin descargas en tiempo de ejecución).
+  await Promise.all(['500', '700'].flatMap((w) => [12, 24, 48].map((s) => document.fonts.load(`${w} ${s}px "${GAME_FONT}"`))));
 
   const display = new Display();
   await display.init();

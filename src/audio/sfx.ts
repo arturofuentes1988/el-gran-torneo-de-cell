@@ -115,15 +115,24 @@ const SOUNDS: Record<string, Gen> = {
       return sat(body * 1.2 + thump + ring, 2) * 0.8;
     });
   },
+  // Guardia: un clic seco al contacto, un "tsss" de escudo de energía que baja de agudo a medio,
+  // un golpe grave cortísimo (sin resonar, para que no suene hueco) y un brillo metálico chico.
   block: (sr) => {
     const n = noiseGen(9);
-    const hp = highpass(sr);
-    const a = osc(sr);
-    const b = osc(sr);
-    return render(sr, 0.12, (t) => {
-      const metal = (a(1400, 'sq') + b(2130, 'sq')) * 0.25 * Math.exp(-t * 48);
-      const click = hp(n(), 3000) * Math.exp(-t * 90);
-      return sat(metal + click * 0.8) * 0.55;
+    const n2 = noiseGen(29);
+    const hpClick = highpass(sr);
+    const hpZap = highpass(sr);
+    const lpZap = lowpass(sr);
+    const o = osc(sr);
+    const s1 = osc(sr);
+    const s2 = osc(sr);
+    return render(sr, 0.15, (t) => {
+      const click = hpClick(n(), 2600) * Math.exp(-t * 380);
+      const corte = 5200 * Math.exp(-t * 14) + 1300;
+      const zap = hpZap(lpZap(n2(), corte), corte * 0.35) * env(t, 0.002, 34);
+      const body = o(190 + 120 * Math.exp(-t * 90)) * Math.exp(-t * 70);
+      const shine = (s1(2930) + s2(4110) * 0.7) * 0.07 * env(t, 0.001, 30);
+      return sat(click * 0.9 + zap * 0.85 + body * 0.45 + shine, 1.4) * 0.6;
     });
   },
   whooshL: (sr) => {

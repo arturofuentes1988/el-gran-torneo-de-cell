@@ -5,11 +5,14 @@ import type { Game, Scene } from '../app/game';
 import type { FighterAsset } from '../content/mannequin/fighters';
 import { attackKeys } from '../input/devices';
 import { FxLayer } from '../render/fx';
-import { StageView } from '../render/stage';
+import type { StageView } from '../render/stage';
 import { outlinedText } from '../render/text';
 import type { FighterDef } from '../sim/types';
 import { backdrop } from './backdrop';
 import { MainMenuScene } from './modeSelect';
+import { loadTitleArena } from './titleArena';
+
+export { loadTitleArena };
 
 /** Alto en pantalla de cada luchador (de cuerpo entero) y dónde quedan sus pies. */
 const ALTO = 112;
@@ -76,13 +79,6 @@ interface Burst {
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 
-/** Fondo del título: el ring del torneo de artes marciales (public/torneo/, ilustración con video en loop). */
-let arenaLoad: Promise<StageView> | null = null;
-export function loadTitleArena(): Promise<StageView> {
-  arenaLoad ??= StageView.load('torneo/escenario.json');
-  return arenaLoad;
-}
-
 /**
  * Pantalla de título: "EL GRAN TORNEO DE CELL". En cada vuelta salen dos luchadores
  * al azar: entra uno saltando desde la izquierda y después el otro desde la derecha
@@ -101,7 +97,7 @@ export class TitleScene implements Scene {
   private prompt = outlinedText('PRESIONA ENTER', 12, 0xffffff, 0x3a0a18, 3);
   /** Un clic en el título pone la pantalla completa (y el sonido) sin pasar al menú. */
   private onPointer = (): void => autoFullscreen();
-  private logoBig = outlinedText('DE CELL', 28, 0xffd040, 0x5a0a10, 3);
+  private logoBig = outlinedText('DE CELL', 30, 0xffd040, 0x5a0a10, 3);
   /** De fondo, el ring del torneo de artes marciales (si no carga, el show de luces de los menús). */
   private arena: StageView | null = null;
   private lights = false;
@@ -123,11 +119,11 @@ export class TitleScene implements Scene {
   private kick = 0;
 
   constructor(private game: Game) {
-    const top = outlinedText('EL GRAN TORNEO', 22, 0xfff4e0, 0x5a0a10, 3);
+    const top = outlinedText('EL GRAN TORNEO', 17, 0xfff4e0, 0x5a0a10, 3);
     top.anchor.set(0.5);
-    top.position.set(VIEW_W / 2, 30);
+    top.position.set(VIEW_W / 2, 24);
     this.logoBig.anchor.set(0.5);
-    this.logoBig.position.set(VIEW_W / 2, 58);
+    this.logoBig.position.set(VIEW_W / 2, 62);
     this.fx.container.scale.set(S);
     this.prompt.anchor.set(0.5);
     this.prompt.position.set(VIEW_W / 2, VIEW_H - 13);

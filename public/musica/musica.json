@@ -7,9 +7,9 @@
   },
   "rene-cabana": {
     "archivo": "rene-cabana.mp3",
-    "bpm": 117.5,
-    "loopStart": 2.0,
-    "loopEnd": 104.4174
+    "bpm": 131.84,
+    "loopStart": 34.7,
+    "loopEnd": 67.4442
   },
   "rene-plaza": {
     "archivo": "rene-plaza.mp3",
@@ -19,14 +19,14 @@
   },
   "pablito-calle": {
     "archivo": "pablito-calle.mp3",
-    "bpm": 100.02,
-    "loopStart": 21.05,
-    "loopEnd": 81.0348
+    "bpm": 113.88,
+    "loopStart": 6.5,
+    "loopEnd": 113.7884
   },
   "lena-valparaiso": {
     "archivo": "lena-valparaiso.mp3",
-    "bpm": 140.0,
-    "loopStart": 19.5,
-    "loopEnd": 55.5
+    "bpm": 137.9,
+    "loopStart": 18.6,
+    "loopEnd": 79.6116
   }
 }

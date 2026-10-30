@@ -1,27 +1,37 @@
 import { Text, type TextStyleOptions } from 'pixi.js';
-import { PIXEL_FONT } from '../config';
+import { GAME_FONT } from '../config';
 
-// Todo el texto usa la fuente pixel. Se dibuja a la resolución de pantalla
-// (escala × densidad) para que se vea nítido aunque el HUD esté escalado.
+// Todo el texto usa la fuente del juego (Oswald, gruesa y moderna). Se dibuja a la
+// resolución de pantalla (escala × densidad) para que se vea nítido aunque el HUD esté escalado.
+// Los tamaños del código venían pensados para la fuente pixel (letras anchas y del alto
+// completo); FONT_SCALE los agranda para que la nueva se vea del mismo porte.
 
 const registry = new Set<Text>();
 let resolution = 1;
 
-const PLAIN: Record<string, string> = { Á: 'A', É: 'E', Í: 'I', Ó: 'O', Ú: 'U', Ü: 'U' };
+const FONT_SCALE = 1.45;
 
 /**
- * La fuente pixel dibuja las mayúsculas con tilde del tamaño de una minúscula,
- * así que en pantalla van sin tilde, como en los arcades. Usar también al
- * cambiar el texto de un Text ya creado.
+ * Antes la fuente pixel no tenía mayúsculas con tilde y se las quitaba; la fuente
+ * nueva sí las tiene, así que el texto queda tal cual (se mantiene la función para
+ * los lugares que la usan al cambiar el texto de un Text ya creado).
  */
 export function arcade(s: string): string {
-  return s.replace(/[ÁÉÍÓÚÜ]/g, (c) => PLAIN[c] ?? c);
+  return s;
 }
 
 export function pixelText(text: string, size: number, fill: number, style: Partial<TextStyleOptions> = {}): Text {
   const t = new Text({
     text: arcade(text),
-    style: { fontFamily: PIXEL_FONT, fontSize: size, fill, lineHeight: size + Math.round(size / 2), ...style },
+    style: {
+      fontFamily: GAME_FONT,
+      fontWeight: '700',
+      fontSize: Math.round(size * FONT_SCALE),
+      fill,
+      letterSpacing: Math.max(0, size * 0.04),
+      lineHeight: Math.round(size * FONT_SCALE * 1.15),
+      ...style,
+    },
     resolution,
   });
   t.roundPixels = true;

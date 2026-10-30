@@ -204,6 +204,8 @@ export class Match {
   slowmo = 0;
   /** Cuadros que el round 1 espera las frases de entrada antes del "ROUND 1" (y cuándo se canta en este round). */
   private introDelay = 0;
+  /** Luchadores que ya hicieron su entrada en esta presentación (una sola vez, no en loop). */
+  private introShown = new Set<Fighter>();
   private callAt = 0;
   camX = STAGE_W / 2;
   private serial = 0;
@@ -342,6 +344,7 @@ export class Match {
   private startRound(): void {
     this.phase = 'intro';
     this.phaseFrame = 0;
+    this.introShown.clear();
     this.timer = ROUND_TIME;
     this.timerSub = 0;
     this.projectiles.length = 0;
@@ -372,6 +375,19 @@ export class Match {
     switch (this.phase) {
       case 'intro':
         if (this.callAt > 0 && this.phaseFrame === this.callAt) this.announceRound();
+        // Cada uno hace su entrada una vez, terminando justo cuando suena "FIGHT!"; antes y después, en guardia.
+        for (const f of this.fighters) {
+          const intro = f.def.anims.intro;
+          if (f.state !== 'intro' || !intro) continue;
+          const len = intro.frames.reduce((t, fr) => t + fr.dur, 0);
+          const start = Math.max(0, this.callAt + FIGHT_AT - len);
+          if (!this.introShown.has(f) && this.phaseFrame >= start) {
+            this.introShown.add(f);
+            f.setAnim('intro');
+          } else if (this.introShown.has(f) && this.phaseFrame === start + len) {
+            f.setAnim('idle');
+          }
+        }
         if (this.phaseFrame === this.callAt + FIGHT_AT) {
           this.emit({ type: 'announce', text: 'FIGHT!', kind: 'fight' });
         }

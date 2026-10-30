@@ -108,7 +108,9 @@ export class FxLayer {
   private live: Particle[] = [];
   private sheets: SheetFx[] = [];
   private hearts = new Map<number, Texture>();
-  readonly tex: { dot: Texture; spark: Texture; ring: Texture; star: Texture };
+  readonly tex: { dot: Texture; spark: Texture; ring: Texture; star: Texture; ray: Texture };
+  /** Rayos quebrados (tres formas al azar) para los golpes fuertes. */
+  private bolts: Texture[] = [];
 
   constructor() {
     this.tex = {
@@ -151,7 +153,46 @@ export class FxLayer {
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, s, s);
       }),
+      // Rayo de luz que sale del centro hacia la derecha (se gira para hacer el estallido).
+      ray: makeTexture(256, (ctx, s) => {
+        const c = s / 2;
+        const g = ctx.createLinearGradient(c, 0, s, 0);
+        g.addColorStop(0, 'rgba(255,255,255,1)');
+        g.addColorStop(0.35, 'rgba(255,255,255,0.75)');
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(c, c - 5);
+        ctx.lineTo(s, c - 0.5);
+        ctx.lineTo(s, c + 0.5);
+        ctx.lineTo(c, c + 5);
+        ctx.closePath();
+        ctx.fill();
+      }),
     };
+    for (let k = 0; k < 3; k++) {
+      this.bolts.push(
+        makeTexture(256, (ctx, s) => {
+          // Zigzag desde el centro hacia afuera, con un halo y un núcleo blanco.
+          const pts: [number, number][] = [[s / 2, s / 2]];
+          let x = s / 2;
+          let y = s / 2;
+          for (let i = 0; i < 7; i++) {
+            x += s / 16 + Math.random() * (s / 20);
+            y += (Math.random() - 0.5) * (s / 7);
+            pts.push([x, y]);
+          }
+          for (const [w, a] of [[9, 0.25], [4, 0.6], [1.6, 1]] as const) {
+            ctx.strokeStyle = `rgba(255,255,255,${a})`;
+            ctx.lineWidth = w;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+            ctx.stroke();
+          }
+        }),
+      );
+    }
     this.glowLayer.filters = [new AdvancedBloomFilter({ threshold: 0.25, bloomScale: 1.2, brightness: 1, blur: 6, quality: 5 })];
     this.container.addChild(this.normalLayer, this.glowLayer);
   }
@@ -204,6 +245,44 @@ export class FxLayer {
       this.ring(x, y, 0.15, 0.9, 0x9ae0ff, 16);
       this.sparks(x, y, 16, dir, 1.6, [3, 8], 0xffe070, [12, 20], 0.5);
     }
+  }
+
+  /**
+   * Capa extra de espectáculo para cada golpe que conecta, en el color de quien
+   * pega: estallido de rayos de luz, doble onda de choque, núcleo brillante y,
+   * en los fuertes, rayos eléctricos y líneas de velocidad hacia donde va el golpe.
+   */
+  impact(x: number, y: number, dir: number, kind: SparkKind, color: number): void {
+    const k = kind === 'light' ? 0 : kind === 'heavy' ? 1 : 2;
+    const nRays = [10, 16, 22][k];
+    const base = dir >= 0 ? 0 : Math.PI;
+    for (let i = 0; i < nRays; i++) {
+      // La mitad de los rayos sale hacia donde va el golpe; el resto, para cualquier lado.
+      const a = i % 2 === 0 ? base + rand(-1.1, 1.1) : rand(0, Math.PI * 2);
+      const l = Math.round(rand(7, 11) + k * 3);
+      const len = [0.55, 0.95, 1.15][k] * rand(0.7, 1.25);
+      this.spawn(this.tex.ray, true, {
+        x, y, vx: 0, vy: 0, life: l, max: l, s0: len * 0.25, s1: len, a0: 1, a1: 0, drag: 1, grav: 0, stretch: 0, spin: 0,
+      }, i % 3 === 0 ? 0xffffff : color, a);
+    }
+    // Núcleo: un brillo grande del color del luchador y un destello blanco encima.
+    const lc = 9 + k * 3;
+    this.spawn(this.tex.dot, true, { x, y, vx: 0, vy: 0, life: lc, max: lc, s0: [0.85, 1.35, 1.6][k], s1: [1.35, 2.2, 2.6][k], a0: 0.9, a1: 0, drag: 1, grav: 0, stretch: 0, spin: 0 }, color);
+    this.flash(x, y, [0.85, 1.35, 1.7][k], 0xffffff, 8 + k * 2);
+    // Doble onda de choque: una blanca rápida y una de color más lenta.
+    this.ring(x, y, 0.06, [0.6, 1.0, 1.3][k], 0xffffff, 9 + k * 2);
+    this.ring(x, y, 0.1, [0.85, 1.45, 1.9][k], color, 13 + k * 4);
+    if (k === 0) return;
+    // Rayos eléctricos que salen del impacto.
+    for (let i = 0; i < [0, 4, 7][k]; i++) {
+      const l = Math.round(rand(5, 9));
+      const sz = rand(0.32, 0.5) * (k === 2 ? 1.3 : 1);
+      this.spawn(this.bolts[i % this.bolts.length], true, {
+        x, y, vx: 0, vy: 0, life: l, max: l, s0: sz, s1: sz * 1.15, a0: 1, a1: 0, drag: 1, grav: 0, stretch: 0, spin: 0,
+      }, i % 2 ? 0xffffff : color, base + rand(-1.4, 1.4));
+    }
+    // Líneas de velocidad en la dirección del golpe.
+    this.sparks(x, y, 6 + k * 4, dir, 0.28, [8, 14], 0xffffff, [6, 10], 0.6);
   }
 
   block(x: number, y: number, dir: number): void {
@@ -323,6 +402,19 @@ export class FxLayer {
     }
     this.ring(x, y, 0.1, 1.1, 0x7fdcff, 16);
     this.flash(x, y - 10, 1, 0xd8f6ff, 10);
+  }
+
+  /** Bebida con gas: burbujas blancas y gotas cafés que saltan y suben (golpes y combos de Carlitos). */
+  fizz(x: number, y: number, n: number): void {
+    for (let i = 0; i < n; i++) {
+      const l = Math.round(rand(14, 28));
+      const foam = Math.random() < 0.55;
+      this.spawn(this.tex.dot, foam, {
+        x: x + rand(-10, 10), y: y + rand(-8, 8), vx: rand(-2.2, 2.2), vy: rand(-3.6, -0.8), life: l, max: l,
+        s0: rand(0.08, foam ? 0.2 : 0.14), s1: 0.03, a0: 0.95, a1: 0.1, drag: 0.95, grav: foam ? -0.03 : 0.16, stretch: 0, spin: 0,
+      }, foam ? 0xfff6e8 : 0x6a2a0c);
+    }
+    this.flash(x, y, 0.5, 0xfff0d8, 7);
   }
 
   /** Fuego: llamas y brasas que suben desde (x, y) hasta ~h de alto (combos y especiales de fuego). */

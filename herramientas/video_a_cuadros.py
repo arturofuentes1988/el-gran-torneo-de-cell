@@ -39,12 +39,17 @@ def color_fondo(rgb: np.ndarray) -> np.ndarray:
     return np.median(borde, axis=0)
 
 
-def quitar_fondo(rgb: np.ndarray, tolerancia: float, huecos_sd: float | None = None) -> np.ndarray:
+def quitar_fondo(rgb: np.ndarray, tolerancia: float, huecos_sd: float | None = None, estricto: bool = False) -> np.ndarray:
     """Devuelve la máscara del personaje (True = personaje).
 
     huecos_sd: para ropa blanca o gris claro (ej. el Flaitiano), un hueco encerrado solo es
     fondo si además su luminancia es pareja (desviación menor que esto). El fondo, aun con
     su degradado, es parejo; una chaqueta blanca tiene luces y sombras.
+
+    estricto: solo cuenta como fondo lo cercano al color del fondo (sin la regla de "cualquier
+    gris claro o blanco"). Para ropa blanca en cuadros con movimiento rápido, donde el contorno
+    se corta y la inundación se comía la chaqueta (el Flaitiano al saltar y rodar). Además no quita
+    los huecos encerrados: la silueta queda rellena (sirve en poses cerradas, como rodar).
     """
     fondo = color_fondo(rgb)
     f = rgb.astype(np.float32)
@@ -54,7 +59,9 @@ def quitar_fondo(rgb: np.ndarray, tolerancia: float, huecos_sd: float | None = N
     # del personaje impide que la inundación entre a sus zonas blancas.
     maximo = f.max(axis=2)
     saturacion = (maximo - f.min(axis=2)) / np.maximum(maximo, 1)
-    parecido = (dist < tolerancia) | ((f.mean(axis=2) > 150) & (saturacion < 0.12))
+    parecido = dist < tolerancia
+    if not estricto:
+        parecido |= (f.mean(axis=2) > 150) & (saturacion < 0.12)
     # Solo es fondo lo parecido que está conectado con el borde. El contorno se
     # engruesa 2 px para que la inundación no se cuele por los cortes del trazo
     # (entraba a las zapatillas); después recupera ese fondo pegado al contorno.
@@ -77,7 +84,8 @@ def quitar_fondo(rgb: np.ndarray, tolerancia: float, huecos_sd: float | None = N
     # por dentro, o son más oscuras o más blancas que el fondo, así que se quedan.
     hueco = parecido & personaje
     etiq, n = ndimage.label(hueco)
-    if n:
+    # En modo estricto el interior de la silueta se queda entero (ropa blanca borrosa por el movimiento).
+    if n and not estricto:
         idx = range(1, n + 1)
         lum = f.mean(axis=2)
         gy, gx = np.gradient(ndimage.gaussian_filter(lum, 1))
@@ -96,6 +104,55 @@ def quitar_fondo(rgb: np.ndarray, tolerancia: float, huecos_sd: float | None = N
             personaje &= ~np.isin(etiq, quitar)
     # Un pixel menos de borde para sacar el halo del fondo.
     return ndimage.binary_erosion(personaje, iterations=1)
+
+
+_sesion_ia = None
+
+
+def alfa_ia(rgb: np.ndarray, ropa_blanca: bool = True) -> np.ndarray:
+    """Alfa (0-255) del personaje con IA, para ropa blanca sobre el fondo gris claro, donde
+    la inundación por color se come la chaqueta (luchadores pintados, sin contorno oscuro).
+
+    Usa rembg con isnet-anime (dibujos e ilustraciones) y le suma todo lo que es claramente
+    distinto del gris del fondo (piel, pelo, bolso, zapatillas), que isnet a veces deja
+    medio transparente cuando se mueve rápido. Se queda con las manchas grandes.
+
+    ropa_blanca=False (ropa oscura, como Pablito): los huecos encerrados no se rellenan (el
+    hueco entre la mano y la pierna es fondo, aunque tenga motas más claras).
+    """
+    global _sesion_ia
+    if _sesion_ia is None:
+        from rembg import new_session
+        _sesion_ia = new_session("isnet-anime")
+    from rembg import remove
+    a = np.asarray(remove(Image.fromarray(rgb), session=_sesion_ia, only_mask=True)).astype(np.uint8)
+    f = rgb.astype(np.float32)
+    fondo = color_fondo(rgb)
+    fuerte = np.sqrt(((f - fondo) ** 2).sum(axis=2)) > 70
+    # Lo blanco no cuenta (los resplandores que agrega el video): de eso se encarga isnet.
+    maximo = f.max(axis=2)
+    blanco = (f.mean(axis=2) > fondo.mean()) & ((maximo - f.min(axis=2)) / np.maximum(maximo, 1) < 0.18)
+    fuerte = ndimage.binary_opening(fuerte & ~blanco, iterations=2)
+    a = np.maximum(a, (fuerte * 255).astype(np.uint8))
+    m = a > 127
+    etiq, n = ndimage.label(m)
+    if n > 1:
+        tam = ndimage.sum(m, etiq, range(1, n + 1))
+        chicas = np.isin(etiq, np.nonzero(tam < max(400, tam.max() * 0.02))[0] + 1)
+        # Lo semitransparente pegado a una mancha chica también se va.
+        a = np.where(ndimage.binary_dilation(chicas, iterations=3), 0, a).astype(np.uint8)
+    a[a < 24] = 0
+    # Por dentro el personaje es sólido: isnet deja medio transparente la ropa blanca borrosa
+    # (rodando, saltando). Se rellenan los huecos que no son del gris del fondo y el interior
+    # queda opaco; solo el contorno conserva el borde suave. Con ropa oscura no se rellenan
+    # huecos: ahí el hueco entre la mano y la pierna es fondo y quedaba una mancha gris.
+    m = a > 127
+    if ropa_blanca:
+        hueco = ndimage.binary_fill_holes(m) & ~m & (np.sqrt(((f - fondo) ** 2).sum(axis=2)) > 22)
+        m |= hueco
+        a = np.where(hueco, 255, a).astype(np.uint8)
+    a = np.where(ndimage.binary_erosion(m, iterations=3), 255, a).astype(np.uint8)
+    return a
 
 
 def hoja_contacto(cuadros: list[Image.Image], columnas: int, lado: int) -> Image.Image:

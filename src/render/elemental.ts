@@ -10,6 +10,7 @@ import { Container, Graphics } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
 import type { Projectile } from '../sim/match';
 import { drawSilbido, drawSonico, drawTronco, drawTroncos } from './fuego';
+import { drawCajon, drawCola, drawLetras } from './cola';
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 
@@ -76,7 +77,7 @@ export class ProjectileLook {
 
   /** Cuadros que se sigue viendo después de que el proyectil desaparece (el rayo se apaga, el remolino se deshace). */
   get linger(): number {
-    const linger: Record<string, number> = { rayo: 14, tornado: 18, troncos: 16, sonico: 20 };
+    const linger: Record<string, number> = { rayo: 14, tornado: 18, troncos: 16, sonico: 20, letras: 16 };
     return linger[this.kind] ?? 0;
   }
 
@@ -91,6 +92,9 @@ export class ProjectileLook {
     else if (this.kind === 'tronco') drawTronco(this.base, this.g, p);
     else if (this.kind === 'troncos') drawTroncos(this.base, this.g, p, after);
     else if (this.kind === 'sonico') drawSonico(this.g, p, after);
+    else if (this.kind === 'cola') drawCola(this.base, this.g, p);
+    else if (this.kind === 'cajon') drawCajon(this.base, this.g, p);
+    else if (this.kind === 'letras') drawLetras(this.base, this.g, p, after);
   }
 
   /** Aviso (nube que chispea arriba y un brillo en el suelo) y después el rayo que cae. */

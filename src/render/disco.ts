@@ -183,7 +183,8 @@ export class DiscoShow {
   /** Cuadro en que baja la bola (cuando se va el cartel del súper). */
   private dropAt = 0;
 
-  constructor() {
+  /** colors: paleta de focos y destellos (René: multicolor; Carlitos: neón rojo de discoteca). */
+  constructor(private readonly colors: number[] = COLORS) {
     const tex = textures();
     this.wash = new Sprite(tex.wash);
     this.wash.blendMode = 'add';
@@ -197,7 +198,7 @@ export class DiscoShow {
       const view = new Sprite(tex.dot);
       view.blendMode = 'add';
       const white = Math.random() < 0.6;
-      view.tint = white ? 0xffffff : mix(COLORS[i % COLORS.length], 0xffffff, 0.45);
+      view.tint = white ? 0xffffff : mix(this.colors[i % this.colors.length], 0xffffff, 0.45);
       reflLayer.addChild(view);
       this.reflections.push({ view, lon: Math.random() * Math.PI * 2, y: 6 + Math.random() * 244, size: 1.4 + Math.random() * 1.8, phase: Math.random() * 6.28 });
     }
@@ -268,17 +269,17 @@ export class DiscoShow {
     const accent = beat % 4 === 0 ? 1.35 : 1;
     this.container.alpha = this.level;
 
-    this.wash.tint = COLORS[beat % COLORS.length];
+    this.wash.tint = this.colors[beat % this.colors.length];
     this.wash.alpha = 0.1 + 0.18 * k * accent;
 
     // Bola: baja desde arriba con un pequeño rebote y gira.
     const drop = easeOutBack(Math.min(1, Math.max(0, (t - this.dropAt) / 28)));
     const by = BALL_Y - (1 - drop) * 130;
     const rot = t * SPIN;
-    this.drawBall(by, rot, COLORS[beat % COLORS.length], t);
+    this.drawBall(by, rot, this.colors[beat % this.colors.length], t);
     this.ballGlow.position.set(BALL_X, by);
     this.ballGlow.scale.set((BALL_R * 6.5 * (1 + 0.12 * k)) / 64);
-    this.ballGlow.tint = mix(COLORS[beat % COLORS.length], 0xffffff, 0.5);
+    this.ballGlow.tint = mix(this.colors[beat % this.colors.length], 0xffffff, 0.5);
     this.ballGlow.alpha = 0.32 + 0.3 * k;
     this.ballShine.position.set(BALL_X - BALL_R * 0.38, by - BALL_R * 0.42);
     this.ballShine.scale.set((BALL_R * 1.1) / 64);
@@ -323,7 +324,7 @@ export class DiscoShow {
 
     // Focos: barren, se cruzan y dejan su mancha de color en el piso.
     this.beams.forEach((b, i) => {
-      const col = COLORS[(i + bar) % COLORS.length];
+      const col = this.colors[(i + bar) % this.colors.length];
       const ang = b.base + b.amp * Math.sin(t * b.speed + b.phase);
       const y0 = -8;
       const len = (yFloor + 26 - y0) / Math.cos(ang);

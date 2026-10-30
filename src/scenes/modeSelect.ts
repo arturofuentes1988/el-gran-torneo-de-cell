@@ -27,48 +27,52 @@ interface Item {
 /** La opción marcada de cada menú se recuerda al volver a él. */
 const lastSel = new Map<string, number>();
 
-/** Menú compacto y centrado: el panel crece con la cantidad de opciones. */
+/**
+ * Menú centrado de estilo moderno: cada opción es una barra inclinada semitransparente;
+ * la elegida se enciende (magenta con borde dorado y un brillo que respira) y crece un poco.
+ */
 abstract class MenuScene implements Scene {
   /** El tema de la pantalla de título sigue sonando en los menús. */
   readonly music = 'titulo';
   private ui = new Container();
   protected items: Text[] = [];
-  private bar = new Graphics();
-  private cursor: Text;
+  private plates = new Graphics();
+  private glow = new Graphics();
   private sel: number;
   private t = 0;
   private top: number;
-  private left: number;
-  private panelX: number;
-  private panelW: number;
+  private row: number;
+  private barH: number;
+  private barW: number;
 
   constructor(
     protected game: Game,
     private key: string,
     title: string,
     protected options: readonly Item[],
-    private font = 8,
-    private row = 13,
+    font = 8,
+    row = 13,
   ) {
     this.sel = Math.min(lastSel.get(key) ?? 0, options.length - 1);
-    this.cursor = outlinedText('>', font, 0xffd040, 0x5a0a10, 2);
-    const padY = Math.round(font * 1.1);
-    this.panelW = font >= 10 ? 190 : 214;
-    const panelH = padY * 2 + (options.length - 1) * row + font;
-    this.panelX = Math.round(VIEW_W / 2 - this.panelW / 2);
-    const panelY = Math.round((VIEW_H - panelH) / 2) + 12;
-    this.top = panelY + padY;
-    this.left = this.panelX + 20;
+    this.row = Math.max(row, Math.round(font * 2.25));
+    this.barH = Math.round(this.row * 0.8);
+    this.barW = font >= 10 ? 214 : 196;
+    const listH = (options.length - 1) * this.row + this.barH;
+    this.top = Math.round((VIEW_H - listH) / 2) + 14;
     const bg = new Graphics();
-    bg.rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0x0a0414, alpha: 0.55 });
-    bg.roundRect(this.panelX, panelY, this.panelW, panelH, 5).fill({ color: 0x140a24, alpha: 0.86 }).stroke({ color: 0xc89a3a, width: 1 });
-    const head = outlinedText(title, 12, 0xfff4e0, 0x5a0a10, 3);
+    bg.rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0x0a0414, alpha: 0.4 });
+    // Título grande con una línea de acento debajo.
+    const head = outlinedText(title, 13, 0xfff4e0, 0x3a0a40, 3);
     head.anchor.set(0.5);
-    head.position.set(VIEW_W / 2, panelY - 14);
-    this.ui.addChild(bg, this.bar, head, this.cursor);
+    head.position.set(VIEW_W / 2, this.top - 20);
+    bg.rect(VIEW_W / 2 - 46, this.top - 8, 92, 1.5).fill({ color: 0xff4fd8, alpha: 0.85 });
+    bg.rect(VIEW_W / 2 - 22, this.top - 5.5, 44, 1).fill({ color: 0xffd040, alpha: 0.8 });
+    this.glow.blendMode = 'add';
+    this.ui.addChild(bg, this.glow, this.plates, head);
     options.forEach((o, i) => {
       const t = outlinedText(o.label, font, 0xffffff, 0x1a0a24, 2);
-      t.position.set(this.left, this.top + i * row);
+      t.anchor.set(0.5);
+      t.position.set(VIEW_W / 2, this.top + i * this.row + this.barH / 2);
       this.items.push(t);
       this.ui.addChild(t);
     });
@@ -114,12 +118,28 @@ abstract class MenuScene implements Scene {
 
   render(): void {
     backdrop.render();
+    const g = this.plates;
+    g.clear();
+    this.glow.clear();
+    const slant = 7;
+    const pulse = 0.5 + 0.5 * Math.sin(this.t * 0.12);
     this.items.forEach((t, i) => {
-      t.style.fill = i === this.sel ? 0xffd040 : 0xffffff;
+      const on = i === this.sel;
+      const w = this.barW + (on ? 12 : 0);
+      const x = VIEW_W / 2 - w / 2;
+      const y = this.top + i * this.row;
+      const h = this.barH;
+      const shape = [x + slant, y, x + w + slant, y, x + w - slant, y + h, x - slant, y + h];
+      if (on) {
+        this.glow.roundRect(x - 10, y - 5, w + 20, h + 10, 8).fill({ color: 0xff3ac0, alpha: 0.16 + 0.12 * pulse });
+        g.poly(shape).fill({ color: 0xb02a90, alpha: 0.92 }).stroke({ color: 0xffd76a, width: 1.2 });
+        g.poly([x + slant, y, x + w + slant, y, x + w + slant - slant * 0.45, y + h * 0.45, x + slant - slant * 0.45, y + h * 0.45]).fill({ color: 0xff8ae0, alpha: 0.28 });
+      } else {
+        g.poly(shape).fill({ color: 0x1a0c2e, alpha: 0.72 }).stroke({ color: 0xb98cff, width: 0.6, alpha: 0.3 });
+      }
+      t.style.fill = on ? 0xffffff : 0xd8cfe8;
+      t.scale.set(on ? 1.08 : 1);
     });
-    const y = this.top + this.sel * this.row;
-    this.bar.clear().roundRect(this.panelX + 5, y - 3, this.panelW - 10, this.font + 6, 3).fill({ color: 0xffd040, alpha: 0.12 });
-    this.cursor.position.set(this.left - 13 + (Math.floor(this.t / 10) % 2), y);
   }
 }
 

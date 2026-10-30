@@ -102,6 +102,8 @@ export class FightScene implements Scene {
   private fx = new FxLayer();
   /** Show de luces de los súpers con cinematic.lights = 'disco' (detrás de los luchadores). */
   private disco = new DiscoShow();
+  /** Discoteca de neón rojo del súper de Carlitos Run (cinematic.lights = 'neon'). */
+  private neon = new DiscoShow([0xff1a1a, 0xff5a2a, 0xff2a7a, 0xffc890, 0xd01030]);
   private discoOwner: Fighter | null = null;
   private discoProj: ProjectileDef | null = null;
   private discoT = 0;
@@ -148,6 +150,10 @@ export class FightScene implements Scene {
   private dark = 0;
   private zoom = new ZoomBlurFilter({ strength: 0, innerRadius: 40 });
   private zoomT = 0;
+  /** Golpe fuerte: un tirón corto del zoom hacia el impacto y un destello de pantalla. */
+  private punchT = 0;
+  private punchMax = 1;
+  private punchFlash = new Graphics();
   private paused = false;
   private pauseSel = 0;
   private moveList: MoveListPanel | null = null;
@@ -370,8 +376,12 @@ export class FightScene implements Scene {
 
   enter(): void {
     const d = this.game.display;
-    d.world.addChild(this.game.assets.stage.container, this.disco.container, this.storm.container, this.ultraShow.container, this.party.container, this.world);
+    d.world.addChild(this.game.assets.stage.container, this.disco.container, this.neon.container, this.storm.container, this.ultraShow.container, this.party.container, this.world);
     d.fx.addChild(this.fx.container, this.debugG);
+    this.punchFlash.rect(0, 0, VIEW_W, VIEW_H).fill(0xffffff);
+    this.punchFlash.alpha = 0;
+    this.punchFlash.blendMode = 'add';
+    d.hud.addChildAt(this.punchFlash, 0);
     d.hud.addChild(this.hud.container);
     d.overlay.addChild(this.pauseUi);
     d.worldView.filters = [this.zoom, this.negative];
@@ -383,10 +393,11 @@ export class FightScene implements Scene {
     this.closeMoveList();
     this.closeControls();
     const d = this.game.display;
-    d.world.removeChild(this.shownStage.container, this.disco.container, this.storm.container, this.ultraShow.container, this.party.container, this.world);
+    d.world.removeChild(this.shownStage.container, this.disco.container, this.neon.container, this.storm.container, this.ultraShow.container, this.party.container, this.world);
     if (this.shownStage !== this.game.assets.stage) this.shownStage.setDarkness(0);
     d.fx.removeChild(this.fx.container, this.debugG);
     d.hud.removeChild(this.hud.container);
+    d.hud.removeChild(this.punchFlash);
     d.overlay.removeChild(this.pauseUi);
     d.worldView.filters = [];
     this.game.assets.stage.setDarkness(0);
@@ -396,6 +407,7 @@ export class FightScene implements Scene {
     this.fx.clear();
     this.live.destroy();
     this.disco.destroy();
+    this.neon.destroy();
     this.storm.destroy();
     this.ultraShow.destroy();
     this.party.destroy();
@@ -457,9 +469,10 @@ export class FightScene implements Scene {
     if (this.shake > 0) this.shake = Math.max(0, this.shake - 0.35);
     // Un rayo que avisa corta la luz: el escenario parpadea a oscuras.
     const blackout = this.projViews.blackout(m) * (0.7 + Math.random() * 0.3);
-    const targetDark = Math.max(m.freeze > 0 ? 0.62 : 0, m.ultraActive ? 0.72 : 0, this.disco.darkness, this.storm.darkness, this.ultraShow.darkness, this.party.darkness, blackout);
+    const targetDark = Math.max(m.freeze > 0 ? 0.62 : 0, m.ultraActive ? 0.72 : 0, this.disco.darkness, this.neon.darkness, this.storm.darkness, this.ultraShow.darkness, this.party.darkness, blackout);
     this.dark += (targetDark - this.dark) * (targetDark > this.dark ? 0.35 : 0.08);
     if (this.zoomT > 0) this.zoomT--;
+    if (this.punchT > 0) this.punchT--;
 
     if (m.over) {
       if (this.opts.next) g.setScene(this.opts.next(m.matchWinner ?? -1));
@@ -549,12 +562,15 @@ export class FightScene implements Scene {
     const pan = (x: number) => ((x - camLeft) / VIEW_W) * 1.2 - 0.6;
     for (const e of m.events) {
       switch (e.type) {
-        case 'hit':
+        case 'hit': {
           this.fx.hit(e.x, e.y, e.dir, e.spark);
+          this.fx.impact(e.x, e.y, e.dir, e.spark, m.fighters[e.side].def.ui.fx);
+          if (e.spark !== 'light') this.hitPunch(e.x, e.y, e.spark === 'heavy' ? 1 : 2, camLeft);
           sfx.play(e.spark === 'light' ? 'hitLight' : e.spark === 'heavy' ? 'hitHeavy' : 'hitSuper', { pan: pan(e.x) });
-          this.addShake(e.spark === 'light' ? 1.2 : e.spark === 'heavy' ? 2.6 : 3.6);
+          this.addShake(e.spark === 'light' ? 1.4 : e.spark === 'heavy' ? 3.2 : 4.6);
           this.elementalHit(e);
           break;
+        }
         case 'block':
           this.fx.block(e.x, e.y, e.dir);
           sfx.play('block', { pan: pan(e.x) });
@@ -810,6 +826,19 @@ export class FightScene implements Scene {
     } else if (e.look === 'sonico') {
       this.fx.electric(e.x, e.y, 10, 0xe6eeff);
       if (e.last) this.shatter(att, e.x, e.y);
+    } else if (e.look === 'cola') {
+      // El chorro de bebida: espuma y gotas que saltan.
+      this.fx.fizz(e.x, e.y, e.last ? 26 : 16);
+      this.addShake(e.last ? 4 : 2);
+    } else if (e.look === 'cajon') {
+      // El cajón revienta: botellas que estallan en espuma.
+      this.fx.explosion(e.x, e.y, 0x8a3a12, true);
+      this.fx.fizz(e.x, e.y, 30);
+      this.addShake(5);
+    } else if (e.look === 'letras') {
+      this.views.get(vic)?.burn(14);
+      this.fx.explosion(e.x, e.y, 0xff2a2a, !!e.last);
+      this.addShake(e.last ? 7 : 4);
     }
     // Letras de cómic (¡TOC!) de los movimientos que las tienen, una por golpe.
     const mv = e.move ? att.def.moves[e.move] : undefined;
@@ -830,6 +859,20 @@ export class FightScene implements Scene {
       }
       if (e.combo >= 12) {
         this.fx.fire(vic.x, 0, 170);
+        this.impact = Math.max(this.impact, 2);
+      }
+    }
+    // Combo de bebida: burbujas desde 3 golpes, espuma alrededor desde 5, estallidos desde 8, géiser de bebida desde 12.
+    if (att.def.comboFx === 'cola' && e.combo >= 3) {
+      this.fx.fizz(e.x, e.y, 4 + Math.min(e.combo, 12));
+      if (e.combo >= 5) for (let i = 0; i < 2; i++) this.fx.aura(att.x - att.facing * 10, att.y - 70, 0xfff0d8);
+      if (e.combo >= 8) {
+        this.fx.explosion(e.x, e.y, 0x8a3a12, false);
+        this.addShake(2);
+      }
+      if (e.combo >= 12) {
+        this.fx.geyser(vic.x, 0, 170);
+        this.fx.fizz(vic.x, -60, 40);
         this.impact = Math.max(this.impact, 2);
       }
     }
@@ -912,7 +955,7 @@ export class FightScene implements Scene {
     }
     // Troncos que caen al suelo: golpe seco, polvo y chispas de fuego.
     for (const l of this.projViews.landings) {
-      const id = `${l.owner.def.id}/troncoCae`;
+      const id = `${l.owner.def.id}/${l.owner.def.id === 'carlitos' ? 'letraCae' : 'troncoCae'}`;
       if (this.game.sfx.has(id)) this.game.sfx.play(id);
       this.fx.dust(l.x, 0, 6, true);
       this.fx.electric(l.x, -6, 5, 0xffa040);
@@ -940,6 +983,16 @@ export class FightScene implements Scene {
   }
 
   /** Escenario de reemplazo del ultra que corre (si tiene uno y ya cargó). */
+  /** Golpe fuerte (1) o de súper (2): tirón de zoom hacia el impacto; el de súper además destella la pantalla. */
+  private hitPunch(x: number, y: number, level: 1 | 2, camLeft: number): void {
+    if (this.zoomT > 0) return;
+    this.punchMax = level === 2 ? 14 : 9;
+    this.punchT = this.punchMax;
+    const p = this.game.display.root.toGlobal({ x: x - camLeft, y: GROUND_SCREEN_Y + y + this.camOffY });
+    const r = this.game.display.app.renderer.resolution;
+    this.zoom.center = [p.x * r, p.y * r];
+  }
+
   private activeBackdrop(): StageView | null {
     if (!this.match.ultraActive) return null;
     const o = this.allFighters().find((f) => f.ultraRun);
@@ -994,6 +1047,9 @@ export class FightScene implements Scene {
     const mv = o?.move;
     const lights = mv?.cinematic?.lights;
     if (!o || !mv?.cinematic || !lights) return;
+    // Una súper nueva apaga las luces de la anterior (si no, la discoteca de René quedaba pegada
+    // cuando otro tiraba su súper encima).
+    this.stopAllLights(lights);
     this.lightsKind = lights;
     this.discoOwner = o;
     this.discoProj = mv.projectile ? o.def.projectiles[mv.projectile] ?? null : null;
@@ -1004,9 +1060,19 @@ export class FightScene implements Scene {
     this.discoMax = freeze + 210;
     // La bola baja justo cuando se va el cartel; la tormenta parte de inmediato.
     if (lights === 'disco') this.disco.start(Math.max(0, freeze - 18));
+    else if (lights === 'neon') this.neon.start(Math.max(0, freeze - 18));
     else if (lights === 'tormenta') this.storm.start();
     else if (lights === 'ultrainstinto') this.ultraShow.start();
     else this.party.start();
+  }
+
+  /** Apaga todos los shows de luces menos `keep` (el que está por empezar). */
+  private stopAllLights(keep?: LightsKind): void {
+    if (keep !== 'disco') this.disco.stop();
+    if (keep !== 'neon') this.neon.stop();
+    if (keep !== 'tormenta') this.storm.stop();
+    if (keep !== 'ultrainstinto') this.ultraShow.stop();
+    if (keep !== 'fiesta') this.party.stop();
   }
 
   /** Las luces siguen mientras duran el cartel, la animación del súper y su proyectil (máximo ~3,5 s después del cartel). */
@@ -1019,12 +1085,9 @@ export class FightScene implements Scene {
       const anim = (o.state === 'attack' && o.move?.kind === 'super') || !!o.ultraRun;
       const proj = !!this.discoProj && m.projectiles.some((p) => !p.dead && p.owner === o && p.def === this.discoProj);
       const running = frozen || anim || proj || this.discoT < this.discoMin;
-      if (!running || (this.discoT > this.discoMax && !o.ultraRun)) {
+      if (!running || (this.discoT > this.discoMax && !o.ultraRun) || this.discoT > this.discoMax + 900) {
         this.discoOwner = null;
-        if (this.lightsKind === 'disco') this.disco.stop();
-        else if (this.lightsKind === 'tormenta') this.storm.stop();
-        else if (this.lightsKind === 'ultrainstinto') this.ultraShow.stop();
-        else this.party.stop();
+        this.stopAllLights();
       }
     }
     // Ultra instinto: aura plateada que sube alrededor de quien lo hace.
@@ -1034,6 +1097,7 @@ export class FightScene implements Scene {
       this.fx.aura(o.x, o.y - 60, 0xffffff);
     }
     this.disco.step();
+    this.neon.step();
     this.storm.step();
     this.ultraShow.step();
     this.party.step();
@@ -1067,6 +1131,7 @@ export class FightScene implements Scene {
     stage.setDarkness(backdrop ? Math.min(this.dark, 0.3) : this.dark);
     stage.update(camLeft - sx, this.camOffY + sy);
     this.disco.update(this.camOffY + sy);
+    this.neon.update(this.camOffY + sy);
     this.storm.update(this.camOffY + sy);
     this.ultraShow.update(this.camOffY + sy);
     this.party.update(this.camOffY + sy);
@@ -1086,8 +1151,10 @@ export class FightScene implements Scene {
     this.fx.sync();
     this.hud.update(m, camLeft, this.camOffY);
     this.live.update(m);
-    this.zoom.enabled = this.zoomT > 0;
-    this.zoom.strength = (this.zoomT / 40) * 0.14;
+    const punch = this.punchT > 0 ? (this.punchT / this.punchMax) * (this.punchMax > 10 ? 0.11 : 0.07) : 0;
+    this.zoom.enabled = this.zoomT > 0 || punch > 0;
+    this.zoom.strength = Math.max((this.zoomT / 40) * 0.14, punch);
+    this.punchFlash.alpha = this.punchT > 0 && this.punchMax > 10 ? (this.punchT / this.punchMax) * 0.22 : 0;
     if (this.paused) this.paintPause();
     this.controls?.render();
     this.drawDebug();

@@ -1,0 +1,24 @@
+{
+  "voz/intro": "en-breve-bicicleta.mp3",
+  "voz/cocaColita": [
+    "quiero-coca-colita-run.mp3",
+    "quiero-coca-colita-run-2.mp3"
+  ],
+  "voz/run": "run.mp3",
+  "voz/bici": "en-breve-bicicleta.mp3",
+  "voz/poder": "run.mp3",
+  "voz/super": "entrando-discoteca.mp3",
+  "voz/super-remate": "run.mp3",
+  "voz/ultra": "run.mp3",
+  "voz/ultra-1": "quiero-coca-colita-run.mp3",
+  "voz/ultra-2": "en-breve-bicicleta.mp3",
+  "voz/ultra-3": "run.mp3",
+  "voz/remate": "run.mp3",
+  "voz/victoria": "gracias-bicicleta.mp3",
+  "voz/burla": "run.mp3",
+  "voz/combo-corto": "run.mp3",
+  "voz/combo-medio": "run.mp3",
+  "voz/combo-largo": "quiero-coca-colita-run.mp3",
+  "voz/combo-viral": "run.mp3",
+  "voz/combo-ultra": "run.mp3"
+}

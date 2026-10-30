@@ -1330,7 +1330,8 @@ export class Fighter {
     this.lastHurt = null;
     this.resetKiAll();
     this.input.reset();
-    this.setState('intro', 'intro');
+    // Espera en guardia; la animación de entrada la pone el Match una sola vez, justo antes del "FIGHT!".
+    this.setState('intro', 'idle');
   }
 
   /** Todo el estado de combos Killer y del ultra en cero (round nuevo, entrada en 2 VS 2). */

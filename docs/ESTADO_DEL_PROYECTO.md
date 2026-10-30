@@ -25,7 +25,7 @@ Parodia sin fines de lucro.
 
 ## Plantel
 
-Ocho luchadores elegidos por el usuario. Cuatro ya se pueden jugar.
+Ocho luchadores elegidos por el usuario más Carlitos Run (agregado el 30 de octubre). Cinco ya se pueden jugar.
 
 | Luchador | Estado | Ciudad (mapa del ARCADE) | Escenario propio |
 |---|---|---|---|
@@ -33,6 +33,7 @@ Ocho luchadores elegidos por el usuario. Cuatro ya se pueden jugar.
 | Pablito Neuquén | jugable | Valdivia | LA CALLE DEL PABLITO |
 | Flaitiano | jugable | Santiago | (ninguno todavía; idea: feria libre) |
 | Vendedor de Leña | jugable | Valparaíso | LOS CERROS DE VALPARAÍSO |
+| Carlitos Run | jugable | Valdivia | (ninguno todavía) |
 | Papi Micky (Miguel Devia) | pendiente | | idea: set de TV juvenil con neón (guiño a Yingo) |
 | Guatón Ñackson | pendiente | | idea: picada de completos |
 | Doctor Maki Gero | pendiente | | idea: laboratorio en la cordillera |
@@ -45,7 +46,7 @@ Cada luchador completo cuesta unos 130 créditos de Higgsfield (ver COMO_SE_HACE
 En `public/escenarios/escenarios.json`, en este orden:
 
 1. `rene-cabana`: LA CABAÑA DEL LAGO (sur de Chile, de día). Video de fondo.
-2. `rene-plaza`: LA CANCHA (Santiago, de noche, batalla de rap con el grafiti "DURO COMO TUNA").
+2. `rene-plaza`: LA CANCHA (Santiago, de noche: esquina oscura de la pobla con maleantes en las sombras; rehecho el 30 oct).
 3. `pablito-calle`: LA CALLE DEL PABLITO (Valdivia, de noche con lluvia).
 4. `lena-valparaiso`: LOS CERROS DE VALPARAÍSO (al atardecer, ascensor, bahía, rumas de leña).
 5. `santiago`: SANTIAGO DE NOCHE (el mismo fondo del título).
@@ -58,10 +59,10 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
 | Tema | Archivo | Origen |
 |---|---|---|
 | Título y menús | `titulo.mp3` | Suno V6 (kie.ai) |
-| La cabaña del lago | `rene-cabana.mp3` | Suno V6 (kie.ai) |
+| La cabaña del lago | `rene-cabana.mp3` | Suno V6 (kie.ai), versión arcade 80/90 del 30 oct (`rene-cabana-v2`) |
 | La cancha | `rene-plaza.mp3` | Suno V6 (kie.ai) |
-| La calle del Pablito | `pablito-calle.mp3` | ACE-Step 1.5 local, cumbia sureña con lluvia |
-| Los cerros de Valparaíso | `lena-valparaiso.mp3` | ACE-Step 1.5 local, videojuego de 16 bits de los 90 |
+| La calle del Pablito | `pablito-calle.mp3` | Suno V6 (kie.ai), electro cumbia con synthwave y lluvia a -17 dB (`pablito-calle-v2`) |
+| Los cerros de Valparaíso | `lena-valparaiso.mp3` | Suno V6 (kie.ai), synth rock arcade (`lena-valparaiso-v2`) |
 
 ## Modos
 
@@ -91,6 +92,53 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
 - Herramientas: `borrar_tono` en `armar_luchador.py` (borra una mancha de un color que el
   video dibujó), cara del Vendedor en `caras.py`.
 
+## Trabajo del 30 de octubre, segunda parte (sin subir)
+
+- Menús: de fondo el ring del templo (el del título) con velo morado y el piso de neón que avanza
+  (`src/scenes/backdrop.ts`, `src/scenes/titleArena.ts`).
+- Golpes más vistosos: `FxLayer.impact` (rayos de luz, doble onda de choque, rayos eléctricos en
+  los fuertes, del color de quien pega), tirón de zoom en los fuertes y destello en los de súper.
+- Sonido del bloqueo nuevo (golpe seco acolchado, sin el zumbido de ondas cuadradas).
+- René tiene frase de entrada: "¿Querí too?".
+- Música nueva de la cabaña, la calle del Pablito y Valparaíso (Suno, estilo arcade 80/90).
+- Carlitos Run jugable: 23 animaciones, voces, efectos de bebida (`src/render/cola.ts`), súper con
+  discoteca de neón rojo (`lights: "neon"`) y ultra ¡RUN MAFIA!.
+- Escenarios con más vida: la cancha nueva (oscura, con maleantes), la cabaña con Diego González,
+  la Gatita Veve, el Barbero Exótico, Marcianeke y Junior Playboy bailando, y videos nuevos con más
+  movimiento en la calle del Pablito, Valparaíso y Santiago (`arte/escenarios/trabajos-vida.json`).
+
+## Trabajo del 30 de octubre, tercera parte (sin subir)
+
+- Al empezar la pelea cada luchador espera en guardia y hace su entrada una sola vez, justo antes
+  del "FIGHT!" (antes la repetía en loop). `Match.introShown` en `src/sim/match.ts`.
+- Música de la calle del Pablito rehecha sin cumbia: synthwave oscuro con guitarra (`pablito-calle-v3`).
+- Escenarios, segunda vuelta (48 créditos): Valparaíso con un ciclista por la vereda y sin bicis
+  volando; Santiago con un helicóptero de policía grande que alumbra la terraza; la cancha con cinco
+  tipos alentando a la izquierda; la calle del Pablito con niños jugando a la pelota junto al auto.
+- Victoria de Carlitos sin los cuadros del salto (el video le cortaba los brazos arriba).
+- Después, a pedido del usuario: la calle del Pablito vuelve a la versión con autos y paraguas (los
+  niños no le gustaron) y Valparaíso al loop original (el ciclista no calzaba). Santiago tiene un video
+  de 10 s (20 créditos): el helicóptero entra por la izquierda, alumbra la terraza, da la vuelta y sale
+  por la izquierda, sin retroceder ni desaparecer.
+
+## Trabajo del 30 de octubre, cuarta parte (sin subir): Flaitiano y Pablito pintados
+
+- El Flaitiano y Pablito Neuquén dejan el pixel art: ahora están pintados en HD, con el mismo
+  estilo de los fondos (diseños aprobados con GPT Image 2.5, 5,5 créditos de Higgsfield).
+- 51 animaciones nuevas con Kling 3.0 `pro` (1440 px) por kie.ai: 3.078 créditos de kie
+  (unos US$15). Se revisó cada clip cuadro por cuadro y se rehicieron 5 con errores de
+  continuidad: salto y piquero del Flaitiano (el pelo y las manos se salían por arriba; se
+  pidieron con la guardia achicada), su agarre "cabeza de tarro" (le salía un mango negro y la
+  mano quedaba flotando), el súper de Pablito (se sacaba las zapatillas y se las volvía a poner;
+  ahora ordena y apunta al cielo sin objetos) y su caída (se achicaba al alejarse de la cámara).
+- Recorte con IA (`"ia": true`, rembg isnet-anime) porque el gris del fondo se comía la ropa
+  blanca del Flaitiano; interior sólido y borde suave. Más cuadros por movimiento, con los mismos
+  ticks por fase (arranque, golpe, recuperación) que antes, así que el juego se siente igual.
+- La zapatilla que lanza Pablito también es pintada (sacada de un clip descartado).
+- Respaldo de la versión pixel: `arte/<luchador>/armado-pixel.json`, `diseno-final-pixel.png`,
+  `efectos/retrato-pixel.png` y `efectos/zapatilla-N-pixel.png`; los videos viejos siguen en
+  `videos/`.
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra
@@ -111,7 +159,7 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
 
 - **Higgsfield** (plan plus): saldo de unos **428,6 créditos** al 30 de octubre de 2026.
   - Vendedor de Leña: diseños 4 + 4 + 2, clip de prueba 4,5, 23 animaciones 103,5, escenario 14.
-- **kie.ai** (Suno): quedaban 37 créditos. La clave de la API nunca se guarda en el proyecto;
+- **kie.ai** (Suno y Kling): 6.911 créditos al 30 de octubre de 2026 (1 crédito ≈ US$0,005). La clave de la API nunca se guarda en el proyecto;
   se pasa en la variable de entorno `KIE_API_KEY` y el usuario la entrega cada vez.
 - ACE-Step, Demucs y Whisper corren gratis en la tarjeta de video del usuario.
 
