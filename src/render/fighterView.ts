@@ -204,7 +204,7 @@ export class ProjectileViews {
       if (!v) {
         const sprite = new Sprite();
         this.layer.addChild(sprite);
-        const look = p.def.look ? new ProjectileLook(p.def.look) : null;
+        const look = p.def.look ? new ProjectileLook(p.def.look, this.textures) : null;
         if (look) this.layer.addChild(look.view);
         v = { sprite, glow: this.fx.makeGlow(p.def.glow, p.def.glowSize), look };
         this.views.set(p, v);
@@ -222,7 +222,8 @@ export class ProjectileViews {
       v.sprite.texture = tex;
       v.sprite.anchor.set(tex.defaultAnchor?.x ?? 0.5, tex.defaultAnchor?.y ?? 0.5);
       v.sprite.position.set(snap(p.x), snap(p.y));
-      v.sprite.scale.set(p.dir * k, k);
+      v.sprite.scale.set((p.def.flip ? -1 : 1) * p.dir * k, k);
+      v.sprite.blendMode = p.def.blend === 'add' ? 'add' : 'normal';
       v.glow.position.set(p.x, p.y);
       v.glow.alpha = 0.75 + Math.sin(p.frame * 0.6) * 0.15;
     }

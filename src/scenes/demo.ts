@@ -1,11 +1,10 @@
-// DEMOSTRACIÓN (en OPCIONES): la CPU contra la CPU en MUY DIFÍCIL, sin fin. Cada round es una
-// pelea nueva con otros dos luchadores (al azar, distintos de la pareja anterior si se puede),
-// con colores de ropa al azar y en otro escenario. Aceptar o volver sale al menú de OPCIONES.
+// DEMOSTRACIÓN (en OPCIONES): la CPU contra la CPU en MUY DIFÍCIL, sin fin. Cada pelea es al mejor
+// de tres rounds, con dos luchadores distintos (al azar, otra pareja que la anterior si se puede),
+// cada uno con su ropa original, en otro escenario. Aceptar o volver sale al menú de OPCIONES.
 
 import { Container, Graphics, type Text } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
 import type { Game, Scene } from '../app/game';
-import { COSTUME_COUNT } from '../render/costume';
 import { arcade, outlinedText } from '../render/text';
 import { FightScene } from './fight';
 
@@ -27,21 +26,20 @@ export class DemoScene implements Scene {
     private last: { pair: string; stage: string } = { pair: '', stage: '' },
   ) {
     const n = game.assets.roster.length;
-    // Pareja al azar, distinta de la anterior (si hay con qué variar).
+    // Pareja al azar de dos luchadores distintos (nunca el mismo contra sí mismo), distinta de la
+    // anterior si hay con qué variar. Los dos con su color original.
     let a = 0;
-    let b = 1;
-    for (let tries = 0; tries < 12; tries++) {
+    let b = Math.min(1, n - 1);
+    for (let tries = 0; tries < 40 && n > 1; tries++) {
       a = Math.floor(Math.random() * n);
       b = Math.floor(Math.random() * n);
-      if (n > 1 && a === b && Math.random() < 0.8) continue;
+      if (a === b) continue;
       const key = [a, b].sort().join('+');
       if (key !== last.pair || n <= 2) break;
     }
+    if (a === b && n > 1) b = (a + 1) % n;
     this.fighters = [a, b];
-    const ca = Math.floor(Math.random() * COSTUME_COUNT);
-    let cb = Math.floor(Math.random() * COSTUME_COUNT);
-    if (a === b && cb === ca) cb = (ca + 1) % COSTUME_COUNT;
-    this.colors = [ca, cb];
+    this.colors = [0, 0];
     // Escenario al azar de la lista, distinto del anterior.
     const stages = game.assets.stages.entries;
     const pool = stages.length > 1 ? stages.filter((e) => e.id !== last.stage) : stages;
@@ -95,7 +93,6 @@ export class DemoScene implements Scene {
         fighters: this.fighters,
         colors: this.colors,
         difficulty: 'muyDificil',
-        singleRound: true,
         exit: this.exitTo,
         next: () => new DemoScene(g, this.exitTo, last),
       }),

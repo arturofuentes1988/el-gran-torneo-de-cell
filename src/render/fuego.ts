@@ -1,5 +1,6 @@
-// Efectos de fuego de leña y viento del silbido (el Vendedor de Leña), dibujados con
-// vectores para que se vean nítidos en HD:
+// Efectos de fuego de leña y viento del silbido (el Vendedor de Leña). Usan los efectos
+// pintados compartidos (public/efectos/: remolino, fuego y rayo sónico en video, el tronco
+// pintado) y, si no están cargados, se dibujan con vectores:
 // - Dibujos de proyectil (los usa ProjectileLook): 'silbido' (remolino de viento con notas
 //   doradas), 'tronco' (el tronco lanzado del leñazo), 'troncos' (troncos ardiendo que caen del cielo) y
 //   'sonico' (el rayo plateado del súper).
@@ -11,6 +12,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
 import type { Projectile } from '../sim/match';
+import type { LookSprites } from './elemental';
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 
@@ -89,7 +91,7 @@ function sparkle(g: Graphics, x: number, y: number, r: number, color: number, a:
 }
 
 /** "¡Un silbidito!": remolino de viento que avanza, con notas doradas que giran y destellos. */
-export function drawSilbido(base: Graphics, g: Graphics, p: Projectile): void {
+export function drawSilbido(base: Graphics, g: Graphics, p: Projectile, spr?: LookSprites): void {
   const box = p.def.box;
   const cy = p.y + box.y + box.h / 2;
   const R = box.h * 0.6;
@@ -103,6 +105,14 @@ export function drawSilbido(base: Graphics, g: Graphics, p: Projectile): void {
     const y = cy + (i - 2) * R * 0.32;
     const len = R * (1.4 + 0.5 * Math.sin(f * 0.3 + i));
     g.moveTo(p.x - dir * R * 0.4, y).lineTo(p.x - dir * (R * 0.4 + len), y).stroke({ width: 1.4, color: C_WIND, alpha: 0.35 * a });
+  }
+  // El remolino pintado (video): viento blanco y turquesa con notas doradas.
+  const frames = spr?.frames('silbido') ?? [];
+  if (spr && frames.length) {
+    const tex = frames[Math.floor(f / 2) % frames.length];
+    const k = ((R * 2.3) / tex.height) * grow;
+    spr.put(tex, p.x, cy, k * dir, k, 0, a, true);
+    return;
   }
   // Tres brazos de viento en espiral que giran.
   for (let arm = 0; arm < 3; arm++) {
@@ -130,7 +140,7 @@ export function drawSilbido(base: Graphics, g: Graphics, p: Projectile): void {
 }
 
 /** "¡Leñazo!": el tronco lanzado que vuela girando, con líneas de velocidad (sin fuego). */
-export function drawTronco(base: Graphics, g: Graphics, p: Projectile): void {
+export function drawTronco(base: Graphics, g: Graphics, p: Projectile, spr?: LookSprites): void {
   const box = p.def.box;
   const cy = p.y + box.y + box.h / 2;
   const len = box.w * 1.05;
@@ -142,7 +152,36 @@ export function drawTronco(base: Graphics, g: Graphics, p: Projectile): void {
     const l = len * (0.7 + 0.3 * Math.sin(p.frame * 0.5 + i * 1.7));
     g.moveTo(p.x - dir * len * 0.45, y).lineTo(p.x - dir * (len * 0.45 + l), y).stroke({ width: 1.3, color: 0xffffff, alpha: 0.4 });
   }
+  const tex = spr?.obj('tronco');
+  if (spr && tex) {
+    const k = len / tex.width;
+    spr.put(tex, p.x, cy, k * dir, k, p.frame * 0.42 * dir);
+    return;
+  }
   drawLog(base, p.x, cy, len, r, p.frame * 0.42 * dir);
+}
+
+/** Un tronco pintado (o dibujado) de largo `len`, girado `ang`. */
+function logAt(base: Graphics, spr: LookSprites | undefined, x: number, y: number, len: number, r: number, ang: number): void {
+  const tex = spr?.obj('tronco');
+  if (spr && tex) {
+    const k = len / tex.width;
+    spr.put(tex, x, y, k, k, ang);
+  } else {
+    drawLog(base, x, y, len, r, ang);
+  }
+}
+
+/** Fuego con base en (x, y): el video pintado si está (ancho `w`), si no, la llama dibujada. */
+export function fireAt(g: Graphics, spr: LookSprites | undefined, x: number, y: number, h: number, w: number, t: number, a: number): void {
+  const frames = spr?.frames('fuego') ?? [];
+  if (spr && frames.length) {
+    const tex = frames[Math.floor(Math.abs(t) / 2) % frames.length];
+    const k = w / tex.width;
+    spr.put(tex, x, y, k, (h / tex.height) * 1.15, 0, a, true);
+  } else {
+    flame(g, x, y, h, w * 0.3, t, a);
+  }
 }
 
 /** Dónde cae cada tronco (corrimiento desde el rival) y su giro. */
@@ -156,7 +195,7 @@ export function logLandFrame(p: Projectile, i: number): number {
 }
 
 /** "¡Llegó la leña!": aviso en el suelo y troncos ardiendo que caen del cielo uno tras otro. */
-export function drawTroncos(base: Graphics, g: Graphics, p: Projectile, after: number): void {
+export function drawTroncos(base: Graphics, g: Graphics, p: Projectile, after: number, spr?: LookSprites): void {
   const n = p.def.hits;
   const f = p.frame + after;
   const fade = Math.min(1, (p.life + 1) / 14) * Math.max(0, 1 - after / 16);
@@ -181,20 +220,22 @@ export function drawTroncos(base: Graphics, g: Graphics, p: Projectile, after: n
       const t = (f - start) / fall;
       const y = top + (-r - top) * t * t;
       const ang = (i % 2 ? 1 : -1) * (t * 4 + i);
-      for (let k = 1; k <= 3; k++) flame(g, x, y - k * 2, 26 + k * 6, 7, f * 2 + i * 5 + k, 0.55 * fade);
-      drawLog(base, x, y, len, r, ang);
+      if (spr?.frames('fuego').length) fireAt(g, spr, x, y - r * 0.5, 46, len * 0.9, f * 2 + i * 5, 0.85 * fade);
+      else for (let k = 1; k <= 3; k++) flame(g, x, y - k * 2, 26 + k * 6, 7, f * 2 + i * 5 + k, 0.55 * fade);
+      logAt(base, spr, x, y, len, r, ang);
     } else {
       // En el suelo, ardiendo: quedan tirados con llamitas.
       const ang = LOG_REST[i % LOG_REST.length];
-      drawLog(base, x, -r + 1, len, r, ang);
-      flame(g, x, -r, 16 + Math.sin(f * 0.4 + i) * 3, 9, f + i * 9, 0.8 * fade);
+      logAt(base, spr, x, -r + 1, len, r, ang);
+      if (spr?.frames('fuego').length) fireAt(g, spr, x, -r * 0.6, 30 + Math.sin(f * 0.4 + i) * 4, len * 0.85, f + i * 9, 0.85 * fade);
+      else flame(g, x, -r, 16 + Math.sin(f * 0.4 + i) * 3, 9, f + i * 9, 0.8 * fade);
       if (f - land < 6) g.circle(x, -4, 24 * (1 - (f - land) / 6) + 6).fill({ color: C_FIRE_CORE, alpha: 0.5 * fade });
     }
   }
 }
 
 /** El rayo plateado del súper: carga en la boca, haz con ondas de sonido y destellos. */
-export function drawSonico(g: Graphics, p: Projectile, after: number): void {
+export function drawSonico(g: Graphics, p: Projectile, after: number, spr?: LookSprites): void {
   const box = p.def.box;
   const cy = p.y + box.y + box.h / 2;
   const delay = p.def.delay ?? 0;
@@ -211,6 +252,15 @@ export function drawSonico(g: Graphics, p: Projectile, after: number): void {
   const L = box.w * Math.min(1, (p.frame - delay + 2) / 8);
   const x1 = p.x + dir * L;
   const wob = Math.sin(f * 0.9) * 3;
+  // El rayo pintado (video): haz dorado con viento en espiral y ondas de choque.
+  const frames = spr?.frames('sonico') ?? [];
+  if (spr && frames.length) {
+    const tex = frames[Math.floor(f / 2) % frames.length];
+    spr.put(tex, p.x - dir * 10, cy, (dir * (L + 20)) / tex.width, ((box.h * 1.05 + wob * 2) / tex.height), 0, fade, true);
+    for (let i = 0; i < 6; i++) sparkle(g, p.x + dir * rand(0, L), cy + rand(-40, 40), rand(2, 5), 0xffffff, 0.8 * fade);
+    g.circle(p.x, cy, 20 + wob).fill({ color: 0xfff4d0, alpha: 0.5 * fade });
+    return;
+  }
   // Halo ancho, cuerpo plateado y núcleo blanco.
   g.moveTo(p.x, cy).lineTo(x1, cy).stroke({ width: 70 + wob * 2, color: 0x9fb8ff, alpha: 0.18 * fade });
   g.moveTo(p.x, cy).lineTo(x1, cy).stroke({ width: 34 + wob, color: C_SILVER, alpha: 0.45 * fade });

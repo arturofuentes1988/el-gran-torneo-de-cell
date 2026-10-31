@@ -1,13 +1,15 @@
-// Efectos de agua y rayos (el Flaitiano: "¡junten agua, junten luz!"), dibujados con
-// vectores para que se vean nítidos en HD:
+// Efectos de agua y rayos (el Flaitiano: "¡junten agua, junten luz!"). Usan los efectos
+// pintados compartidos (public/efectos/: el rayo y el tornado son videos sin el fondo negro)
+// y, si no están cargados, se dibujan con vectores:
 // - bolt(): un rayo quebrado con ramas, núcleo blanco y halo celeste.
 // - ProjectileLook: el dibujo propio de un proyectil con `look` ('rayo', 'rastas',
 //   'tornado'; y los del Vendedor de Leña, en render/fuego.ts), cuadro a cuadro según su edad.
 // - StormShow: la tormenta del súper (cinematic.lights = 'tormenta'): cielo oscuro,
 //   lluvia y relámpagos, detrás de los luchadores, en unidades de pantalla (480x270).
 
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
+import { vfxFrames } from '../content/vfx';
 import type { Projectile } from '../sim/match';
 import { drawSilbido, drawSonico, drawTronco, drawTroncos } from './fuego';
 import { drawCajon, drawCola, drawLetras } from './cola';
@@ -61,23 +63,80 @@ function stroke(g: Graphics, pts: Array<[number, number]>, width: number, color:
   g.stroke({ width, color, alpha, cap: 'round', join: 'round' });
 }
 
+/**
+ * Sprites de los efectos pintados de un dibujo de proyectil: cada cuadro se piden con put() y
+ * los que no se pidieron se esconden. `normal` va sobre los vectores de base (objetos: troncos,
+ * cajón, botella); `glow` brilla con mezcla aditiva (videos de efectos sin fondo).
+ */
+export class LookSprites {
+  readonly normal = new Container();
+  readonly glow = new Container();
+  private pool: Sprite[] = [];
+  private used = 0;
+
+  constructor(private textures: Record<string, Texture>) {}
+
+  /** Cuadros de un efecto de video (vacío si no están cargados). */
+  frames(name: string): Texture[] {
+    return vfxFrames(this.textures, name);
+  }
+
+  /** Un objeto pintado (obj/<nombre>) o undefined. */
+  obj(name: string): Texture | undefined {
+    return this.textures[`obj/${name}`];
+  }
+
+  begin(): void {
+    this.used = 0;
+  }
+
+  /** Pone `tex` en (x, y) con escala (sx negativo = espejado), giro y opacidad; `add` = brilla. */
+  put(tex: Texture, x: number, y: number, sx: number, sy: number, rot = 0, alpha = 1, add = false): void {
+    let s = this.pool[this.used];
+    if (!s) {
+      s = new Sprite();
+      this.pool.push(s);
+    }
+    this.used++;
+    const layer = add ? this.glow : this.normal;
+    if (s.parent !== layer) layer.addChild(s);
+    s.blendMode = add ? 'add' : 'normal';
+    s.texture = tex;
+    s.anchor.set(tex.defaultAnchor?.x ?? 0.5, tex.defaultAnchor?.y ?? 0.5);
+    s.position.set(x, y);
+    s.scale.set(sx, sy);
+    s.rotation = rot;
+    s.alpha = alpha;
+    s.visible = alpha > 0.01;
+  }
+
+  end(): void {
+    for (let i = this.used; i < this.pool.length; i++) this.pool[i].visible = false;
+  }
+}
+
 /** Dibujo propio de un proyectil con `look`; se redibuja cada cuadro. */
 export class ProjectileLook {
   /** Capa normal (las rastas oscuras) y capa que brilla (agua, rayos), en la capa de proyectiles. */
   readonly view = new Container();
   private base = new Graphics();
   private g = new Graphics();
+  private spr: LookSprites;
   /** Cuadro en que pegó (para el destello del rayo). */
   private struck = -1;
 
-  constructor(readonly kind: string) {
+  constructor(
+    readonly kind: string,
+    textures: Record<string, Texture> = {},
+  ) {
     this.g.blendMode = 'add';
-    this.view.addChild(this.base, this.g);
+    this.spr = new LookSprites(textures);
+    this.view.addChild(this.base, this.spr.normal, this.g, this.spr.glow);
   }
 
   /** Cuadros que se sigue viendo después de que el proyectil desaparece (el rayo se apaga, el remolino se deshace). */
   get linger(): number {
-    const linger: Record<string, number> = { rayo: 14, tornado: 18, troncos: 16, sonico: 20, letras: 16 };
+    const linger: Record<string, number> = { rayo: 26, tornado: 18, troncos: 16, sonico: 20, letras: 16 };
     return linger[this.kind] ?? 0;
   }
 
@@ -85,16 +144,18 @@ export class ProjectileLook {
   draw(p: Projectile, after = 0): void {
     this.g.clear();
     this.base.clear();
+    this.spr.begin();
     if (this.kind === 'rayo') this.rayo(p, after);
     else if (this.kind === 'rastas') this.rastas(p);
     else if (this.kind === 'tornado') this.tornado(p, after);
-    else if (this.kind === 'silbido') drawSilbido(this.base, this.g, p);
-    else if (this.kind === 'tronco') drawTronco(this.base, this.g, p);
-    else if (this.kind === 'troncos') drawTroncos(this.base, this.g, p, after);
-    else if (this.kind === 'sonico') drawSonico(this.g, p, after);
-    else if (this.kind === 'cola') drawCola(this.base, this.g, p);
-    else if (this.kind === 'cajon') drawCajon(this.base, this.g, p);
-    else if (this.kind === 'letras') drawLetras(this.base, this.g, p, after);
+    else if (this.kind === 'silbido') drawSilbido(this.base, this.g, p, this.spr);
+    else if (this.kind === 'tronco') drawTronco(this.base, this.g, p, this.spr);
+    else if (this.kind === 'troncos') drawTroncos(this.base, this.g, p, after, this.spr);
+    else if (this.kind === 'sonico') drawSonico(this.g, p, after, this.spr);
+    else if (this.kind === 'cola') drawCola(this.base, this.g, p, this.spr);
+    else if (this.kind === 'cajon') drawCajon(this.base, this.g, p, this.spr);
+    else if (this.kind === 'letras') drawLetras(this.base, this.g, p, after, this.spr);
+    this.spr.end();
   }
 
   /** Aviso (nube que chispea arriba y un brillo en el suelo) y después el rayo que cae. */
@@ -117,6 +178,19 @@ export class ProjectileLook {
     }
     if (this.struck < 0) this.struck = p.frame;
     const age = p.frame - this.struck + after;
+    // El rayo pintado (video): cae desde arriba de la pantalla hasta el suelo, con chispas.
+    const frames = this.spr.frames('rayo');
+    if (frames.length) {
+      if (age >= frames.length) return;
+      const k = (p.y - top + 24) / frames[0].height;
+      this.spr.put(frames[age], p.x, p.y + 6, (this.struck % 2 ? -1 : 1) * k, k, 0, 1, true);
+      if (age < 7) {
+        const f = 1 - age / 7;
+        g.ellipse(p.x, p.y, 44 * (1 + age * 0.12), 10).fill({ color: C_CORE, alpha: f * 0.7 });
+        g.circle(p.x, p.y - 20, 40 * f + 10).fill({ color: C_BOLT, alpha: f * 0.3 });
+      }
+      return;
+    }
     const a = Math.max(0, 1 - age / 16);
     if (a <= 0) return;
     const w = 4 * (age < 4 ? 1.5 : 1);
@@ -181,6 +255,19 @@ export class ProjectileLook {
     if (fade <= 0) return;
     // Al deshacerse, los anillos se abren y suben.
     const open = 1 + after * 0.06;
+    // El tornado pintado (video): agua que gira con rayos, crece al salir y se abre al irse.
+    const frames = this.spr.frames('tornado');
+    if (frames.length) {
+      const f = p.frame + after;
+      const tex = frames[Math.floor(f / 2) % frames.length];
+      const k = (h * 1.2) / tex.height;
+      this.spr.put(tex, p.x, 6 - after * 2, k * open, k * (0.35 + 0.65 * grow), 0, fade * Math.min(1, grow * 1.6), true);
+      g.ellipse(p.x, 0, 54 * grow * open, 8).fill({ color: C_WATER, alpha: 0.3 * fade });
+      if (p.frame > delay && !after && Math.random() < 0.35) {
+        bolt(g, p.x + rand(-28, 28), -h * rand(0.6, 1), p.x + rand(-28, 28), -h * rand(0, 0.4), 1.2, 0.9 * fade, 1);
+      }
+      return;
+    }
     const top = -h * grow - after * 3;
     const rings = 18;
     const f = p.frame + after;

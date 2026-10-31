@@ -17,6 +17,7 @@ import { LiveShow } from '../render/live';
 import { MoveListPanel } from '../render/moveListPanel';
 import { ControlsPanel } from './controls';
 import { COSTUME_COUNT } from '../render/costume';
+import { vfxFrames } from '../content/vfx';
 import { snap } from '../render/scale';
 import type { StageView } from '../render/stage';
 import { outlinedText } from '../render/text';
@@ -827,11 +828,13 @@ export class FightScene implements Scene {
       this.fx.electric(e.x, e.y, 10, 0xe6eeff);
       if (e.last) this.shatter(att, e.x, e.y);
     } else if (e.look === 'cola') {
-      // El chorro de bebida: espuma y gotas que saltan.
+      // La botella revienta: estallido de bebida y espuma (pintado) y gotas que saltan.
+      this.fx.playSheet(vfxFrames(this.game.assets.textures, 'espuma'), e.x, e.y, { scale: e.last ? 0.42 : 0.32, frameDur: 2 });
       this.fx.fizz(e.x, e.y, e.last ? 26 : 16);
       this.addShake(e.last ? 4 : 2);
     } else if (e.look === 'cajon') {
       // El cajón revienta: botellas que estallan en espuma.
+      this.fx.playSheet(vfxFrames(this.game.assets.textures, 'espuma'), e.x, e.y, { scale: 0.55, frameDur: 2 });
       this.fx.explosion(e.x, e.y, 0x8a3a12, true);
       this.fx.fizz(e.x, e.y, 30);
       this.addShake(5);
@@ -839,6 +842,16 @@ export class FightScene implements Scene {
       this.views.get(vic)?.burn(14);
       this.fx.explosion(e.x, e.y, 0xff2a2a, !!e.last);
       this.addShake(e.last ? 7 : 4);
+    } else if (e.move?.startsWith('bici')) {
+      // La bicicleta atropella: estallido de fuego, polvo y sacudón.
+      this.views.get(vic)?.burn(10);
+      this.fx.explosion(e.x, e.y, 0xff8a1e, true);
+      this.fx.fire(e.x, 0, 90);
+      this.fx.dust(e.x, 0, 6, true);
+      this.addShake(5);
+    } else if (e.move?.startsWith('run')) {
+      this.fx.dust(e.x, 0, 5, true);
+      this.addShake(4);
     }
     // Letras de cómic (¡TOC!) de los movimientos que las tienen, una por golpe.
     const mv = e.move ? att.def.moves[e.move] : undefined;
@@ -946,6 +959,7 @@ export class FightScene implements Scene {
 
   /** Por cuadro de simulación: truenos de los rayos que caen, letras de cómic y cuentas de los efectos. */
   private stepElemental(): void {
+    this.stepMoveFx();
     for (const p of this.projViews.strikes) {
       const id = `${p.owner.def.id}/trueno`;
       if (this.game.sfx.has(id)) this.game.sfx.play(id);
@@ -978,6 +992,37 @@ export class FightScene implements Scene {
       if (c.life <= 0) {
         c.text.destroy();
         this.comics.splice(i, 1);
+      }
+    }
+  }
+
+  /**
+   * Efectos al hacer especiales: un anillo de energía del color del luchador al arrancar cualquier
+   * especial o súper; y los propios de algunos movimientos (la bicicleta de Carlitos deja llamas,
+   * polvo y líneas de velocidad; su carrera "¡Run!", polvo y líneas).
+   */
+  private stepMoveFx(): void {
+    for (const f of this.allFighters()) {
+      if (f.state !== 'attack' || !f.moveId || f.hitstop > 0) continue;
+      const kind = f.moveKind;
+      if ((kind === 'special' || kind === 'super') && f.stateFrame === 1) this.fx.charge(f.x, f.y, f.def.ui.fx);
+      const id = f.moveId;
+      const dir = f.facing;
+      if (id.startsWith('bici')) {
+        // La bicicleta aparece y se va en una nube de humo (en el video entra y sale por los bordes).
+        const last = f.anim.frames.length - 1;
+        if ((f.frameIdx === 0 && f.frameTime === 0) || (f.frameIdx === last && f.frameTime === 0)) {
+          this.fx.dust(f.x + dir * 10, f.y, 10, true);
+          this.fx.dust(f.x - dir * 20, f.y, 8, true);
+          this.fx.charge(f.x, f.y + 40, 0xffb060);
+        }
+        if (f.frameIdx === last) continue;
+        this.fx.fireTrail(f.x - dir * 34, f.y, dir);
+        if (f.stateFrame % 2 === 0) this.fx.dust(f.x - dir * 30, f.y, 1, false);
+        if (Math.abs(f.vx) > 1) this.fx.speedLines(f.x, f.y - 60, dir, 0xffd8a0);
+      } else if (id.startsWith('run')) {
+        if (f.stateFrame % 2 === 0) this.fx.dust(f.x - dir * 20, f.y, 1, false);
+        if (Math.abs(f.vx) > 1) this.fx.speedLines(f.x, f.y - 60, dir);
       }
     }
   }

@@ -5,7 +5,9 @@ La clave NO se guarda en el proyecto: va en la variable de entorno KIE_API_KEY.
   KIE_API_KEY=... python -P -E herramientas/kie_video.py arte/<luchador>/kie.json [clave ...]
 
 kie.json:
-  guardia   URL pública de la guardia (primer y último cuadro de cada clip, para que calcen)
+  guardia   URL pública de la guardia (primer y último cuadro de cada clip, para que calcen);
+            sin guardia el clip sale solo del texto (efectos sobre fondo negro)
+  aspecto   "1:1" (por defecto), "16:9" o "9:16"; también por clip
   salida    carpeta de los videos, relativa a la raíz del proyecto
   modo      "std" (720x720) o "pro" (1440x1440)
   duracion  segundos de cada clip (texto, ej. "3")
@@ -56,17 +58,19 @@ def main(ruta: str, claves: list[str]) -> None:
         c = cfg['clips'][clave]
         texto, dur, cierre = (c, cfg['duracion'], True) if isinstance(c, str) else (c['texto'], c.get('duracion', cfg['duracion']), not c.get('sin_cierre'))
         # "guardia" propia del clip: la misma pose más chica, con aire para saltos y clavados.
-        guardia = cfg['guardia'] if isinstance(c, str) else c.get('guardia', cfg['guardia'])
-        prompt = f"{cfg['base']} {texto} {cfg['final']}{CIERRE if cierre else ''}"
+        guardia = cfg.get('guardia') if isinstance(c, str) else c.get('guardia', cfg.get('guardia'))
+        # Sin guardia (efectos especiales sobre negro) el video sale solo del texto y no hay cierre.
+        aspecto = cfg.get('aspecto', '1:1') if isinstance(c, str) else c.get('aspecto', cfg.get('aspecto', '1:1'))
+        prompt = f"{cfg['base']} {texto} {cfg['final']}{CIERRE if cierre and guardia else ''}".strip()
+        entrada = {
+            'prompt': prompt[:2500], 'sound': False, 'duration': str(dur), 'aspect_ratio': aspecto,
+            'mode': cfg['modo'], 'multi_shots': False,
+        }
+        if guardia:
+            entrada['image_urls'] = [guardia, guardia]
         # kie.ai corta con 429 si se piden muchos seguidos: se espera y se reintenta.
         for intento in range(12):
-            res = llamar('POST', '/jobs/createTask', {
-                'model': 'kling-3.0/video',
-                'input': {
-                    'prompt': prompt[:2500], 'image_urls': [guardia, guardia], 'sound': False,
-                    'duration': str(dur), 'aspect_ratio': '1:1', 'mode': cfg['modo'], 'multi_shots': False,
-                },
-            })
+            res = llamar('POST', '/jobs/createTask', {'model': 'kling-3.0/video', 'input': entrada})
             if res.get('code') != 429:
                 break
             time.sleep(20 + 10 * intento)

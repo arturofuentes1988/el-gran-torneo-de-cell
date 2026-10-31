@@ -9,11 +9,13 @@ import { loadMuted } from './app/settings';
 import { Sfx } from './audio/sfx';
 import { FRAME_MS, GAME_FONT } from './config';
 import { loadFighterFolder, validateFighter } from './content/loadFighter';
+import { loadEffects } from './content/vfx';
 import { BUILTIN_STAGE, StageLibrary } from './content/stages';
 import { buildPlaceholderFighters, type FighterAsset } from './content/mannequin/fighters';
 import { Gamepads, Keyboard, MenuInput } from './input/devices';
 import { StageView } from './render/stage';
 import { setTextResolution } from './render/text';
+import { DemoScene } from './scenes/demo';
 import { FightScene } from './scenes/fight';
 import { TitleScene, loadTitleArena } from './scenes/title';
 
@@ -71,6 +73,8 @@ async function main(): Promise<void> {
   // Luchadores con sprites definitivos, en este orden (public/luchadores/<id>/). Si una carpeta
   // falta o no carga, se salta. ?provisorios=1 fuerza los dos luchadores provisorios.
   const folders: Array<{ asset: FighterAsset; folder: string }> = [];
+  // Efectos especiales pintados (rayos, tornado, objetos): se cargan junto con los luchadores.
+  const effectsLoading = loadEffects();
   if (!params.has('provisorios')) {
     for (const id of REAL_FIGHTERS) {
       const folder = `luchadores/${id}`;
@@ -92,9 +96,10 @@ async function main(): Promise<void> {
     ? [roster[pair[0]], roster[pair[1]]]
     : [roster[0], folders.length >= 2 ? roster[1] : placeholders[1]];
   // Los nombres de textura llevan el id del luchador (rene/…, rojo/…, azul/…): no chocan.
-  const textures = Object.assign({}, ...roster.map((f) => f.textures)) as Record<string, Texture>;
+  const effects = await effectsLoading;
+  const textures = Object.assign({}, effects, ...roster.map((f) => f.textures)) as Record<string, Texture>;
   for (const f of roster) {
-    const problems = validateFighter(f.def, f.textures);
+    const problems = validateFighter(f.def, { ...effects, ...f.textures });
     if (problems.length) console.warn(`Luchador "${f.def.id}":\n- ${problems.join('\n- ')}`);
   }
 
@@ -141,13 +146,15 @@ async function main(): Promise<void> {
   // Música de fondo (public/musica/musica.json): título y menús, y un tema por escenario.
   void game.music.load('musica/musica.json');
 
-  // Atajos para pruebas: ?escena=pelea&modo=cpu|2p|demo|practica&semilla=123
+  // Atajos para pruebas: ?escena=pelea&modo=cpu|2p|demo|practica&semilla=123; ?escena=demostracion (la de OPCIONES).
   // 1 VS 1: &luchadores=0,1 (índices del plantel). 2 VS 2: &equipos=0,1-2,0 (índices de cada equipo).
   const mode = params.get('modo') as FightMode | null;
   if (params.get('escena') === 'pelea' && (mode === 'cpu' || mode === '2p' || mode === 'demo' || mode === 'practica')) {
     const teams = parseTeams(params.get('equipos'), roster.length);
     const opts = teams && mode !== 'practica' ? { teams } : pair ? { fighters: pair } : undefined;
     game.setScene(new FightScene(game, mode, Number(params.get('semilla')) || 7, opts));
+  } else if (params.get('escena') === 'demostracion') {
+    game.setScene(new DemoScene(game, () => new TitleScene(game)));
   } else {
     // Al abrir el juego: directo al título (PRESIONA ENTER).
     game.setScene(new TitleScene(game));

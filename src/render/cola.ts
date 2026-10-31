@@ -1,12 +1,15 @@
-// Efectos de bebida con gas y de su "¡run!" (Carlitos Run), dibujados con vectores:
-// - 'cola': el chorro de bebida que dispara agitando la botella (cuerpo café, espuma y gotas).
+// Efectos de bebida con gas y de su "¡run!" (Carlitos Run). Usan los objetos y efectos pintados
+// compartidos (public/efectos/: la botella, el cajón, la espuma y el fuego) y, si no están
+// cargados, se dibujan con vectores:
+// - 'cola': la botella agitada que sale girando y rociando espuma.
 // - 'cajon': el cajón de botellas que lanza, girando.
 // - 'letras': las letras R-U-N en llamas que caen sobre el rival en el súper (como los troncos
 //   del Vendedor: usa los mismos tiempos de caída, logLandFrame).
 
 import type { Graphics } from 'pixi.js';
 import type { Projectile } from '../sim/match';
-import { flame, logLandFrame } from './fuego';
+import type { LookSprites } from './elemental';
+import { fireAt, flame, logLandFrame } from './fuego';
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 
@@ -19,13 +22,31 @@ const C_CAP = 0xe02020;
 const C_RED = 0xff2a2a;
 
 /** "¡Quiero mi coca colita!": una ola de bebida con espuma adelante y gotas que saltan. */
-export function drawCola(base: Graphics, g: Graphics, p: Projectile): void {
+export function drawCola(base: Graphics, g: Graphics, p: Projectile, spr?: LookSprites): void {
   const box = p.def.box;
   const cy = p.y + box.y + box.h / 2;
   const L = box.w * 1.3;
   const R = box.h * 0.5;
   const dir = p.dir;
   const f = p.frame;
+  // La botella pintada sale girando y rocía espuma hacia atrás.
+  const bottle = spr?.obj('botella');
+  const foam = spr?.frames('espuma') ?? [];
+  if (spr && bottle) {
+    if (foam.length) {
+      for (let i = 0; i < 3; i++) {
+        const tex = foam[Math.min(foam.length - 1, 3 + ((f + i * 3) % 6))];
+        const k = (R * (1.2 + i * 0.35)) / tex.height;
+        spr.put(tex, p.x - dir * (R * 0.9 + i * R * 0.85), cy + Math.sin(f * 0.5 + i) * 3, k, k, f * 0.2 + i, 0.9 - i * 0.22);
+      }
+    }
+    for (let i = 0; i < 6; i++) {
+      g.circle(p.x - dir * rand(R * 0.5, L * 1.2), cy + rand(-R * 1.2, R), rand(1.2, 3)).stroke({ width: 1, color: C_FOAM, alpha: 0.8 });
+    }
+    const k = (box.h * 1.55) / bottle.height;
+    spr.put(bottle, p.x, cy, k * dir, k, f * 0.45 * dir);
+    return;
+  }
   // Chorro: varias capas cafés que ondulan, de atrás (delgado) hacia adelante (grueso).
   for (let i = 0; i < 7; i++) {
     const t = i / 6;
@@ -51,7 +72,7 @@ export function drawCola(base: Graphics, g: Graphics, p: Projectile): void {
 }
 
 /** "¡Regálame todo el cajón!": el cajón de botellas que vuela girando, con líneas de velocidad. */
-export function drawCajon(base: Graphics, g: Graphics, p: Projectile): void {
+export function drawCajon(base: Graphics, g: Graphics, p: Projectile, spr?: LookSprites): void {
   const box = p.def.box;
   const cy = p.y + box.y + box.h / 2;
   const w = box.w * 0.95;
@@ -64,6 +85,13 @@ export function drawCajon(base: Graphics, g: Graphics, p: Projectile): void {
   for (let i = 0; i < 3; i++) {
     const y = cy + (i - 1) * h * 0.4;
     g.moveTo(p.x - dir * w * 0.6, y).lineTo(p.x - dir * w * 1.5, y).stroke({ width: 1.3, color: 0xffffff, alpha: 0.4 });
+  }
+  // El cajón pintado, con sus botellas de vidrio.
+  const crate = spr?.obj('cajon');
+  if (spr && crate) {
+    const k = (box.w * 1.3) / crate.width;
+    spr.put(crate, p.x, cy, k * dir, k, ang);
+    return;
   }
   const quad = (x0: number, y0: number, x1: number, y1: number, color: number): void => {
     const q = [pt(x0, y0), pt(x1, y0), pt(x1, y1), pt(x0, y1)].flat();
@@ -107,7 +135,7 @@ function letra(base: Graphics, g: Graphics, ch: string, x: number, y: number, s:
 }
 
 /** "¡Entrando pa' la discoteca!": aviso en el suelo y las letras R, U, N en llamas que caen una tras otra. */
-export function drawLetras(base: Graphics, g: Graphics, p: Projectile, after: number): void {
+export function drawLetras(base: Graphics, g: Graphics, p: Projectile, after: number, spr?: LookSprites): void {
   const n = p.def.hits;
   const f = p.frame + after;
   const fade = Math.min(1, (p.life + 1) / 14) * Math.max(0, 1 - after / 16);
@@ -130,12 +158,14 @@ export function drawLetras(base: Graphics, g: Graphics, p: Projectile, after: nu
     if (f < land) {
       const t = (f - start) / fall;
       const y = top + (0 - top) * t * t;
-      for (let k = 1; k <= 3; k++) flame(g, x, y - s * 1.4 - k * 3, 30 + k * 6, 9, f * 2 + i * 5 + k, 0.5 * fade);
+      if (spr?.frames('fuego').length) fireAt(g, spr, x, y - s * 1.2, 52, s * 1.6, f * 2 + i * 5, 0.85 * fade);
+      else for (let k = 1; k <= 3; k++) flame(g, x, y - s * 1.4 - k * 3, 30 + k * 6, 9, f * 2 + i * 5 + k, 0.5 * fade);
       letra(base, g, ch, x, y, s, (i % 2 ? 1 : -1) * (1 - t) * 0.6, fade);
     } else {
       // En el suelo, ardiendo.
+      if (spr?.frames('fuego').length) fireAt(g, spr, x, 2, 40 + Math.sin(f * 0.4 + i) * 5, s * 1.7, f + i * 9, 0.8 * fade);
       letra(base, g, ch, x, 0, s, 0, fade);
-      flame(g, x, 0, 22 + Math.sin(f * 0.4 + i) * 4, 14, f + i * 9, 0.75 * fade);
+      if (!spr?.frames('fuego').length) flame(g, x, 0, 22 + Math.sin(f * 0.4 + i) * 4, 14, f + i * 9, 0.75 * fade);
       if (f - land < 6) g.circle(x, -14, 30 * (1 - (f - land) / 6) + 8).fill({ color: 0xffe0a0, alpha: 0.5 * fade });
     }
   }

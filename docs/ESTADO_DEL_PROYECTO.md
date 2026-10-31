@@ -139,6 +139,37 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   `efectos/retrato-pixel.png` y `efectos/zapatilla-N-pixel.png`; los videos viejos siguen en
   `videos/`.
 
+## Trabajo del 30 de octubre, quinta parte (sin subir): poderes pintados y diseños nuevos
+
+- Poderes con efectos pintados (7 videos de efectos por kie.ai, 294 créditos de kie; 4 objetos con
+  GPT Image): rayo y tornado del Flaitiano; onda y súper onda de René (portal de sonido con ondas) y su
+  parlante; silbido (remolino con notas), tronco, troncos en llamas y rayo sónico del Vendedor de Leña;
+  botella, cajón, espuma al pegar y letras en llamas de Carlitos. Se cargan de `public/efectos/`.
+- Diseños pintados aprobados para René (A), el Vendedor de Leña y Carlitos Run (cara nueva más parecida
+  a las fotos, cuerpo entero con su contextura real). El Vendedor pasó por varias vueltas: mira al rival
+  (a la derecha, no a la cámara), tiene el cuerpo como René (macizo, no musculoso ni gordo) y la cabeza un
+  12 % más grande (deformación suave hecha a mano, `scratchpad cabeza_lena.py`), con la piel de la cara
+  limpia de manchones. Total de rediseños del Vendedor: 22 créditos.
+  Ya son su `diseno-final.png` (respaldo `diseno-final-pixel.png`); falta animarlos (kie.ai).
+
+## Trabajo del 30 de octubre, sexta parte (sin subir): los cinco pintados
+
+- René, el Vendedor de Leña y Carlitos Run ya están pintados y animados (Kling 3.0 `pro` por kie.ai,
+  unos 4.300 créditos de kie con los clips rehechos). Ahora los cinco luchadores son HD pintado.
+- Los videos se pidieron sobre **verde chroma** (`guardia-verde.png`, y `guardia-verde-chica.png` al 75 %
+  para saltos, caídas y movimientos que suben) y se recortan por color (`"fondo": "verde"`, alfa_verde):
+  borde limpio, sin reflejo verde y sin las manchas grises del recorte con IA.
+- Clips rehechos por errores: el cadenazo de René (la cadena se estiraba como látigo y se salía del
+  cuadro; ahora es un puñetazo con la cadena enrollada), sus dos patadas (pateaba hacia atrás) y la
+  patada fuerte y la victoria del Vendedor (la victoria no se movía; ahora pulgares al pecho y brazos
+  cruzados).
+- Carlitos sin corazones: entrada con el puño al cielo y victoria de campeón. Su bicicleta aparece y
+  se va en humo, deja estela de fuego y líneas de velocidad, hace caballito y revienta en fuego al pegar.
+- Poderes de todos: al arrancar un especial o súper sale un anillo de energía del color del luchador.
+- DEMOSTRACIÓN: peleas al mejor de tres, dos luchadores distintos (nunca el mismo contra sí mismo) y
+  siempre con su color original. Atajo de prueba: `?escena=demostracion`.
+- Retratos de la cinemática del súper y caras de ELIGE LUCHADOR, rehechos desde los diseños pintados.
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra

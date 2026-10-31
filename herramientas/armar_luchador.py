@@ -26,7 +26,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).parent))
-from video_a_cuadros import alfa_ia, color_fondo, quitar_fondo  # noqa: E402
+from video_a_cuadros import alfa_ia, alfa_verde, color_fondo, quitar_fondo  # noqa: E402
 
 PAGINA = 4096
 MARGEN = 2
@@ -38,7 +38,7 @@ class Clip:
     """Cuadros de un video (a 24 por segundo) con su máscara, cargados a pedido."""
 
     def __init__(self, ruta: Path, tolerancia: float, huecos_sd: float | None = None, estricto: bool = False,
-                 ia: bool = False, ropa_blanca: bool = True):
+                 ia: bool = False, ropa_blanca: bool = True, verde: bool = False):
         self.tmp = Path(tempfile.mkdtemp(prefix="clip_"))
         subprocess.run(
             ["ffmpeg", "-loglevel", "error", "-y", "-i", str(ruta), "-vf", "fps=24", str(self.tmp / "%04d.png")],
@@ -50,6 +50,7 @@ class Clip:
         self.estricto = estricto
         self.ia = ia
         self.ropa_blanca = ropa_blanca
+        self.verde = verde
         self.cache: dict[int, tuple[np.ndarray, np.ndarray]] = {}
         self.alfas: dict[int, np.ndarray] = {}
         self.factor = 1.0
@@ -77,7 +78,9 @@ class Clip:
         i = max(0, min(len(self.rutas) - 1, i))
         if i not in self.cache:
             rgb = np.asarray(Image.open(self.rutas[i]).convert("RGB"))
-            if self.ia:
+            if self.verde:
+                rgb, alfa = alfa_verde(rgb)
+            elif self.ia:
                 alfa = alfa_ia(rgb, self.ropa_blanca)
             else:
                 m = quitar_fondo(rgb, self.tolerancia, self.huecos_sd, self.estricto)
@@ -85,7 +88,7 @@ class Clip:
             if self.factor != 1.0:
                 rgb, alfa = self._agrandar(rgb, alfa if alfa is not None else (m * 255).astype(np.uint8))
                 m = alfa > 127
-                if not self.ia:
+                if not (self.ia or self.verde):
                     alfa = None
             elif alfa is not None:
                 m = alfa > 127
@@ -379,6 +382,8 @@ def main() -> None:
     ia = cfg.get("ia", False)
     # "ropa_blanca": false para luchadores de ropa oscura: el resplandor del video no queda (ver alfa_ia).
     ropa_blanca = cfg.get("ropa_blanca", True)
+    # "fondo": "verde" recorta por chroma (videos animados sobre verde plano; ver alfa_verde).
+    verde = cfg.get("fondo") == "verde"
     # "reescalar": {clip: factor} para clips hechos con la guardia achicada (ver Clip.reescalar).
     reescalar = cfg.get("reescalar", {})
     pies_ref: list[tuple[float, float]] = []
@@ -390,7 +395,7 @@ def main() -> None:
             if nombre in estrictos:
                 clips[nombre] = Clip(videos / f"{nombre}.mp4", estrictos[nombre], huecos_sd, True)
             else:
-                clips[nombre] = Clip(videos / f"{nombre}.mp4", tol, huecos_sd, ia=ia is True or nombre in (ia or []), ropa_blanca=ropa_blanca)
+                clips[nombre] = Clip(videos / f"{nombre}.mp4", tol, huecos_sd, ia=ia is True or nombre in (ia or []), ropa_blanca=ropa_blanca, verde=verde)
             if nombre in reescalar:
                 if nombre == cfg["referencia"] or not pies_ref:
                     raise SystemExit(f"{nombre}: la referencia no se puede reescalar")

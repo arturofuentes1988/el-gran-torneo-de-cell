@@ -252,9 +252,14 @@ export interface ProjectileDef {
   delay?: number;
   /**
    * Dibujo propio en vez de (o además de) sus cuadros: 'rayo', 'tornado', 'rastas', 'geiser' (el Flaitiano);
-   * 'silbido', 'tronco', 'troncos', 'sonico' (el Vendedor de Leña).
+   * 'silbido', 'tronco', 'troncos', 'sonico' (el Vendedor de Leña); 'cola', 'cajon', 'letras' (Carlitos).
+   * Usa los efectos pintados compartidos (public/efectos/) si están cargados.
    */
   look?: string;
+  /** 'add': sus cuadros brillan (mezcla aditiva; para los efectos de video sin fondo, vfx/…). */
+  blend?: 'add';
+  /** Sus cuadros miran al revés (la onda de René: la cola de ondas queda detrás). */
+  flip?: boolean;
 }
 
 /** Filtrado de las texturas: 'linear' para arte HD, 'nearest' para pixel art a escala de mundo. */

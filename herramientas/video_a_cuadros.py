@@ -155,6 +155,37 @@ def alfa_ia(rgb: np.ndarray, ropa_blanca: bool = True) -> np.ndarray:
     return a
 
 
+def alfa_verde(rgb: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Recorte por chroma verde (los luchadores animados sobre verde plano). Devuelve el color sin
+    el reflejo verde en los bordes y el alfa (0-255).
+
+    El alfa sale de cuánto domina el verde sobre el rojo y el azul (el verde del fondo y sus sombras
+    más oscuras quedan transparentes); al borde le quita el tinte verde (g se limita al mayor de r y b).
+    Se queda con las manchas grandes (el personaje y lo que tiene en las manos).
+    """
+    f = rgb.astype(np.float32)
+    r, g, b = f[..., 0], f[..., 1], f[..., 2]
+    dom = g - np.maximum(r, b)
+    a = np.clip(1 - (dom - 18) / (70 - 18), 0, 1)
+    # En el borde suave el color es una mezcla con el verde: se separa (si no, queda un contorno oscuro).
+    fondo = color_fondo(rgb).astype(np.float32)
+    an = np.maximum(a, 0.15)[..., None]
+    f = np.where((a > 0) & (a < 1), 0, 1)[..., None] * f + np.where((a > 0) & (a < 1), 1, 0)[..., None] * np.clip((f - (1 - an) * fondo) / an, 0, 255)
+    r, g, b = f[..., 0], f[..., 1], f[..., 2]
+    # Sin reflejo verde: en los bordes y en lo que quedó teñido.
+    gg = np.minimum(g, np.maximum(r, b) + 6)
+    color = np.dstack([r, gg, b])
+    m = a > 0.5
+    etiq, n = ndimage.label(m)
+    if n > 1:
+        tam = ndimage.sum(m, etiq, range(1, n + 1))
+        chicas = np.isin(etiq, np.nonzero(tam < max(600, tam.max() * 0.01))[0] + 1)
+        a = np.where(ndimage.binary_dilation(chicas, iterations=2), 0, a)
+    a8 = (a * 255).astype(np.uint8)
+    a8[a8 < 16] = 0
+    return color.clip(0, 255).astype(np.uint8), a8
+
+
 def hoja_contacto(cuadros: list[Image.Image], columnas: int, lado: int) -> Image.Image:
     filas = (len(cuadros) + columnas - 1) // columnas
     hoja = Image.new("RGBA", (columnas * lado, filas * lado), (52, 48, 60, 255))

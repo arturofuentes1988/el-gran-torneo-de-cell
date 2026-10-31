@@ -430,6 +430,46 @@ export class FxLayer {
     this.flash(x, y - 20, 1, 0xffd080, 10);
   }
 
+  /** Arranque de un especial: anillo de energía y chispas del color del luchador. y = pies. */
+  charge(x: number, y: number, color: number): void {
+    this.ring(x, y - 70, 0.08, 1.1, color, 14);
+    this.flash(x, y - 70, 0.9, color, 8);
+    for (let i = 0; i < 14; i++) {
+      const ang = rand(0, Math.PI * 2);
+      const v = rand(2.5, 5);
+      const l = Math.round(rand(10, 18));
+      this.spawn(this.tex.spark, true, {
+        x: x + Math.cos(ang) * 10, y: y - 70 + Math.sin(ang) * 10, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, life: l, max: l,
+        s0: 0.4, s1: 0.1, a0: 1, a1: 0, drag: 0.9, grav: 0, stretch: 1, spin: 0,
+      }, i % 3 ? color : 0xffffff);
+    }
+  }
+
+  /** Estela de llamas y chispas pegada al suelo (la bicicleta de Carlitos, el piquero). dir = hacia dónde avanza. */
+  fireTrail(x: number, y: number, dir: number): void {
+    for (let i = 0; i < 3; i++) {
+      const l = Math.round(rand(12, 22));
+      this.spawn(this.tex.dot, true, {
+        x: x + rand(-6, 6), y: y - rand(2, 18), vx: -dir * rand(0.6, 1.8), vy: -rand(0.8, 2.2), life: l, max: l,
+        s0: rand(0.2, 0.38), s1: 0.04, a0: 0.95, a1: 0, drag: 0.95, grav: -0.03, stretch: 0, spin: 0,
+      }, Math.random() < 0.3 ? 0xfff1a8 : Math.random() < 0.6 ? 0xff9a22 : 0xff4a12);
+    }
+    const l = Math.round(rand(8, 14));
+    this.spawn(this.tex.spark, true, {
+      x: x, y: y - rand(2, 10), vx: -dir * rand(3, 6), vy: -rand(0.5, 2), life: l, max: l,
+      s0: 0.45, s1: 0.1, a0: 1, a1: 0, drag: 0.9, grav: 0.1, stretch: 1, spin: 0,
+    }, 0xffe0a0);
+  }
+
+  /** Líneas de velocidad horizontales detrás de algo que corre. y = altura del centro. */
+  speedLines(x: number, y: number, dir: number, color = 0xffffff): void {
+    const l = Math.round(rand(6, 10));
+    this.spawn(this.tex.spark, true, {
+      x: x - dir * rand(10, 40), y: y + rand(-50, 50), vx: -dir * rand(8, 12), vy: 0, life: l, max: l,
+      s0: 0.9, s1: 0.4, a0: 0.8, a1: 0, drag: 0.92, grav: 0, stretch: 1, spin: 0,
+    }, color);
+  }
+
   /** Lanzador que conecta: anillo y chispas hacia arriba. */
   launch(x: number, y: number): void {
     this.flash(x, y, 1, 0xffffff, 10);

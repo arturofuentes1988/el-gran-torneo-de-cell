@@ -82,10 +82,23 @@ gris claro del fondo se come la chaqueta: puños flotando, jeans con hoyos). `"i
 `armado.json` recorta con IA (rembg con isnet-anime, menos de 1 s por cuadro) y le suma lo que es
 claramente oscuro o de color (piel, pelo, bolso, zapatillas); los resplandores blancos que agrega
 el video quedan fuera. El borde queda suave. Se instala con `pip install --user rembg`.
+**Fondo verde (lo recomendado desde René, el Vendedor y Carlitos)**: la guardia se arma sobre verde chroma
+(0, 177, 64) con el personaje recortado del diseño, y en el `kie.json` el texto final pide "plain flat
+solid chroma-key green, nothing on him is green". En el `armado.json` va `"fondo": "verde"`: el recorte
+sale del verde (alfa por dominancia del verde, borde sin reflejo verde). No necesita IA y no deja manchas.
+
 Con ropa oscura (Pablito) va además `"ropa_blanca": false`: no se rellenan los huecos encerrados
 (el hueco entre la mano y la pierna es fondo; se rellenaba y quedaba una mancha clara). Para los
 próximos luchadores pintados conviene pedir la guardia sobre fondo de color plano (verde, o magenta
 si el luchador tiene verde, como el Flaitiano) y recortar por color.
+
+**Efectos de los poderes pintados** (`public/efectos/`, compartidos por todos): los videos de efectos se
+piden a Kling por kie.ai **sin guardia**, solo con texto y sobre fondo negro puro (`arte/efectos/kie.json`,
+unos 42 créditos de kie cada uno en `std`); los objetos (parlante, tronco, cajón, botella) con GPT Image
+sobre gris. `herramientas/efectos_vfx.py arte/efectos/vfx.json` quita el negro (el brillo pasa a alfa),
+recorta, desvanece los bordes y empaqueta: texturas `vfx/<efecto>/<i>` y `obj/<nombre>`. En el juego,
+`ProjectileLook` (render/elemental.ts) los usa si están cargados; si no, dibuja con vectores. Un proyectil
+con cuadros propios puede usar `"frames": ["vfx/onda/0", …]` con `"blend": "add"` y `"flip"`.
 
 **Colores alternativos** (`costume` en la definición): revisar con una vista previa de los 3 colores.
 Una franja de cabeza (`head`) que corta una prenda la deja de dos colores (el gorro del polerón de
@@ -282,6 +295,7 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 | `musica_ia.py` | Temas con ACE-Step (registro de los textos usados). |
 | `musica_suno.py` | Temas con Suno por kie.ai (`KIE_API_KEY`). |
 | `kie_video.py` | Animaciones con Kling 3.0 por kie.ai desde `arte/<luchador>/kie.json` (`KIE_API_KEY`). |
+| `efectos_vfx.py` | Efectos pintados compartidos (`public/efectos/`) desde videos sobre negro y objetos pintados (`arte/efectos/vfx.json`). |
 | `musica_loop.py` | Prepara un tema para sonar en loop y lo agrega a `musica.json`. |
 | `musica_lluvia.py` | Cama de lluvia sintetizada para mezclar bajo un tema. |
 | `musica.py` | Temas sintetizados desde cero (respaldo, sin IA). |

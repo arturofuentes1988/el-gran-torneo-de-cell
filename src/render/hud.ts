@@ -513,7 +513,7 @@ export class Hud {
       const power = f.powerTimer > 0;
       if (power !== this.powerShown[i]) {
         this.powerShown[i] = power;
-        this.superLabels[i].text = power ? 'MODO PODER' : 'SUPER';
+        this.superLabels[i].text = power ? 'MODO PODER' : 'SÚPER';
       }
       if (power) {
         const pulse = Math.floor(this.frame / 5) % 2 === 0;

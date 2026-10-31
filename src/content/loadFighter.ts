@@ -6,11 +6,15 @@
 import { Assets, type Spritesheet, type Texture } from 'pixi.js';
 import { REQUIRED_ANIMS, type FighterDef } from '../sim/types';
 import type { FighterAsset } from './mannequin/fighters';
+import { SHARED_TEX } from './vfx';
 
 const okScale = (k: number | undefined) => k === undefined || (Number.isFinite(k) && k > 0 && k <= 8);
 
-/** Revisa que la definición esté completa; devuelve la lista de problemas. */
-export function validateFighter(def: FighterDef, textures: Record<string, Texture>): string[] {
+/**
+ * Revisa que la definición esté completa; devuelve la lista de problemas. Con `ownOnly` no
+ * revisa las texturas compartidas de efectos (vfx/…, obj/…), que no vienen en su atlas.
+ */
+export function validateFighter(def: FighterDef, textures: Record<string, Texture>, ownOnly = false): string[] {
   const problems: string[] = [];
   if (!okScale(def.texScale)) problems.push(`texScale debe ser un número entre 0 y 8 (hay ${def.texScale})`);
   if (def.texFilter !== undefined && def.texFilter !== 'linear' && def.texFilter !== 'nearest') {
@@ -39,7 +43,9 @@ export function validateFighter(def: FighterDef, textures: Record<string, Textur
   }
   for (const [id, p] of Object.entries(def.projectiles)) {
     if (!okScale(p.texScale)) problems.push(`proyectil "${id}": texScale inválido`);
-    for (const t of p.frames) if (!textures[t]) problems.push(`proyectil "${id}": no existe la textura "${t}"`);
+    for (const t of p.frames) {
+      if (!textures[t] && !(ownOnly && SHARED_TEX.test(t))) problems.push(`proyectil "${id}": no existe la textura "${t}"`);
+    }
   }
   const specials = def.specials.filter((id) => def.moves[id]?.kind === 'special').map((id) => def.moves[id].name);
   const distinct = new Set(specials).size;
@@ -66,7 +72,7 @@ export async function loadFighter(atlasJsonUrls: string | string[], defJsonUrl: 
   );
   const textures: Record<string, Texture> = {};
   for (const sheet of sheets) Object.assign(textures, sheet.textures);
-  const problems = validateFighter(def, textures);
+  const problems = validateFighter(def, textures, true);
   if (problems.length) console.warn(`Luchador "${def.id}":\n- ${problems.join('\n- ')}`);
   return { def, textures };
 }
