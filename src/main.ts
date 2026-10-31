@@ -13,6 +13,7 @@ import { loadEffects } from './content/vfx';
 import { BUILTIN_STAGE, StageLibrary } from './content/stages';
 import { buildPlaceholderFighters, type FighterAsset } from './content/mannequin/fighters';
 import { Gamepads, Keyboard, MenuInput } from './input/devices';
+import { TouchControls } from './input/touch';
 import { StageView } from './render/stage';
 import { setTextResolution } from './render/text';
 import { DemoScene } from './scenes/demo';
@@ -49,6 +50,8 @@ async function main(): Promise<void> {
   display.onResize(() => setTextResolution(display.textResolution));
 
   const kb = new Keyboard();
+  // Celulares y tablets: joystick y botones en pantalla (aprietan las teclas del jugador 1).
+  new TouchControls(kb, display);
   const pads = new Gamepads();
   const menu = new MenuInput(kb, pads);
   const sfx = new Sfx();

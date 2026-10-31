@@ -212,6 +212,20 @@ export class Keyboard {
     window.addEventListener('blur', () => this.down.clear());
   }
 
+  /** Tecla virtual apretada (controles táctiles): igual que una tecla física. */
+  press(code: string): void {
+    if (this.down.has(code)) return;
+    this.tapped.add(code);
+    this.hits.push(code);
+    for (const l of this.listeners) l(code);
+    this.down.add(code);
+  }
+
+  /** Tecla virtual soltada (controles táctiles). */
+  release(code: string): void {
+    if (this.down.delete(code)) this.released.add(code);
+  }
+
   /** Avisa en cada pulsación (sirve para desbloquear el audio). */
   onKey(fn: (code: string) => void): void {
     this.listeners.push(fn);

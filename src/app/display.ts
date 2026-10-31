@@ -30,6 +30,10 @@ export class Display {
   dpr = 1;
   /** Pixeles de la textura del mundo por unidad de mundo (S). */
   renderScale = 0;
+  /** Celular vertical: el juego va arriba (los controles táctiles quedan abajo) en vez de centrado. */
+  alignTop = false;
+  /** Con alignTop: pixeles CSS libres arriba del juego (para el botón ☰ de los controles táctiles). */
+  topOffset = 0;
   private worldRoot = new Container();
   private rt: RenderTexture | null = null;
   private lastW = 0;
@@ -81,7 +85,8 @@ export class Display {
       this.worldRoot.scale.set(s);
     }
     this.root.scale.set(this.scale);
-    this.root.position.set(Math.round((W - VIEW_W * this.scale) / 2), Math.round((H - VIEW_H * this.scale) / 2));
+    const y = this.alignTop ? Math.round(this.topOffset) : Math.round((H - VIEW_H * this.scale) / 2);
+    this.root.position.set(Math.round((W - VIEW_W * this.scale) / 2), y);
     for (const fn of this.listeners) fn();
   }
 

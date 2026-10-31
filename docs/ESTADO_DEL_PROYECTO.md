@@ -170,6 +170,18 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   siempre con su color original. Atajo de prueba: `?escena=demostracion`.
 - Retratos de la cinemática del súper y caras de ELIGE LUCHADOR, rehechos desde los diseños pintados.
 
+## Versión para celular (31 de octubre)
+
+- En pantallas táctiles salen controles en pantalla (`src/input/touch.ts`): joystick flotante a la
+  izquierda (aparece donde se toca, 8 direcciones), los cuatro botones de golpe y patada a la derecha,
+  RODAR, PODER y PELÁ, y ☰ arriba a la derecha (pausa en la pelea, volver en los menús). Aprietan las
+  mismas teclas que el jugador 1, así sirven en la pelea, los menús, la selección y el título (el golpe
+  débil acepta). Vibran al tocar (Android).
+- Horizontal: el juego ocupa la pantalla y los controles van encima, semitransparentes. Vertical: el
+  juego sube arriba, los controles quedan debajo y aparece "GIRA EL CELULAR PARA VERLO MÁS GRANDE".
+  En pantalla completa Android se queda horizontal.
+- `?tactil=1` muestra los controles en el computador (pruebas).
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra
