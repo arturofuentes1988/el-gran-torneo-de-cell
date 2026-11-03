@@ -117,7 +117,10 @@ del jugador 2.
 
 Menús: flechas (o cruceta) para moverse, Enter, Espacio o A para aceptar, Esc
 o Retroceso para volver. También se tocan (o se hace clic) las opciones directo; en
-el celular la cruceta y los botones salen solo en la pelea y ☰ vuelve atrás. El
+el celular la cruceta y los botones salen solo en la pelea y ☰ vuelve atrás.
+
+La primera vez, después del título aparece **TU CUENTA**: ENTRAR CON GOOGLE, ENTRAR CON
+CORREO o JUGAR SIN CUENTA (queda recordado). La cuenta solo hace falta para EN LÍNEA. El
 **MENÚ PRINCIPAL** tiene:
 
 - **ARCADE**: eliges tu luchador y le ganas a cada uno de los demás contra la
@@ -129,6 +132,9 @@ el celular la cruceta y los botones salen solo en la pelea y ☰ vuelve atrás. 
   contra quien no tenga escenario propio (la última pelea es un poco más
   difícil). Si pierdes, ¿CONTINUAR? repite esa pelea; si les ganas a todos,
   ¡CAMPEÓN!
+- **EN LÍNEA**: pide cuenta y un apodo único (3 a 14 letras) la primera vez. Por ahora tiene
+  CAMBIAR APODO y CERRAR SESIÓN; CREAR SALA, UNIRSE CON CÓDIGO y PARTIDA RÁPIDA llegan en la
+  fase 2. Las cuentas están en Supabase (`src/online/`, tablas en `supabase/migraciones/`).
 - **CASUAL**: 1 VS CPU, 1 VS 1, 2 VS 2 y PRÁCTICA.
 - **OPCIONES**: PERSONAJES, MOVIMIENTOS, ESCENARIOS, DEMOSTRACIÓN, CONTROLES,
   DIFICULTAD (izquierda / derecha) y SONIDO. **DEMOSTRACIÓN** es la CPU contra la
@@ -395,7 +401,8 @@ src/
   content/            carga: luchadores, escenarios, efectos, calidades y descargas con barra
   render/             escenario, luchadores, efectos HD, HUD, texto pixel
   audio/              efectos sintetizados, muestras (voces) y música
-  scenes/             título, menús (elegir luchador, escenario), escenarios y pelea
+  scenes/             título, menús (elegir luchador, escenario), cuenta y EN LÍNEA, escenarios y pelea
+  online/             cuentas (Supabase: entrar con Google o correo, apodo) y formularios HTML
 public/
   escenarios/         escenarios HD (escenarios.json es la lista)
   titulo/             escenario Santiago de noche (escenario.json, también arena de pelea)
@@ -403,6 +410,7 @@ public/
   voces/              voces del anunciador
   sonidos/            jingle de consola (ya no se usa)
 herramientas/         scripts en Python para armar luchadores, escenarios y sonidos
+supabase/migraciones/ tablas y reglas de seguridad de la base de datos (ya aplicadas)
 docs/
   FORMATO_SPRITES.md  formato para entregar luchadores definitivos
 ```

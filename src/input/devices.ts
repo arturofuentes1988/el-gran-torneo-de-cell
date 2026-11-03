@@ -186,6 +186,12 @@ export function padLabel(button: number | undefined): string {
  */
 const BLOCKED = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'F1', 'F2', 'Tab', 'Backspace']);
 
+/** ¿La tecla va a un campo de texto (formularios de cuenta)? Entonces el juego no la toma. */
+function escribiendo(e: KeyboardEvent): boolean {
+  const t = e.target;
+  return t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
+}
+
 export class Keyboard {
   private down = new Set<string>();
   /** Teclas tocadas desde el último muestreo (para no perder toques muy cortos). */
@@ -198,6 +204,7 @@ export class Keyboard {
 
   constructor() {
     window.addEventListener('keydown', (e) => {
+      if (escribiendo(e)) return;
       if (BLOCKED.has(e.code) || boundCodes.has(e.code)) e.preventDefault();
       if (!e.repeat) {
         this.tapped.add(e.code);

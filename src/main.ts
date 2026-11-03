@@ -15,6 +15,7 @@ import { loadFighterFolder, type FighterAsset } from './content/loadFighter';
 import { StageLibrary } from './content/stages';
 import { Gamepads, Keyboard, MenuInput } from './input/devices';
 import { TouchControls } from './input/touch';
+import { iniciarCuenta } from './online/cuenta';
 import { StageView } from './render/stage';
 import { setTextResolution } from './render/text';
 import { DemoScene } from './scenes/demo';
@@ -54,6 +55,8 @@ function watchBoot(prog: Progreso): () => void {
 }
 
 async function main(): Promise<void> {
+  // Si hay una sesión guardada (o se vuelve de entrar con Google), la cuenta se conecta mientras baja el resto.
+  iniciarCuenta();
   const prog = new Progreso();
   const stopBoot = watchBoot(prog);
   // La fuente viene incluida en el build (sin descargas en tiempo de ejecución).

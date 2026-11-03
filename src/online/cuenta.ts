@@ -1,0 +1,351 @@
+// Cuentas de jugador (Supabase): entrar con Google o con correo y contraseña, y el apodo
+// con que te ven los rivales (tabla public.perfiles, ver supabase/migraciones/).
+// La librería de Supabase se baja solo cuando hace falta: al entrar, al tocar EN LÍNEA o,
+// al abrir el juego, si ya hay una sesión guardada. ARCADE y CASUAL no la necesitan.
+
+import type { SupabaseClient, User } from '@supabase/supabase-js';
+import { SUPABASE_KEY, SUPABASE_URL } from './config';
+
+/** Dónde guarda la sesión la librería (localStorage). */
+const KEY_SESION = 'torneoDeCell.sesion';
+/** Eligió JUGAR SIN CUENTA: no se le vuelve a preguntar al abrir el juego. */
+const KEY_INVITADO = 'torneoDeCell.invitado';
+/** Antes de ir a Google: a qué pantalla seguir cuando vuelva (sessionStorage). */
+const KEY_VOLVER = 'torneoDeCell.volverA';
+
+/** Desde dónde se pidió entrar: la primera pantalla después del título, o EN LÍNEA. */
+export type Motivo = 'inicio' | 'online';
+
+/** Mismas reglas que la tabla perfiles (3 a 14 letras, números, espacios, - y _). */
+const APODO_OK = /^[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ _-]+$/;
+const SIN_CONEXION = 'NO HAY CONEXIÓN · REVISA TU INTERNET';
+
+let cliente: Promise<SupabaseClient> | null = null;
+let usuario: User | null = null;
+/** El apodo del que entró; null si todavía no elige; undefined si no se sabe (no se ha podido leer). */
+let perfil: { apodo: string } | null | undefined;
+/** Conexión del arranque (sesión guardada o vuelta de Google) en curso. */
+let pendiente: Promise<void> | null = null;
+let sinConexion = false;
+let errorVuelta: string | null = null;
+
+function obtenerCliente(): Promise<SupabaseClient> {
+  cliente ??= import('@supabase/supabase-js').then(
+    ({ createClient }) => {
+      const c = createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: { flowType: 'pkce', storageKey: KEY_SESION, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+      });
+      // La sesión cambia sola (se renueva, se cierra en otra pestaña): se sigue aquí.
+      c.auth.onAuthStateChange((_evento, sesion) => {
+        const antes = usuario?.id;
+        usuario = sesion?.user ?? null;
+        if (usuario?.id !== antes) perfil = usuario ? undefined : null;
+      });
+      return c;
+    },
+    (err: unknown) => {
+      // Sin internet no baja la librería: se vuelve a intentar la próxima vez.
+      cliente = null;
+      throw err;
+    },
+  );
+  return cliente;
+}
+
+/** Sin internet, las llamadas pueden tardar mucho en fallar: se cortan a los 12 segundos. */
+function aTiempo<T>(p: PromiseLike<T>, ms = 12000): Promise<T> {
+  return Promise.race([Promise.resolve(p), new Promise<T>((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+}
+
+function leer(store: () => Storage, key: string): string | null {
+  try {
+    return store().getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function escribir(store: () => Storage, key: string, value: string | null): void {
+  try {
+    if (value === null) store().removeItem(key);
+    else store().setItem(key, value);
+  } catch {
+    // Sin almacenamiento (modo privado): solo dura esta sesión.
+  }
+}
+
+/** ¿Es un error de red (sin internet, se cortó, tardó demasiado)? */
+function esDeRed(err: { name?: string; message?: string; status?: number }): boolean {
+  const msg = (err.message ?? '').toLowerCase();
+  return (
+    msg === 'timeout' || err.name === 'AuthRetryableFetchError' || msg.includes('failed to fetch') ||
+    msg.includes('networkerror') || msg.includes('load failed') || msg.includes('network request failed')
+  );
+}
+
+/** Mensaje en español (para la pantalla) de un error de Supabase. */
+function traducir(e: unknown): string {
+  console.warn('Cuenta:', e);
+  const err = (e ?? {}) as { name?: string; message?: string; code?: string; status?: number };
+  if (esDeRed(err)) return SIN_CONEXION;
+  const msg = (err.message ?? '').toLowerCase();
+  switch (err.code) {
+    case 'invalid_credentials':
+      return 'CORREO O CONTRASEÑA INCORRECTOS';
+    case 'user_already_exists':
+    case 'email_exists':
+      return 'YA HAY UNA CUENTA CON ESE CORREO · TOCA ENTRAR';
+    case 'weak_password':
+      return 'LA CONTRASEÑA ES MUY CORTA · USA AL MENOS 6 LETRAS O NÚMEROS';
+    case 'email_address_invalid':
+    case 'validation_failed':
+      return 'ESE CORREO NO ES VÁLIDO';
+    case 'email_not_confirmed':
+      return 'FALTA CONFIRMAR EL CORREO';
+    case 'over_request_rate_limit':
+    case 'over_email_send_rate_limit':
+      return 'DEMASIADOS INTENTOS · ESPERA UN RATO Y VUELVE A PROBAR';
+    case 'signup_disabled':
+    case 'email_provider_disabled':
+    case 'email_address_not_authorized':
+      return 'POR AHORA NO SE PUEDEN CREAR CUENTAS CON CORREO';
+    case 'provider_disabled':
+      return 'LA ENTRADA CON GOOGLE TODAVÍA NO ESTÁ LISTA · USA EL CORREO';
+    case '23505':
+      return 'ESE APODO YA LO TIENE OTRO JUGADOR';
+    case '23514':
+      return 'ESE APODO NO SIRVE: USA DE 3 A 14 LETRAS O NÚMEROS';
+    case 'PGRST301':
+    case 'PGRST303':
+      return 'TU SESIÓN VENCIÓ · VUELVE A ENTRAR';
+  }
+  if (msg.includes('invalid login')) return 'CORREO O CONTRASEÑA INCORRECTOS';
+  if (msg.includes('already registered')) return 'YA HAY UNA CUENTA CON ESE CORREO · TOCA ENTRAR';
+  if (msg.includes('password')) return 'LA CONTRASEÑA DEBE TENER AL MENOS 6 LETRAS O NÚMEROS';
+  return 'ALGO FALLÓ · VUELVE A INTENTARLO';
+}
+
+/** Saca de la dirección lo que dejó Google al volver (?code=…), sin tocar lo demás. */
+function limpiarUrl(): void {
+  const url = new URL(location.href);
+  const keys = ['code', 'error', 'error_code', 'error_description', 'state'];
+  if (!keys.some((k) => url.searchParams.has(k))) return;
+  for (const k of keys) url.searchParams.delete(k);
+  history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+}
+
+async function leerPerfil(): Promise<void> {
+  if (!usuario) {
+    perfil = null;
+    return;
+  }
+  const c = await obtenerCliente();
+  const { data, error } = await aTiempo(c.from('perfiles').select('apodo').eq('id', usuario.id).maybeSingle());
+  if (error) {
+    perfil = undefined;
+    throw error;
+  }
+  perfil = data ? { apodo: String(data.apodo) } : null;
+}
+
+/**
+ * Al abrir el juego: si hay una sesión guardada o se vuelve de Google, conecta en segundo
+ * plano (mientras bajan los luchadores). Si no, no baja nada.
+ */
+export function iniciarCuenta(): void {
+  const q = new URLSearchParams(location.search);
+  const vueltaGoogle = q.has('code');
+  if (q.has('error_description') || q.has('error')) {
+    // Canceló en Google, o Google no dejó entrar.
+    errorVuelta = q.get('error') === 'access_denied' ? 'NO SE ENTRÓ CON GOOGLE' : 'NO SE PUDO ENTRAR CON GOOGLE · VUELVE A INTENTARLO';
+    limpiarUrl();
+  }
+  if (!vueltaGoogle && !leer(() => localStorage, KEY_SESION)) return;
+  pendiente = (async () => {
+    try {
+      const c = await aTiempo(obtenerCliente());
+      const { data } = await aTiempo(c.auth.getSession());
+      usuario = data.session?.user ?? null;
+      if (vueltaGoogle && !usuario) errorVuelta = 'NO SE PUDO ENTRAR CON GOOGLE · VUELVE A INTENTARLO';
+    } catch (err) {
+      console.warn('No se pudo conectar la cuenta.', err);
+      sinConexion = true;
+      return;
+    } finally {
+      limpiarUrl();
+    }
+    try {
+      await leerPerfil();
+    } catch (err) {
+      console.warn('No se pudo leer el perfil.', err);
+    }
+  })().finally(() => (pendiente = null));
+}
+
+/** La conexión del arranque, si todavía no termina (las pantallas esperan con "CONECTANDO…"). */
+export function cuentaPendiente(): Promise<void> | null {
+  return pendiente;
+}
+
+/** ¿Hay alguien conectado? */
+export function conectado(): boolean {
+  return !!usuario;
+}
+
+/** Apodo del que entró: null si todavía no elige uno; undefined si no se ha podido leer. */
+export function apodo(): string | null | undefined {
+  return perfil === undefined ? undefined : (perfil?.apodo ?? null);
+}
+
+/** Vuelve a leer el apodo; devuelve el error para mostrar, o null si se pudo. */
+export async function cargarPerfil(): Promise<string | null> {
+  try {
+    await leerPerfil();
+    return null;
+  } catch (err) {
+    return traducir(err);
+  }
+}
+
+/** ¿Al abrir el juego no se pudo conectar (sin internet)? Entonces se sigue sin cuenta. */
+export function quedoSinConexion(): boolean {
+  return sinConexion;
+}
+
+export function esInvitado(): boolean {
+  return leer(() => localStorage, KEY_INVITADO) === 'si';
+}
+
+export function marcarInvitado(): void {
+  escribir(() => localStorage, KEY_INVITADO, 'si');
+}
+
+/** Al volver de Google: la pantalla a la que seguir (solo la primera vez que se pregunta). */
+export function tomarVolverA(): Motivo | null {
+  const v = leer(() => sessionStorage, KEY_VOLVER);
+  escribir(() => sessionStorage, KEY_VOLVER, null);
+  return v === 'inicio' || v === 'online' ? v : null;
+}
+
+/** Error al volver de Google (canceló, o falló), para mostrarlo una vez. */
+export function tomarErrorDeVuelta(): string | null {
+  const e = errorVuelta;
+  errorVuelta = null;
+  return e;
+}
+
+/**
+ * Va a la página de Google para entrar (y vuelve al juego ya conectado). Si no se
+ * puede, devuelve el error para mostrar; si va bien, devuelve null y la página cambia.
+ */
+export async function entrarConGoogle(motivo: Motivo): Promise<string | null> {
+  // Antes de salir del juego se revisa que Google esté activado en el proyecto (si no,
+  // la página de Supabase mostraría un error en inglés en vez de volver).
+  let activo: boolean;
+  try {
+    const r = await aTiempo(fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_KEY } }));
+    const s = (await r.json()) as { external?: { google?: boolean } };
+    activo = !!s.external?.google;
+  } catch (err) {
+    return traducir(err);
+  }
+  if (!activo) return 'LA ENTRADA CON GOOGLE TODAVÍA NO ESTÁ LISTA · USA EL CORREO';
+  try {
+    const c = await aTiempo(obtenerCliente());
+    escribir(() => sessionStorage, KEY_VOLVER, motivo);
+    const { error } = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
+    return error ? traducir(error) : null;
+  } catch (err) {
+    return traducir(err);
+  }
+}
+
+/** Entra con correo y contraseña; devuelve el error para mostrar, o null si entró. */
+export async function entrarConCorreo(correo: string, clave: string): Promise<string | null> {
+  try {
+    const c = await aTiempo(obtenerCliente());
+    const { data, error } = await aTiempo(c.auth.signInWithPassword({ email: correo, password: clave }));
+    if (error) return traducir(error);
+    usuario = data.user;
+  } catch (err) {
+    return traducir(err);
+  }
+  try {
+    await leerPerfil();
+  } catch (err) {
+    console.warn('No se pudo leer el perfil.', err);
+  }
+  return null;
+}
+
+/**
+ * Crea una cuenta con correo y contraseña (y queda conectado). Si el proyecto pide
+ * confirmar el correo, avisa con `confirmar` (hay que confirmar y después ENTRAR).
+ */
+export async function crearCuenta(correo: string, clave: string): Promise<{ error?: string; confirmar?: boolean }> {
+  try {
+    const c = await aTiempo(obtenerCliente());
+    const { data, error } = await aTiempo(c.auth.signUp({ email: correo, password: clave }));
+    if (error) return { error: traducir(error) };
+    if (!data.session) return { confirmar: true };
+    usuario = data.user;
+    perfil = null;
+    return {};
+  } catch (err) {
+    return { error: traducir(err) };
+  }
+}
+
+/** Apodo con los espacios ordenados y las tildes en su forma normal (como se guarda). */
+function limpiarApodo(a: string): string {
+  return a.normalize('NFC').trim().replace(/\s+/g, ' ');
+}
+
+/** ¿El apodo cumple las reglas? Devuelve el problema para mostrar, o null. */
+export function validarApodo(a: string): string | null {
+  const s = limpiarApodo(a);
+  if (s.length < 3) return 'EL APODO DEBE TENER AL MENOS 3 LETRAS';
+  if (s.length > 14) return 'EL APODO PUEDE TENER HASTA 14 LETRAS';
+  if (!APODO_OK.test(s)) return 'SOLO LETRAS, NÚMEROS, ESPACIOS, - Y _';
+  return null;
+}
+
+/** Apodo sugerido: el nombre de pila de Google, o lo de antes de la @ del correo. */
+export function sugerirApodo(): string {
+  const m = (usuario?.user_metadata ?? {}) as Record<string, unknown>;
+  const nombre = String(m.given_name ?? m.full_name ?? m.name ?? '').split(' ')[0];
+  const base = nombre || (usuario?.email ?? '').split('@')[0];
+  const s = limpiarApodo(base.normalize('NFC').replace(/[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ _-]/g, '').slice(0, 14));
+  return validarApodo(s) ? '' : s;
+}
+
+/** Guarda el apodo; devuelve el error para mostrar (ej. ya lo tiene otro), o null si quedó. */
+export async function guardarApodo(a: string): Promise<string | null> {
+  const s = limpiarApodo(a);
+  const malo = validarApodo(s);
+  if (malo) return malo;
+  if (!usuario) return 'TU SESIÓN SE CERRÓ · VUELVE A ENTRAR';
+  try {
+    const c = await aTiempo(obtenerCliente());
+    const { error } = await aTiempo(c.from('perfiles').upsert({ id: usuario.id, apodo: s }));
+    if (error) return traducir(error);
+    perfil = { apodo: s };
+    return null;
+  } catch (err) {
+    return traducir(err);
+  }
+}
+
+/** Cierra la sesión en este aparato (y no se le vuelve a preguntar al abrir el juego). */
+export async function cerrarSesion(): Promise<void> {
+  try {
+    const c = await aTiempo(obtenerCliente());
+    await aTiempo(c.auth.signOut({ scope: 'local' }));
+  } catch (err) {
+    console.warn('No se pudo cerrar la sesión en el servidor.', err);
+    escribir(() => localStorage, KEY_SESION, null);
+  }
+  usuario = null;
+  perfil = null;
+  marcarInvitado();
+}

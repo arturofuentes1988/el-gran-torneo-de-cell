@@ -10,7 +10,7 @@ import type { StageView } from '../render/stage';
 import { outlinedText } from '../render/text';
 import type { FighterDef } from '../sim/types';
 import { backdrop } from './backdrop';
-import { MainMenuScene } from './modeSelect';
+import { despuesDelTitulo } from './cuenta';
 import { loadTitleArena } from './titleArena';
 
 export { loadTitleArena };
@@ -382,7 +382,8 @@ export class TitleScene implements Scene {
       autoFullscreen();
       this.game.sfx.unlock();
       this.game.sfx.play('menuConfirm');
-      this.game.setScene(new MainMenuScene(this.game));
+      // La primera vez, TU CUENTA (Google, correo o sin cuenta); después, el menú principal.
+      this.game.setScene(despuesDelTitulo(this.game));
     }
   }
 

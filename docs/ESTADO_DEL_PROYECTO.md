@@ -225,6 +225,34 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   menús, donde tapaban opciones); queda ☰ arriba a la derecha para volver o pausar. Los textos de
   ayuda dicen "TOCA" y "☰ VUELVE" en vez de ENTER y ESC.
 
+## En línea, fase 1: cuentas (3 de noviembre)
+
+- Proyecto de Supabase gratis en São Paulo (organización "torneo de cell", ref `hmyesbgnihxgaygmkuck`).
+  La URL y la llave publicable están en `src/online/config.ts` (son públicas a propósito; las reglas
+  de seguridad de cada tabla mandan). La contraseña de la base de datos y la llave secreta nunca van
+  al repositorio.
+- Tabla `perfiles` (apodo único sin importar mayúsculas, 3 a 14 letras, números, espacios, - y _):
+  `supabase/migraciones/001_perfiles.sql`. Cualquiera con cuenta ve los apodos; cada uno cambia solo
+  el suyo; sin cuenta no se lee nada. El conector de Supabase de Claude no ve esta organización, así
+  que los cambios a la base de datos se pegan en el SQL Editor del panel.
+- Pantallas (`src/scenes/cuenta.ts`):
+  - TU CUENTA aparece la primera vez después del título, con ENTRAR CON GOOGLE, ENTRAR CON CORREO y
+    JUGAR SIN CUENTA. Si eliges jugar sin cuenta, queda recordado en el navegador.
+  - EN LÍNEA vuelve a pedir cuenta a quien no ha entrado y pide el apodo la primera vez. Ofrece
+    CAMBIAR APODO y CERRAR SESIÓN. CREAR SALA, UNIRSE CON CÓDIGO y PARTIDA RÁPIDA dicen que llegan en
+    la próxima actualización.
+  - ENTRAR CON CORREO y ELIGE TU APODO son formularios HTML encima del juego (`src/online/formulario.ts`).
+    El teclado del juego no toma las teclas mientras se escribe en un campo.
+- La librería de Supabase (~55 KB comprimida) se baja solo al usar la cuenta, o al abrir el juego si
+  ya hay una sesión guardada. Quien juega sin cuenta no baja nada más.
+- En el panel de Supabase está apagado "Confirm email": Supabase no manda correos a jugadores sin un
+  servicio de correo propio. Por lo mismo, todavía no hay "olvidé mi contraseña".
+- **Falta**:
+  - La entrada con Google: el usuario tiene que crear la llave en Google Cloud y pegarla en Supabase.
+    Mientras tanto, el juego dice "todavía no está lista · usa el correo".
+  - Revisar que la URL Configuration del panel tenga la dirección del juego.
+  - Borrar las cuentas de prueba `qa.torneo.*@example.com` en Authentication → Users.
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra
