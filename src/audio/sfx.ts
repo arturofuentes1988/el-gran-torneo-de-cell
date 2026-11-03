@@ -1,6 +1,7 @@
 // Efectos de sonido generados por código (sin archivos), estilo arcade.
 // Cada sonido se sintetiza una vez a un AudioBuffer cuando se desbloquea el audio.
 
+import { bajar, type Progreso } from '../content/descargas';
 import type { SoundSpec } from '../sim/types';
 
 type Gen = (sr: number) => Float32Array<ArrayBuffer>;
@@ -433,11 +434,9 @@ export class Sfx {
    * Carga una muestra de audio (mp3, ogg, wav), por ejemplo una voz. Si el
    * audio aún no está desbloqueado se decodifica al desbloquearlo.
    */
-  loadSample(name: string, url: string): Promise<void> {
+  loadSample(name: string, url: string, prog?: Progreso): Promise<void> {
     const job = (async () => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`No se pudo cargar ${url} (${res.status})`);
-      const data = await res.arrayBuffer();
+      const data = await (await bajar(url, prog)).arrayBuffer();
       if (this.ctx) await this.decode(name, data);
       else this.pending.set(name, data);
     })();
@@ -449,9 +448,9 @@ export class Sfx {
    * Carga las muestras de un manifiesto JSON { "voz/round1": "round1.mp3", "voz/hola": ["a.mp3", "b.mp3"] }
    * (rutas relativas al manifiesto). `prefix` va delante de cada nombre (ej. "rene/" para las voces
    * de un luchador: "rene/voz/hola"). Una lista son variantes: al tocar el nombre suena una al azar.
-   * Si el manifiesto no existe, no hace nada. Devuelve cuántos archivos cargó.
+   * Si el manifiesto no existe, no hace nada. Devuelve cuántos archivos cargó. `prog` anota lo bajado.
    */
-  async loadManifest(url: string, prefix = ''): Promise<number> {
+  async loadManifest(url: string, prefix = '', prog?: Progreso): Promise<number> {
     let manifest: SampleManifest;
     try {
       const res = await fetch(url);
@@ -467,12 +466,12 @@ export class Sfx {
       const files = (Array.isArray(value) ? value : [value]).filter((f): f is string => typeof f === 'string' && f !== '');
       if (!files.length) continue;
       if (!Array.isArray(value)) {
-        jobs.push(this.loadSample(name, new URL(files[0], base).href));
+        jobs.push(this.loadSample(name, new URL(files[0], base).href, prog));
         continue;
       }
       const names = files.map((_, i) => `${name}#${i}`);
       this.variants.set(name, names);
-      files.forEach((f, i) => jobs.push(this.loadSample(names[i], new URL(f, base).href)));
+      files.forEach((f, i) => jobs.push(this.loadSample(names[i], new URL(f, base).href, prog)));
     }
     const results = await Promise.allSettled(jobs);
     for (const r of results) if (r.status === 'rejected') console.warn('Muestra de audio no cargada:', r.reason);
@@ -693,6 +692,12 @@ export class Sfx {
     src.start();
     m.src = src;
     m.gain = gain;
+  }
+
+  /** Suelta una muestra ya cargada (las pistas de música decodificadas ocupan ~25 MB cada una). */
+  forget(name: string): void {
+    this.buffers.delete(name);
+    this.pending.delete(name);
   }
 
   /** Apaga la música con un fundido de `fade` segundos. */

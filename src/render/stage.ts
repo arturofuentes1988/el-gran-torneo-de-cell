@@ -1,15 +1,12 @@
-// Escenarios. Dos fuentes:
-//  - HD: capas de imágenes (arte final) descritas en un JSON (StageDef), con
-//    paralaje por capa, repetición horizontal, desplazamiento automático y
-//    capas animadas. Se cargan con StageView.load().
-//  - "Escenario de prueba" (respaldo): fondo provisorio pintado pixel a pixel
-//    al cargar (atardecer, montañas, mesetas y piso de tierra), determinista.
+// Escenarios: capas de imágenes (arte final) descritas en un JSON (StageDef), con
+// paralaje por capa, repetición horizontal, desplazamiento automático, capas
+// animadas y video de fondo. Se cargan con StageView.load().
 
-import { Assets, Container, Graphics, Rectangle, Sprite, Texture, TilingSprite } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite, Texture, TilingSprite } from 'pixi.js';
+import type { Calidad } from '../content/calidad';
+import { bajarJson, bajarTextura, bajarVideo, type Progreso } from '../content/descargas';
 import { FRAME_MS, GROUND_SCREEN_Y, STAGE_W, VIEW_H, VIEW_W } from '../config';
-import { Rng } from '../sim/rng';
 import type { TexFilter } from '../sim/types';
-import { PixelCanvas } from './pixelCanvas';
 import { snap } from './scale';
 
 /** Una capa de un escenario HD (JSON). Ver docs/FORMATO_SPRITES.md. */
@@ -45,6 +42,8 @@ export interface StageLayerDef {
   floor?: { strips?: number };
   /** Luz que late: el alpha va de min a max cada `period` cuadros (60 = 1 s). */
   pulse?: StagePulseDef;
+  /** Calidad liviana (celulares): las mismas imágenes a la mitad, con su escala (herramientas/escenario_liviano.py). */
+  liviano?: Pick<StageLayerDef, 'src' | 'video' | 'frames' | 'scale'>;
 }
 
 export interface StagePulseDef {
@@ -252,153 +251,6 @@ class ParticleField {
   }
 }
 
-function heightmap(rng: Rng, w: number, min: number, max: number, rough: number): number[] {
-  // Desplazamiento de punto medio.
-  let size = 1;
-  while (size < w) size *= 2;
-  const h = new Array<number>(size + 1).fill(0);
-  h[0] = min + rng.next() * (max - min);
-  h[size] = min + rng.next() * (max - min);
-  let step = size;
-  let amp = (max - min) * 0.7;
-  while (step > 1) {
-    const half = step / 2;
-    for (let i = half; i < size; i += step) {
-      h[i] = (h[i - half] + h[i + half]) / 2 + (rng.next() * 2 - 1) * amp;
-      h[i] = Math.max(min * 0.6, Math.min(max * 1.1, h[i]));
-    }
-    step = half;
-    amp *= rough;
-  }
-  return h.slice(0, w);
-}
-
-/** Cielo de atardecer: su borde inferior es el horizonte (y = -100 de mundo). */
-function paintSky(): Texture {
-  const W = VIEW_W;
-  const H = 290;
-  const c = new PixelCanvas(W, H);
-  c.vgrad(0, 0, W, H, [0x140a2e, 0x2a1450, 0x4e2264, 0x86306c, 0xc44a5e, 0xee7048, 0xffa850, 0xffd884]);
-  const rng = new Rng(7);
-  for (let i = 0; i < 70; i++) {
-    const x = rng.int(0, W - 1);
-    const y = rng.int(0, 110);
-    const b = rng.next();
-    c.set(x, y, b > 0.85 ? 0xffffff : b > 0.5 ? 0xc8b8ff : 0x8a78c8);
-  }
-  // Sol del atardecer con franjas (estilo retro), asomando sobre las montañas.
-  const sx = 336;
-  const sy = H - 82;
-  const r = 30;
-  for (let y = Math.floor(sy - r); y <= Math.ceil(sy + r); y++) {
-    const rel = (y - (sy - r)) / (2 * r);
-    // Franjas que se ensanchan hacia abajo en la mitad inferior.
-    if (rel > 0.55) {
-      const band = Math.floor((rel - 0.55) * 40);
-      if ((y + band) % 5 < Math.min(3, 1 + band / 3)) continue;
-    }
-    for (let x = Math.floor(sx - r); x <= Math.ceil(sx + r); x++) {
-      const dx = x + 0.5 - sx;
-      const dy = y + 0.5 - sy;
-      if (dx * dx + dy * dy > r * r) continue;
-      c.dither(x, y, 0xfff2b0, 0xff8a3a, rel);
-    }
-  }
-  return c.texture();
-}
-
-function paintMountains(seed: number, w: number, h: number, min: number, max: number, body: number, lit: number, snow: number, snowShade: number, haze: number): Texture {
-  const c = new PixelCanvas(w, h);
-  const rng = new Rng(seed);
-  const hm = heightmap(rng, w + 1, min, max, 0.55);
-  const snowLine = min + (max - min) * 0.55;
-  for (let x = 0; x < w; x++) {
-    const top = Math.round(h - hm[x]);
-    const litSide = hm[x + 1] < hm[x] - 0.2;
-    const snowDepth = hm[x] > snowLine ? Math.round((hm[x] - snowLine) * 0.45 + 2 + rng.next() * 2) : 0;
-    for (let y = Math.max(0, top); y < h; y++) {
-      const d = y - top;
-      const t = d / Math.max(1, h - top);
-      let col = litSide ? lit : body;
-      if (d < snowDepth) col = litSide ? snow : snowShade;
-      c.dither(x, y, col, haze, t * 0.85);
-    }
-  }
-  return c.texture();
-}
-
-function paintMesas(): Texture {
-  const W = 760;
-  const H = 82;
-  const c = new PixelCanvas(W, H);
-  const rng = new Rng(21);
-  const strata = [0x9c4a2c, 0xb05a34, 0x8e4028, 0xa85232];
-  const litStrata = [0xd27848, 0xe08a52, 0xc86c40, 0xda8050];
-  let x = -20;
-  while (x < W) {
-    const mw = rng.int(70, 170);
-    const mh = rng.int(22, 58);
-    const top = H - mh;
-    for (let y = top; y < H; y++) {
-      const slope = Math.round((y - top) * 0.9);
-      const x0 = x - slope;
-      const x1 = x + mw + slope;
-      const si = Math.floor((y - top) / 5) % strata.length;
-      for (let xx = x0; xx < x1; xx++) {
-        const right = xx > x1 - 1 - Math.max(3, slope + 3);
-        const col = right ? litStrata[si] : strata[si];
-        c.dither(xx, y, col, 0xc8746a, ((y - top) / mh) * 0.5);
-      }
-    }
-    x += mw + rng.int(30, 90);
-  }
-  return c.texture();
-}
-
-/** Arena de fondo y piso de tierra apisonada. Cubre de y=-100 a y=+80 (mundo). */
-function paintFloor(): Texture {
-  const W = STAGE_W;
-  const H = 180;
-  const TOP = -100;
-  const row = (worldY: number) => worldY - TOP;
-  const c = new PixelCanvas(W, H);
-  const rng = new Rng(33);
-  // Arena del fondo.
-  c.vgrad(0, 0, W, row(-14), [0xd28a62, 0xc87650, 0xbc6844, 0xb05e3c]);
-  for (let i = 0; i < 900; i++) {
-    const x = rng.int(0, W - 1);
-    const y = rng.int(0, row(-14) - 1);
-    c.set(x, y, rng.chance(0.5) ? 0xa85634 : 0xe2a074);
-  }
-  for (let i = 0; i < 26; i++) {
-    const x = rng.int(0, W - 1);
-    const y = rng.int(10, row(-14) - 6);
-    const rw = rng.int(2, 6);
-    c.rect(x, y, rw, 2, 0x7a3e2a);
-    c.rect(x, y - 1, rw - 1, 1, 0xc0805a);
-  }
-  // Piso de pelea: una franja de tierra apisonada, más clara y pareja.
-  const g0 = row(-14);
-  const g1 = row(6);
-  c.vgrad(0, g0, W, g1, [0x9a5a3c, 0xb06c4a, 0xc07c58, 0xb87452]);
-  for (let x = 0; x < W; x++) c.set(x, g0, 0x7a4430);
-  for (let i = 0; i < 500; i++) {
-    const x = rng.int(0, W - 1);
-    const y = rng.int(g0 + 1, g1 - 1);
-    c.set(x, y, rng.chance(0.5) ? 0x8e5034 : 0xd09068);
-  }
-  for (let i = 0; i < 40; i++) {
-    const x = rng.int(0, W - 1);
-    const y = rng.int(g0 + 2, g1 - 2);
-    c.rect(x, y, rng.int(6, 22), 1, 0xa86444);
-  }
-  // Borde delantero y tierra más oscura hacia el espectador.
-  for (let x = 0; x < W; x++) c.set(x, g1, 0xd49470);
-  c.vgrad(0, g1 + 1, W, H, [0x8a4a2e, 0x7a4028, 0x6a3622, 0x5a2c1c]);
-  for (let i = 0; i < 400; i++) c.set(rng.int(0, W - 1), rng.int(g1 + 1, H - 1), rng.chance(0.5) ? 0x4e2618 : 0x9a5636);
-  return c.texture();
-}
-
 export class StageView {
   readonly container = new Container();
   /** Oscurece el fondo durante el flash del súper. */
@@ -411,64 +263,61 @@ export class StageView {
   private darkAlpha = 0;
   private lastTime = performance.now();
 
-  /** Sin argumentos: escenario de prueba procedural. Con capas: escenario HD (ver StageView.load). */
-  constructor(hd?: { name: string; layers: Array<{ def: StageLayerDef; textures: Texture[] }>; particles?: StageParticlesDef[]; music?: string }) {
-    this.music = hd?.music ?? null;
-    if (hd) {
-      this.name = hd.name;
-      for (const { def, textures } of hd.layers) this.addHd(def, textures);
-      for (const p of hd.particles ?? []) {
-        const field = new ParticleField(p);
-        this.particles.push(field);
-        this.container.addChild(field.container);
-      }
-    } else {
-      this.name = 'Escenario de prueba';
-      const add = (tex: Texture, fx: number, fy: number, top: number) => {
-        const view = new Sprite(tex);
-        this.container.addChild(view);
-        this.layers.push({ view, fx, fy, top, left: 0, frames: null, frameDur: 1, scrollX: 0, alpha: 1, pulse: null, strips: null });
-      };
-      add(paintSky(), 0, 0.2, -390);
-      add(paintMountains(3, 580, 150, 40, 120, 0x3a2452, 0x5c3474, 0xf6d4dc, 0xb69ac8, 0xc86a6a), 0.12, 0.4, -245);
-      add(paintMountains(11, 640, 110, 22, 78, 0x4a2440, 0x7a3a52, 0xf0c8c4, 0xb08090, 0xb85a4e), 0.25, 0.55, -205);
-      add(paintMesas(), 0.5, 0.75, -170);
-      add(paintFloor(), 1, 1, -100);
+  /** Escenario HD ya cargado (ver StageView.load). */
+  constructor(hd: { name: string; layers: Array<{ def: StageLayerDef; textures: Texture[] }>; particles?: StageParticlesDef[]; music?: string }) {
+    this.music = hd.music ?? null;
+    this.name = hd.name;
+    for (const { def, textures } of hd.layers) this.addHd(def, textures);
+    for (const p of hd.particles ?? []) {
+      const field = new ParticleField(p);
+      this.particles.push(field);
+      this.container.addChild(field.container);
     }
     this.darken.rect(0, 0, VIEW_W, VIEW_H).fill(0x05020c);
     this.darken.alpha = 0;
     this.container.addChild(this.darken);
   }
 
-  /** Carga un escenario HD desde su JSON (StageDef); las imágenes se buscan junto al JSON. */
-  static async load(url: string): Promise<StageView> {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`No se pudo cargar el escenario ${url}`);
-    const def = (await res.json()) as StageDef;
+  /**
+   * Carga un escenario HD desde su JSON (StageDef); las imágenes se buscan junto al JSON. En
+   * calidad liviana usa las versiones chicas de cada capa (si las tiene). `prog` anota lo bajado.
+   */
+  static async load(url: string, calidad: Calidad = 'hd', prog?: Progreso): Promise<StageView> {
+    const def = await bajarJson<StageDef>(url, prog);
     const base = new URL(url, location.href);
+    const abs = (src: string) => new URL(src, base).href;
     const scaleMode = def.filter ?? 'linear';
-    const load = (src: string) =>
-      Assets.load<Texture>({ src: new URL(src, base).href, data: { scaleMode, autoGenerateMipmaps: scaleMode === 'linear' } });
-    // Video en loop, mudo (así el navegador lo deja reproducirse solo). Sin mipmaps: se regenerarían en cada cuadro.
-    const loadVideo = async (src: string): Promise<Texture[]> => {
-      try {
-        const tex = await Assets.load<Texture>({
-          src: new URL(src, base).href,
-          data: { autoPlay: true, loop: true, muted: true, playsinline: true, preload: true, scaleMode: 'linear', autoGenerateMipmaps: false },
-        });
-        return [tex];
-      } catch (err) {
-        console.warn(`No se pudo cargar el video ${src}; queda la imagen fija.`, err);
-        return [];
-      }
-    };
-    const layers = await Promise.all(
-      def.layers.map(async (l) => ({
+    const op = { scaleMode, mipmaps: calidad === 'hd' && scaleMode === 'linear' };
+    const layers = def.layers.map((l) => (calidad === 'liviano' && l.liviano ? { ...l, ...l.liviano } : l));
+    const files = (l: StageLayerDef) => (l.video ? [l.video] : (l.frames ?? (l.src ? [l.src] : [])));
+    if (prog) for (const l of layers) for (const f of files(l)) prog.esperar(abs(f));
+    // Video en loop, mudo (así el navegador lo deja reproducirse solo); si no parte, queda la imagen fija.
+    const loaded = await Promise.all(
+      layers.map(async (l) => ({
         def: l,
-        textures: l.video ? await loadVideo(l.video) : await Promise.all((l.frames ?? (l.src ? [l.src] : [])).map(load)),
+        textures: l.video
+          ? [await bajarVideo(abs(l.video), prog).catch(() => null)].filter((t): t is Texture => !!t)
+          : await Promise.all(files(l).map((f) => bajarTextura(abs(f), op, prog))),
       })),
     );
-    return new StageView({ name: def.name, layers, particles: def.particles, music: def.music });
+    return new StageView({ name: def.name, layers: loaded, particles: def.particles, music: def.music });
+  }
+
+  /** Libera sus texturas y videos (para no llenar la memoria de un celular con escenarios que ya no se usan). */
+  destroy(): void {
+    if (this.videoWatch !== null) clearInterval(this.videoWatch);
+    this.videoWatch = null;
+    for (const v of this.videos) {
+      v.pause();
+      v.removeAttribute('src');
+      v.querySelectorAll('source').forEach((el) => {
+        if (el.src.startsWith('blob:')) URL.revokeObjectURL(el.src);
+        el.remove();
+      });
+      v.load();
+    }
+    this.videos = [];
+    this.container.destroy({ children: true, texture: true, textureSource: true });
   }
 
   /** Videos del escenario: se reproducen solo mientras el escenario se está dibujando. */

@@ -2,22 +2,22 @@
 // herramientas/efectos_vfx.py): cuadros de videos de efectos sin el fondo negro
 // ("vfx/<efecto>/<i>", para mezcla aditiva) y objetos pintados ("obj/<nombre>").
 
-import { Assets, type Spritesheet, type Texture } from 'pixi.js';
+import type { Texture } from 'pixi.js';
+import type { Calidad } from './calidad';
+import { bajarJson, loadSheets, type Progreso } from './descargas';
 
 /** Texturas compartidas (no vienen en el atlas de un luchador). */
 export const SHARED_TEX = /^(vfx|obj)\//;
 
-/** Carga los atlas de efectos; si faltan, devuelve nada y los poderes se dibujan con vectores. */
-export async function loadEffects(folder = 'efectos'): Promise<Record<string, Texture>> {
+/**
+ * Carga los atlas de efectos (public/efectos/atlas.json: una lista, o {"hd": {"todo": [...]},
+ * "liviano": {...}}); si faltan, devuelve nada y los poderes se dibujan con vectores.
+ */
+export async function loadEffects(calidad: Calidad, prog?: Progreso, folder = 'efectos'): Promise<Record<string, Texture>> {
   try {
-    const res = await fetch(`${folder}/atlas.json`);
-    if (!res.ok) return {};
-    const list = (await res.json()) as string[];
-    const sheets = await Promise.all(
-      list.map((a) =>
-        Assets.load<Spritesheet>({ src: `${folder}/${a}`, data: { textureOptions: { scaleMode: 'linear', autoGenerateMipmaps: true } } }),
-      ),
-    );
+    const index = await bajarJson<string[] | Partial<Record<Calidad, Record<string, string[]>>>>(`${folder}/atlas.json`, prog);
+    const list = Array.isArray(index) ? index : Object.values(index[calidad] ?? index.hd ?? {}).flat();
+    const sheets = await loadSheets(list.map((a) => `${folder}/${a}`), { scaleMode: 'linear', mipmaps: calidad === 'hd' }, prog);
     return Object.assign({}, ...sheets.map((s) => s.textures)) as Record<string, Texture>;
   } catch (err) {
     console.warn('No se pudieron cargar los efectos especiales; se usan los dibujados.', err);

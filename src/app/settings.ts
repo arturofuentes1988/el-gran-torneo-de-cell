@@ -63,3 +63,27 @@ export function saveControls(c: unknown): boolean {
     return false;
   }
 }
+
+const KEY_QUALITY = 'torneoDeCell.calidad';
+
+/** Calidad de los gráficos: 'auto' (según el aparato), 'hd' o 'liviano'. */
+export type QualityPref = 'auto' | 'hd' | 'liviano';
+
+export function loadQuality(): QualityPref {
+  try {
+    const v = localStorage.getItem(KEY_QUALITY);
+    if (v === 'hd' || v === 'liviano') return v;
+  } catch {
+    // Sin acceso a localStorage: automática.
+  }
+  return 'auto';
+}
+
+export function saveQuality(q: QualityPref): void {
+  try {
+    if (q === 'auto') localStorage.removeItem(KEY_QUALITY);
+    else localStorage.setItem(KEY_QUALITY, q);
+  } catch {
+    // Si no se puede guardar, solo dura esta sesión.
+  }
+}

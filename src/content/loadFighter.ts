@@ -1,12 +1,32 @@
-// Carga un luchador definitivo desde archivos: atlas (PNG + JSON con formato
-// de spritesheet de Pixi) y definición (FighterDef en JSON). Devuelve lo mismo
-// que los luchadores provisorios, así que el motor no cambia.
+// Carga un luchador definitivo desde su carpeta (la arma herramientas/armar_luchador.py y la
+// reparte herramientas/calidades.py): definición (FighterDef en JSON) y atlas de Pixi en dos
+// calidades (hd/ y liviano/) y dos grupos: "menu" (lo que sale en los menús, se baja al abrir
+// el juego) y "pelea" (todo lo demás, se baja antes de su primera pelea, ver contenido.ts).
 // Formato documentado en docs/FORMATO_SPRITES.md.
 
-import { Assets, type Spritesheet, type Texture } from 'pixi.js';
+import type { Texture } from 'pixi.js';
 import { REQUIRED_ANIMS, type FighterDef } from '../sim/types';
-import type { FighterAsset } from './mannequin/fighters';
+import type { Calidad } from './calidad';
+import { bajarJson, bajarTextura, loadSheets, type OpcionesTextura, type Progreso } from './descargas';
 import { SHARED_TEX } from './vfx';
+
+/** Un luchador del plantel. */
+export interface FighterAsset {
+  def: FighterDef;
+  /** Texturas cargadas del luchador (las de los menús siempre; las de pelea cuando se bajan). */
+  textures: Record<string, Texture>;
+  /** Cara para las casillas de ELIGE LUCHADOR (public/luchadores/<id>/cara.webp). */
+  face?: Texture;
+  /** Carpeta (public/luchadores/<id>/). */
+  folder: string;
+  /** Atlas del grupo "pelea" (URL de los JSON); vacío si todo vino con los menús. */
+  fightAtlases: string[];
+  /** Cómo se crean sus texturas (filtrado y mipmaps según la calidad). */
+  texOptions: OpcionesTextura;
+}
+
+/** atlas.json: una lista (formato viejo, todo junto) o calidades con grupos. */
+type AtlasIndex = string[] | Partial<Record<Calidad, { menu?: string[]; pelea?: string[] }>>;
 
 const okScale = (k: number | undefined) => k === undefined || (Number.isFinite(k) && k > 0 && k <= 8);
 
@@ -55,42 +75,23 @@ export function validateFighter(def: FighterDef, textures: Record<string, Textur
 }
 
 /**
- * Carga la definición y uno o varios atlas (por ejemplo, una hoja de AutoSprite
- * por animación). El filtrado sale de `def.texFilter` (por defecto 'linear',
- * con mipmaps, para arte HD hecho con IA).
+ * Lee la carpeta del luchador y baja lo de los menús (y su cara). Lo de pelea queda anotado
+ * en `fightAtlases` para bajarlo después.
  */
-export async function loadFighter(atlasJsonUrls: string | string[], defJsonUrl: string): Promise<FighterAsset> {
-  const res = await fetch(defJsonUrl);
-  if (!res.ok) throw new Error(`No se pudo cargar ${defJsonUrl}`);
-  const def = (await res.json()) as FighterDef;
+export async function loadFighterFolder(folder: string, id: string, calidad: Calidad, prog?: Progreso): Promise<FighterAsset> {
+  const [index, def] = await Promise.all([bajarJson<AtlasIndex>(`${folder}/atlas.json`, prog), bajarJson<FighterDef>(`${folder}/${id}.json`, prog)]);
+  const groups = Array.isArray(index) ? { menu: index, pelea: [] } : (index[calidad] ?? index.hd ?? {});
   const scaleMode = def.texFilter ?? 'linear';
-  const urls = Array.isArray(atlasJsonUrls) ? atlasJsonUrls : [atlasJsonUrls];
-  const sheets = await Promise.all(
-    urls.map((src) =>
-      Assets.load<Spritesheet>({ src, data: { textureOptions: { scaleMode, autoGenerateMipmaps: scaleMode === 'linear' } } }),
-    ),
-  );
+  const texOptions: OpcionesTextura = { scaleMode, mipmaps: calidad === 'hd' && scaleMode === 'linear' };
+  const url = (a: string) => `${folder}/${a}`;
+  const faceUrl = `${folder}/cara.webp`;
+  prog?.esperar(faceUrl);
+  const [sheets, face] = await Promise.all([
+    loadSheets((groups.menu ?? []).map(url), texOptions, prog),
+    // Cara para ELIGE LUCHADOR (herramientas/caras.py); si falta, la pantalla usa su silueta.
+    bajarTextura(faceUrl, { mipmaps: true }, prog).catch(() => undefined),
+  ]);
   const textures: Record<string, Texture> = {};
   for (const sheet of sheets) Object.assign(textures, sheet.textures);
-  const problems = validateFighter(def, textures, true);
-  if (problems.length) console.warn(`Luchador "${def.id}":\n- ${problems.join('\n- ')}`);
-  return { def, textures };
-}
-
-/**
- * Carga un luchador desde la carpeta que deja herramientas/armar_luchador.py:
- * `atlas.json` (lista de atlas) y `<id>.json` (definición).
- */
-export async function loadFighterFolder(folder: string, id: string): Promise<FighterAsset> {
-  const res = await fetch(`${folder}/atlas.json`);
-  if (!res.ok) throw new Error(`No se pudo cargar ${folder}/atlas.json`);
-  const atlas = (await res.json()) as string[];
-  const asset = await loadFighter(atlas.map((a) => `${folder}/${a}`), `${folder}/${id}.json`);
-  // Cara para ELIGE LUCHADOR (herramientas/caras.py); si falta, la pantalla usa su silueta.
-  try {
-    asset.face = await Assets.load<Texture>(`${folder}/cara.webp`);
-  } catch {
-    asset.face = undefined;
-  }
-  return asset;
+  return { def, textures, face, folder, fightAtlases: (groups.pelea ?? []).map(url), texOptions };
 }

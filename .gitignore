@@ -6,3 +6,6 @@ __pycache__/
 # quedan solo en este computador. El juego publicado usa lo que está en public/.
 arte/
 referencias/
+
+# Lo arma herramientas/tamanos.mjs antes de cada build.
+public/tamanos.json

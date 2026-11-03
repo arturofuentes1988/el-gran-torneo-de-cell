@@ -27,6 +27,7 @@ from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).parent))
 from video_a_cuadros import alfa_ia, alfa_verde, color_fondo, quitar_fondo  # noqa: E402
+from calidades import repartir  # noqa: E402
 
 PAGINA = 4096
 MARGEN = 2
@@ -501,6 +502,8 @@ def main() -> None:
     (salida / f"{id_}.json").write_text(json.dumps(definicion, ensure_ascii=False), encoding="utf-8")
     (salida / "atlas.json").write_text(json.dumps(atlas), encoding="utf-8")
     print(f"listo: {salida / (id_ + '.json')} con {len(anims)} animaciones y {len(texturas)} texturas")
+    # Calidades HD y liviana, y grupos de carga (menús / pelea): ver calidades.py.
+    repartir(salida)
     for c in clips.values():
         c.cerrar()
 

@@ -1,9 +1,11 @@
+import { calidad } from '../content/calidad';
 import type { Sfx } from './sfx';
 
 // Música de fondo: el tema de la pantalla de título (también en los menús) y
 // uno por escenario. La lista viene de public/musica/musica.json:
 //   { "titulo": { "archivo": "titulo.mp3", "bpm": 140, "loopStart": 3.4, "loopEnd": 82.3 }, … }
-// Cada pista se descarga recién la primera vez que se pide y queda en memoria.
+// Cada pista se descarga recién cuando se pide. En memoria quedan solo la que suena y la del
+// título. En calidad liviana se usa "liviano" (mono, más chica) si la pista la tiene.
 
 interface Track {
   url: string;
@@ -24,11 +26,13 @@ export class MusicLibrary {
     try {
       const res = await fetch(url);
       if (!res.ok) return;
-      const list = (await res.json()) as Record<string, { archivo?: string; loopStart?: number; loopEnd?: number }>;
+      const list = (await res.json()) as Record<string, { archivo?: string; liviano?: string; loopStart?: number; loopEnd?: number }>;
       const base = new URL(url, location.href);
+      const light = calidad() === 'liviano';
       for (const [key, t] of Object.entries(list ?? {})) {
-        if (!t?.archivo) continue;
-        this.tracks.set(key, { url: new URL(t.archivo, base).href, loopStart: t.loopStart ?? 0, loopEnd: t.loopEnd ?? 0 });
+        const file = (light && t?.liviano) || t?.archivo;
+        if (!file) continue;
+        this.tracks.set(key, { url: new URL(file, base).href, loopStart: t.loopStart ?? 0, loopEnd: t.loopEnd ?? 0 });
       }
     } catch {
       return;
@@ -54,5 +58,11 @@ export class MusicLibrary {
       });
     }
     this.sfx.playMusic(name, t.loopStart, t.loopEnd);
+    // Las demás pistas se sueltan (se vuelven a bajar si se piden).
+    for (const k of [...this.requested]) {
+      if (k === key || k === 'titulo') continue;
+      this.requested.delete(k);
+      this.sfx.forget(`musica/${k}`);
+    }
   }
 }

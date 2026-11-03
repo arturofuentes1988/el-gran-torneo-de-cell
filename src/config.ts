@@ -25,6 +25,5 @@ export const ROUND_TIME = 99;
 export const ROUNDS_TO_WIN = 2;
 export const MAX_ROUNDS = 5;
 
-/** Fuente pixel incluida localmente (@fontsource/press-start-2p). */
 /** Fuente de todo el juego (moderna, con tildes y ñ; viene incluida en el build). */
 export const GAME_FONT = 'Oswald';

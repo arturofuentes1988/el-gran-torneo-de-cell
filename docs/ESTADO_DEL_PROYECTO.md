@@ -182,6 +182,29 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   En pantalla completa Android se queda horizontal.
 - `?tactil=1` muestra los controles en el computador (pruebas).
 
+## Carga liviana, cruceta y limpieza (3 de noviembre)
+
+- **Cruceta** en vez de la palanca: fija abajo a la izquierda, 4 direcciones y las diagonales
+  apretando entre dos brazos (50° por dirección y 40° por diagonal). El brazo apretado se ilumina.
+- **Carga por partes.** Antes el juego bajaba ~107 MB al abrir y subía ~1,6 GB de texturas a la
+  memoria de video (por eso se trababa en celulares). Ahora:
+  - Al abrir baja solo lo de los menús, con una barra que muestra los MB: ~9,5 MB en HD y ~4 MB
+    en liviano (más el código, ~220 KB).
+  - Cada pelea baja lo suyo la primera vez (texturas de pelea de sus dos luchadores, voces,
+    efectos, escenario), con barra en ELIGE ESCENARIO, el VS del ARCADE, la DEMOSTRACIÓN y la
+    galería de PERSONAJES: ~17-25 MB en HD y ~7-10 MB en liviano. Después queda guardado.
+  - Al empezar una pelea se suelta lo que lleva rato sin usarse (en liviano, solo queda lo de la
+    pelea en curso; en HD, hasta 4 luchadores y 3 escenarios). La música guarda solo la pista que
+    suena y la del título.
+- **Dos calidades** (`src/content/calidad.ts`): HD en computadores y liviana en celulares y tablets
+  (mitad de resolución, música mono). Se cambia en OPCIONES > GRÁFICOS.
+- **Archivos más chicos**: atlas en WebP 80 (antes 92, no se nota); videos de fondo a 2208 px (antes
+  2944, 5 veces más livianos); efectos al 75 %. Si un video no parte (ahorro de batería en
+  iPhone), a los 8 s se sigue con la imagen fija.
+- **Limpieza**: fuera los luchadores provisorios Rojo y Azul y el escenario de prueba dibujado por
+  código (~1.900 líneas), dos brillos sin usar, 7 cuadros de René que no se usaban, las capturas viejas de `docs/` (28 MB) y la fuente
+  pixel que ya no se usaba.
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra

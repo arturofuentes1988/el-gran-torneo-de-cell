@@ -1,12 +1,13 @@
 // Menús después del título (mismo estilo: panel centrado, cursor y barra):
 // - MENÚ PRINCIPAL: ARCADE, CASUAL, OPCIONES y SALIR.
 // - CASUAL: 1 VS CPU, 1 VS 1, 2 VS 2 y PRÁCTICA.
-// - OPCIONES: PERSONAJES, MOVIMIENTOS, ESCENARIOS, DEMOSTRACIÓN, CONTROLES, DIFICULTAD y SONIDO.
+// - OPCIONES: PERSONAJES, MOVIMIENTOS, ESCENARIOS, DEMOSTRACIÓN, CONTROLES, DIFICULTAD, SONIDO y GRÁFICOS.
 
 import { Container, Graphics, type Text } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
 import type { Game, Scene } from '../app/game';
-import { loadDifficulty, saveDifficulty, saveMuted } from '../app/settings';
+import { loadDifficulty, loadQuality, saveDifficulty, saveMuted, saveQuality, type QualityPref } from '../app/settings';
+import { calidad, elegirCalidad } from '../content/calidad';
 import { arcade, outlinedText } from '../render/text';
 import { DIFFICULTIES, DIFFICULTY_NAME, type DifficultyId } from '../sim/difficulty';
 import { CharacterSelectScene } from './characterSelect';
@@ -194,9 +195,13 @@ export class CasualMenuScene extends MenuScene {
   }
 }
 
-/** OPCIONES: fichas y movimientos de los luchadores, escenarios, controles, dificultad y sonido. */
+const QUALITIES: readonly QualityPref[] = ['auto', 'hd', 'liviano'];
+
+/** OPCIONES: fichas y movimientos de los luchadores, escenarios, controles, dificultad, sonido y gráficos. */
 export class OptionsMenuScene extends MenuScene {
   private difficulty: DifficultyId = loadDifficulty();
+  /** Gráficos elegidos (se aplican al aceptar: el juego se recarga con la otra calidad). */
+  private quality: QualityPref = loadQuality();
 
   constructor(game: Game) {
     super(game, 'opciones', 'OPCIONES', [
@@ -207,10 +212,36 @@ export class OptionsMenuScene extends MenuScene {
       { id: 'controles', label: 'CONTROLES' },
       { id: 'dificultad', label: '' },
       { id: 'sonido', label: '' },
+      { id: 'graficos', label: '' },
       { id: 'volver', label: 'VOLVER' },
     ]);
     this.updateDifficultyLabel();
     this.updateSoundLabel();
+    this.updateQualityLabel();
+  }
+
+  private updateQualityLabel(): void {
+    const i = this.options.findIndex((o) => o.id === 'graficos');
+    const name = (q: 'hd' | 'liviano') => (q === 'hd' ? 'HD' : 'LIVIANOS');
+    const label = this.quality === 'auto' ? `AUTOMÁTICOS (${name(elegirCalidad('auto'))})` : name(this.quality);
+    const pending = this.quality !== loadQuality() ? ' · ACEPTAR' : '';
+    this.items[i].text = arcade(`GRÁFICOS: < ${label} >${pending}`);
+  }
+
+  private changeQuality(step: number): void {
+    const n = QUALITIES.length;
+    this.quality = QUALITIES[(QUALITIES.indexOf(this.quality) + step + n) % n];
+    this.updateQualityLabel();
+    this.game.sfx.play('menuMove');
+  }
+
+  /** Guarda los gráficos elegidos y recarga el juego si cambian (HD: computador; LIVIANOS: celular). */
+  private applyQuality(): void {
+    if (this.quality === loadQuality()) return;
+    const before = calidad();
+    saveQuality(this.quality);
+    if (elegirCalidad(this.quality) !== before) location.reload();
+    else this.updateQualityLabel();
   }
 
   private updateSoundLabel(): void {
@@ -249,6 +280,7 @@ export class OptionsMenuScene extends MenuScene {
   protected override side(id: string, dir: number): void {
     if (id === 'dificultad') this.changeDifficulty(dir);
     else if (id === 'sonido') this.toggleSound();
+    else if (id === 'graficos') this.changeQuality(dir);
   }
 
   protected choose(id: string): void {
@@ -264,6 +296,7 @@ export class OptionsMenuScene extends MenuScene {
     else if (id === 'demo') this.go(new DemoScene(g, here));
     else if (id === 'dificultad') this.changeDifficulty(1);
     else if (id === 'sonido') this.toggleSound();
+    else if (id === 'graficos') this.applyQuality();
     else this.back();
   }
 

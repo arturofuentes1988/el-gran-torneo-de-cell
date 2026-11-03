@@ -8,20 +8,22 @@ import { Game, type FightMode } from './app/game';
 import { loadMuted } from './app/settings';
 import { Sfx } from './audio/sfx';
 import { FRAME_MS, GAME_FONT } from './config';
-import { loadFighterFolder, validateFighter } from './content/loadFighter';
-import { loadEffects } from './content/vfx';
-import { BUILTIN_STAGE, StageLibrary } from './content/stages';
-import { buildPlaceholderFighters, type FighterAsset } from './content/mannequin/fighters';
+import { calidad } from './content/calidad';
+import { Contenido } from './content/contenido';
+import { cargarTamanos, Progreso } from './content/descargas';
+import { loadFighterFolder, type FighterAsset } from './content/loadFighter';
+import { StageLibrary } from './content/stages';
 import { Gamepads, Keyboard, MenuInput } from './input/devices';
 import { TouchControls } from './input/touch';
 import { StageView } from './render/stage';
 import { setTextResolution } from './render/text';
 import { DemoScene } from './scenes/demo';
 import { FightScene } from './scenes/fight';
+import { LoadingScene } from './scenes/loading';
 import { TitleScene, loadTitleArena } from './scenes/title';
 
-/** Luchadores con sprites definitivos (carpetas de public/luchadores/), en el orden del plantel. */
-const REAL_FIGHTERS = ['rene', 'pablito', 'flaitiano', 'lena', 'carlitos'];
+/** Luchadores del plantel (carpetas de public/luchadores/), en este orden. */
+const FIGHTERS = ['rene', 'pablito', 'flaitiano', 'lena', 'carlitos'];
 
 /** "0,1" → [0, 1] (índices del plantel del jugador 1 y del 2); null si no viene o no sirve. */
 function parsePair(raw: string | null, n: number): [number, number] | null {
@@ -37,20 +39,34 @@ function parseTeams(raw: string | null, n: number): [number[], number[]] | null 
   return sides.length === 2 && sides[0].length === 2 && sides[1].length === 2 ? [sides[0], sides[1]] : null;
 }
 
+/** Barra de carga del arranque (en index.html, antes de que se dibuje el juego): lo bajado en MB. */
+function watchBoot(prog: Progreso): () => void {
+  const fill = document.querySelector<HTMLElement>('#loading .lleno');
+  const text = document.querySelector<HTMLElement>('#loading .texto');
+  let raf = 0;
+  const tick = (): void => {
+    if (fill) fill.style.width = `${(prog.fraccion * 100).toFixed(1)}%`;
+    if (text && prog.total > 0) text.textContent = `DESCARGANDO EL JUEGO · ${prog.texto}`;
+    raf = requestAnimationFrame(tick);
+  };
+  tick();
+  return () => cancelAnimationFrame(raf);
+}
+
 async function main(): Promise<void> {
+  const prog = new Progreso();
+  const stopBoot = watchBoot(prog);
   // La fuente viene incluida en el build (sin descargas en tiempo de ejecución).
   await Promise.all(['500', '700'].flatMap((w) => [12, 24, 48].map((s) => document.fonts.load(`${w} ${s}px "${GAME_FONT}"`))));
 
   const display = new Display();
   await display.init();
   installFullscreen();
-  // El fondo del título (imagen y video) se carga mientras tanto, junto con los luchadores.
-  void loadTitleArena().catch(() => undefined);
   setTextResolution(display.textResolution);
   display.onResize(() => setTextResolution(display.textResolution));
 
   const kb = new Keyboard();
-  // Celulares y tablets: joystick y botones en pantalla (aprietan las teclas del jugador 1).
+  // Celulares y tablets: cruceta y botones en pantalla (aprietan las teclas del jugador 1).
   new TouchControls(kb, display);
   const pads = new Gamepads();
   const menu = new MenuInput(kb, pads);
@@ -71,91 +87,58 @@ async function main(): Promise<void> {
   window.addEventListener('keydown', firstGesture);
   window.addEventListener('pointerdown', firstGesture);
 
-  const params = new URLSearchParams(location.search);
-  const placeholders = buildPlaceholderFighters();
-  // Luchadores con sprites definitivos, en este orden (public/luchadores/<id>/). Si una carpeta
-  // falta o no carga, se salta. ?provisorios=1 fuerza los dos luchadores provisorios.
-  const folders: Array<{ asset: FighterAsset; folder: string }> = [];
-  // Efectos especiales pintados (rayos, tornado, objetos): se cargan junto con los luchadores.
-  const effectsLoading = loadEffects();
-  if (!params.has('provisorios')) {
-    for (const id of REAL_FIGHTERS) {
-      const folder = `luchadores/${id}`;
-      try {
-        folders.push({ asset: await loadFighterFolder(folder, id), folder });
-      } catch (err) {
-        console.warn(`No se pudo cargar el luchador "${id}"; se salta.`, err);
-      }
-    }
-  }
-  // Plantel (ELIGE LUCHADOR, 2 VS 2, movimientos): los definitivos y, si son menos de 2, los provisorios
-  // para que siempre haya rival.
-  const roster: FighterAsset[] = folders.map((f) => f.asset);
-  if (roster.length < 2) roster.push(...placeholders);
-  // Pareja por defecto (pruebas con ?escena=pelea): los dos primeros definitivos, o el primero contra
-  // el Azul provisorio si hay uno solo. ?luchadores=i,j la cambia (índices del plantel).
-  const pair = parsePair(params.get('luchadores'), roster.length);
-  const fighters: [FighterAsset, FighterAsset] = pair
-    ? [roster[pair[0]], roster[pair[1]]]
-    : [roster[0], folders.length >= 2 ? roster[1] : placeholders[1]];
-  // Los nombres de textura llevan el id del luchador (rene/…, rojo/…, azul/…): no chocan.
-  const effects = await effectsLoading;
-  const textures = Object.assign({}, effects, ...roster.map((f) => f.textures)) as Record<string, Texture>;
-  for (const f of roster) {
-    const problems = validateFighter(f.def, { ...effects, ...f.textures });
-    if (problems.length) console.warn(`Luchador "${f.def.id}":\n- ${problems.join('\n- ')}`);
-  }
-
-  if (params.get('escena') === 'atlas') {
-    // Visor de depuración: muestra el atlas de poses del luchador indicado (?escena=atlas&f=0).
-    const atlas = placeholders[Number(params.get('f')) === 1 ? 1 : 0].atlas;
-    const zoom = Number(params.get('zoom')) || 0.5;
-    display.app.canvas.style.display = 'none';
-    document.body.style.background = '#3a3a48';
-    if (atlas) {
-      atlas.style.width = `${atlas.width * zoom}px`;
-      atlas.style.imageRendering = 'pixelated';
-      document.body.appendChild(atlas);
-    }
-    document.getElementById('loading')?.remove();
-    return;
-  }
+  // Al abrir solo se baja lo de los menús: la guardia (y poses del título) de cada luchador, la
+  // lista de escenarios y el ring del título. Lo de cada pelea se baja antes de pelear (contenido.ts).
+  await cargarTamanos();
+  const q = calidad();
+  const [fighters, stages, arena] = await Promise.all([
+    Promise.allSettled(FIGHTERS.map((id) => loadFighterFolder(`luchadores/${id}`, id, q, prog))),
+    StageLibrary.load('escenarios/escenarios.json', prog),
+    loadTitleArena(prog).catch((err: unknown) => {
+      console.warn('No se pudo cargar el ring del título.', err);
+      return null;
+    }),
+  ]);
+  const roster: FighterAsset[] = [];
+  fighters.forEach((r, i) => {
+    if (r.status === 'fulfilled') roster.push(r.value);
+    else console.warn(`No se pudo cargar el luchador "${FIGHTERS[i]}"; se salta.`, r.reason);
+  });
+  if (roster.length < 2) throw new Error('no se pudieron bajar los luchadores. Revisa tu conexión.');
+  // Los nombres de textura llevan el id del luchador (rene/…, pablito/…): no chocan.
+  const textures = Object.assign({}, ...roster.map((f) => f.textures)) as Record<string, Texture>;
   for (const f of roster) {
     for (const [name, spec] of Object.entries(f.def.sounds ?? {})) sfx.register(`${f.def.id}/${name}`, spec);
   }
-  // Escenarios para elegir antes de pelear (public/escenarios/escenarios.json). Hasta que se
-  // elija uno, las peleas de prueba y los menús usan el primero de la lista.
-  // ?escenario=<id de la lista>, ?escenario=ruta/al/escenario.json o ?escenario=prueba (el procedural) lo cambia.
-  const builtinStage = new StageView();
-  const stages = await StageLibrary.load('escenarios/escenarios.json', builtinStage);
-  let stage = builtinStage;
-  const stageParam = params.get('escenario');
-  try {
-    if (stageParam && stageParam !== BUILTIN_STAGE) {
-      stage = stages.find(stageParam) ? await stages.get(stageParam) : await StageView.load(stageParam);
-    } else if (!stageParam) {
-      stage = await stages.get(stages.first.id);
-    }
-  } catch (err) {
-    console.warn('No se pudo cargar el escenario; se usa el de prueba.', err);
-  }
-  // Los demás escenarios se cargan mientras tanto, sin frenar el inicio (así la pelea parte sin espera).
-  for (const e of stages.entries) stages.get(e.id).catch(() => undefined);
-  // Sonidos en archivo, sin frenar el inicio: voces del anunciador (public/voces/voces.json),
-  // y voces de cada luchador (<carpeta>/voces/voces.json → "rene/voz/…").
+  // Voces del anunciador (public/voces/voces.json), sin frenar el inicio.
   void sfx.loadManifest('voces/voces.json');
-  for (const { asset, folder } of folders) void sfx.loadManifest(`${folder}/voces/voces.json`, `${asset.def.id}/`);
-  const game = new Game(display, kb, pads, menu, sfx, { fighters, roster, textures, stage, stages });
+
+  const params = new URLSearchParams(location.search);
+  // Pareja por defecto (pruebas con ?escena=pelea): los dos primeros. ?luchadores=i,j la cambia (índices del plantel).
+  const pair = parsePair(params.get('luchadores'), roster.length);
+  const content = new Contenido(roster, textures, sfx, stages);
+  const game = new Game(display, kb, pads, menu, sfx, {
+    fighters: [roster[pair?.[0] ?? 0], roster[pair?.[1] ?? 1]],
+    roster,
+    textures,
+    // Hasta la primera pelea, el escenario es el ring del título (cada pelea deja el suyo).
+    stage: arena ?? new StageView({ name: '', layers: [] }),
+    stageId: '',
+    stages,
+    content,
+  });
   // Música de fondo (public/musica/musica.json): título y menús, y un tema por escenario.
   void game.music.load('musica/musica.json');
 
-  // Atajos para pruebas: ?escena=pelea&modo=cpu|2p|demo|practica&semilla=123; ?escena=demostracion (la de OPCIONES).
+  // Atajos para pruebas: ?escena=pelea&modo=cpu|2p|demo|practica&semilla=123&escenario=<id>; ?escena=demostracion.
   // 1 VS 1: &luchadores=0,1 (índices del plantel). 2 VS 2: &equipos=0,1-2,0 (índices de cada equipo).
   const mode = params.get('modo') as FightMode | null;
   if (params.get('escena') === 'pelea' && (mode === 'cpu' || mode === '2p' || mode === 'demo' || mode === 'practica')) {
     const teams = parseTeams(params.get('equipos'), roster.length);
     const opts = teams && mode !== 'practica' ? { teams } : pair ? { fighters: pair } : undefined;
-    game.setScene(new FightScene(game, mode, Number(params.get('semilla')) || 7, opts));
+    const stageId = stages.find(params.get('escenario') ?? '')?.id ?? stages.first.id;
+    const needs = { fighters: teams ? [...teams[0], ...teams[1]] : (pair ?? [0, 1]), stage: stageId };
+    game.setScene(new LoadingScene(game, needs, () => new FightScene(game, mode, Number(params.get('semilla')) || 7, opts)));
   } else if (params.get('escena') === 'demostracion') {
     game.setScene(new DemoScene(game, () => new TitleScene(game)));
   } else {
@@ -189,11 +172,13 @@ async function main(): Promise<void> {
     qa?.();
   });
 
+  stopBoot();
   document.getElementById('loading')?.remove();
 }
 
 main().catch((err: unknown) => {
   console.error(err);
-  const el = document.getElementById('loading');
-  if (el) el.textContent = 'ERROR AL CARGAR: ' + String(err);
+  const text = document.querySelector('#loading .texto');
+  if (text) text.textContent = 'ERROR AL CARGAR: ' + (err instanceof Error ? err.message : String(err));
+  document.querySelector('#loading .reintentar')?.removeAttribute('hidden');
 });

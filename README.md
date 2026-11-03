@@ -211,16 +211,6 @@ Carlitos Run (bebida con gas, velocidad y su BMX; también dos toques y un botó
 Sus combos se llenan de bebida: burbujas, espuma, estallidos y, desde 12 golpes,
 un géiser. Su ropa de visita es la polera blanca.
 
-Luchadores provisorios:
-
-| Movimiento | Comando |
-|---|---|
-| Bola de energía | abajo, diagonal, adelante + golpe |
-| Gancho volador (invulnerable al inicio) | adelante, abajo, diagonal + golpe |
-| Rojo: Patada Remolino | abajo, diagonal, atrás + patada |
-| Azul: Embestida | cargar atrás medio segundo, luego adelante + golpe |
-| Súper (cuesta 1 barra) | dos veces abajo, diagonal, adelante + golpe |
-
 - **Agarre:** pegado al rival, aprieta un golpe y una patada juntos (cualquiera
   de cada uno, hasta ~0,1 s de diferencia entre los dos; con atrás lo tira hacia atrás). También sale con adelante o
   atrás + golpe fuerte. Se escapa apretando golpe justo al ser agarrado. Los
@@ -322,9 +312,8 @@ ropa oscura, clara o ciertos tonos); la cara, el pelo y las zapatillas quedan
 igual. En 1 VS CPU y práctica el jugador 1 elige el suyo y
 después el rival (CPU o muñeco); en 1 VS 1 cada uno elige con su cursor al mismo
 tiempo (el jugador 2 con sus teclas o el segundo joystick). Esc / Retroceso
-vuelve un paso atrás o al menú. Las caras salen de `herramientas/caras.py`. El plantel son los luchadores con sprites
-definitivos de `public/luchadores/` (René, Pablito…); los provisorios Rojo y
-Azul solo aparecen si hay menos de dos.
+vuelve un paso atrás o al menú. Las caras salen de `herramientas/caras.py`. El plantel son los luchadores de
+`public/luchadores/` (René, Pablito, el Flaitiano, el Vendedor de Leña y Carlitos Run).
 
 Antes de cada pelea se elige el escenario (**ELIGE ESCENARIO**, o ALEATORIO).
 Mientras no se elija uno, los menús y las peleas de prueba usan el primero de
@@ -387,11 +376,9 @@ El Gran Torneo de Cell vive en los lives, así que la pelea se ve como uno:
   `health:1:200` e `input:0:6,5*2,6+lk` (entradas forzadas de un lado, un
   cuadro por elemento: dirección de teclado numérico, botones con `+` y `*N`
   para repetir).
-- `?escena=atlas&f=0` (o `f=1`) muestra el atlas de poses de un luchador
-  provisorio.
-  Con `?escena=…` tampoco aparece.
-- `?escenario=rene-plaza` (un id de la lista, o la ruta a un `escenario.json`)
-  cambia el escenario inicial; `?escenario=prueba` usa el procedural.
+- `?escenario=rene-plaza` (un id de la lista) cambia el escenario de la pelea de prueba.
+- `?calidad=hd` o `?calidad=liviano` fuerza la calidad de los gráficos y `?tactil=1`
+  muestra los controles de celular (cruceta y botones).
 
 ## Estructura
 
@@ -403,7 +390,7 @@ src/
   app/                pantalla (capas y escalado), escenas, puente de pruebas
   input/              teclado, joystick y búfer de comandos
   sim/                simulación determinista: luchador, pelea, CPU, tipos de datos
-  content/            luchadores: provisorios por código y cargador desde archivos
+  content/            carga: luchadores, escenarios, efectos, calidades y descargas con barra
   render/             escenario, luchadores, efectos HD, HUD, texto pixel
   audio/              efectos sintetizados, muestras (voces) y música
   scenes/             título, menús (elegir luchador, escenario), escenarios y pelea

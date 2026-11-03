@@ -5,6 +5,8 @@
 import { Container, Graphics, type Text } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
 import type { Game, Scene } from '../app/game';
+import { Progreso } from '../content/descargas';
+import { BarraCarga } from '../render/barraCarga';
 import { arcade, outlinedText } from '../render/text';
 import { FightScene } from './fight';
 
@@ -17,6 +19,9 @@ export class DemoScene implements Scene {
   private label: Text;
   private t = 0;
   private ready = false;
+  private failed = false;
+  private prog = new Progreso();
+  private bar = new BarraCarga(200, 6, 'CARGANDO PELEA');
   private fighters: [number, number];
   private colors: [number, number];
 
@@ -53,17 +58,20 @@ export class DemoScene implements Scene {
     hint.anchor.set(0.5);
     hint.position.set(VIEW_W / 2, VIEW_H / 2 + 14);
     this.ui.addChild(bg, this.label, hint);
-    if (!entry) {
-      this.ready = true;
-      return;
-    }
-    game.assets.stages.get(entry.id).then(
+    this.bar.container.position.set(VIEW_W / 2, VIEW_H / 2 + 40);
+    this.ui.addChild(this.bar.container);
+    // Lo que falte para la pelea (si no carga, se vuelve atrás).
+    game.assets.content.prepare({ fighters: this.fighters, stage: entry.id }, this.prog).then(
       (st) => {
-        game.assets.stage = st;
+        if (st) {
+          game.assets.stage = st;
+          game.assets.stageId = entry.id;
+        }
         this.ready = true;
       },
-      () => {
-        this.ready = true;
+      (err: unknown) => {
+        console.warn('DEMOSTRACIÓN: no se pudo cargar la pelea.', err);
+        this.failed = true;
       },
     );
   }
@@ -85,6 +93,10 @@ export class DemoScene implements Scene {
       this.game.setScene(this.exitTo());
       return;
     }
+    if (this.failed) {
+      this.game.setScene(this.exitTo());
+      return;
+    }
     if (!this.ready || this.t < MIN_FRAMES) return;
     const g = this.game;
     const last = this.last;
@@ -101,5 +113,7 @@ export class DemoScene implements Scene {
 
   render(): void {
     this.label.alpha = 0.75 + 0.25 * Math.sin(this.t * 0.15);
+    this.bar.container.visible = !this.ready && this.prog.total > 0;
+    this.bar.update(this.prog);
   }
 }

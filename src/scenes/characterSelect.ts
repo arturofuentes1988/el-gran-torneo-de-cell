@@ -10,7 +10,7 @@
 import { ColorMatrixFilter, Container, Graphics, Sprite, type Filter, type Text, type Texture } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
 import type { FightMode, Game, Scene } from '../app/game';
-import type { FighterAsset } from '../content/mannequin/fighters';
+import type { FighterAsset } from '../content/loadFighter';
 import { P1_KEYS, P2_KEYS } from '../input/devices';
 import { COSTUME_COUNT, costumeFilter } from '../render/costume';
 import { NEON_CYAN, NEON_PINK } from '../render/live';
@@ -496,7 +496,7 @@ export class CharacterSelectScene implements Scene {
     const fighters: [number, number] = [this.picks[0], this.picks[1]];
     const colors: [number, number] = [this.colors[0], this.colors[1]];
     const mode = this.mode;
-    g.setScene(new StageSelectScene(g, () => new FightScene(g, mode, undefined, { fighters, colors }), () => new CharacterSelectScene(g, mode)));
+    g.setScene(new StageSelectScene(g, () => new FightScene(g, mode, undefined, { fighters, colors }), () => new CharacterSelectScene(g, mode), fighters));
   }
 
   render(): void {

@@ -27,6 +27,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).parent))
 from armar_luchador import caja, empaquetar  # noqa: E402
+from calidades import repartir  # noqa: E402
 from video_a_cuadros import quitar_fondo  # noqa: E402
 
 
@@ -101,11 +102,9 @@ def main() -> None:
     for viejo in salida.glob("efectos-*.*"):
         viejo.unlink()
     atlas = empaquetar(texturas, salida, "efectos", False)
-    # Efectos con brillo: una calidad algo menor no se nota y el archivo pesa bastante menos.
-    for nombre in atlas:
-        webp = salida / nombre.replace(".json", ".webp")
-        Image.open(webp).save(webp, quality=80, method=6)
     (salida / "atlas.json").write_text(json.dumps(atlas), encoding="utf-8")
+    # Calidades HD (75 %) y liviana (45 %): los brillos difusos se ven igual más chicos (calidades.py).
+    repartir(salida)
     print(f"listo: {len(texturas)} texturas en {salida}")
 
 

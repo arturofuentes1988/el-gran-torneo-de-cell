@@ -376,6 +376,9 @@ export class FightScene implements Scene {
   }
 
   enter(): void {
+    // Suelta lo que lleva rato sin usarse (las escenas de antes ya no lo dibujan).
+    const { roster, content, stageId } = this.game.assets;
+    content.trim({ fighters: this.allFighters().map((f) => roster.findIndex((r) => r.def.id === f.def.id)), stage: stageId });
     const d = this.game.display;
     d.world.addChild(this.game.assets.stage.container, this.disco.container, this.neon.container, this.storm.container, this.ultraShow.container, this.party.container, this.world);
     d.fx.addChild(this.fx.container, this.debugG);

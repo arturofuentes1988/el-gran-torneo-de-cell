@@ -1,7 +1,9 @@
 import { BlurFilter, Container, Graphics, Sprite, type Text, type Texture } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
 import type { Game, Scene } from '../app/game';
-import type { FighterAsset } from '../content/mannequin/fighters';
+import type { FighterAsset } from '../content/loadFighter';
+import { Progreso } from '../content/descargas';
+import { BarraCarga } from '../render/barraCarga';
 import { P1_KEYS } from '../input/devices';
 import { FxLayer } from '../render/fx';
 import { textTokens, tokenLine, type Token } from '../render/keycap';
@@ -206,6 +208,10 @@ export class CharactersScene implements Scene {
   private t = 0;
   /** Entrada del luchador al cambiar (se desliza y aparece). */
   private slide = 0;
+  /** Mientras se bajan sus movimientos: queda en guardia, con la barra de carga. */
+  private loading: Progreso | null = null;
+  private bar = new BarraCarga(SHOW_W - 30, 5, 'CARGANDO MOVIMIENTOS');
+  private alive = true;
 
   constructor(private game: Game, private back: () => Scene) {
     const bg = new Graphics();
@@ -229,13 +235,15 @@ export class CharactersScene implements Scene {
 
     this.listRows.mask = this.listMask;
     this.list.addChild(this.selBar, this.listRows, this.listMask, this.listBar);
-    this.ui.addChild(bg, title, this.header, this.show, this.list, help);
+    this.bar.container.position.set(SHOW_X + SHOW_W / 2, SHOW_Y + SHOW_H - 12);
+    this.bar.container.visible = false;
+    this.ui.addChild(bg, title, this.header, this.show, this.list, help, this.bar.container);
     this.showFighter();
   }
 
   /** Todo el plantel (también los que solo pelean en 2 VS 2). */
   private get fighters(): FighterAsset[] {
-    return this.game.assets.roster.length ? this.game.assets.roster : this.game.assets.fighters;
+    return this.game.assets.roster;
   }
 
   private get def(): FighterDef {
@@ -260,7 +268,32 @@ export class CharactersScene implements Scene {
     this.buildHeader();
     this.buildShowcase();
     this.buildList();
-    this.startMove(true);
+    const needs = { fighters: [this.index] };
+    if (this.game.assets.content.isReady(needs)) {
+      this.loading = null;
+      this.startMove(true);
+      return;
+    }
+    // Sus movimientos se bajan recién ahora (los menús solo traen la guardia).
+    const which = this.index;
+    const prog = new Progreso();
+    this.loading = prog;
+    this.seq = [];
+    this.fi = 0;
+    this.ft = 0;
+    this.resting = Number.POSITIVE_INFINITY;
+    if (this.idle.length) this.setTex(this.idle[0].tex, false);
+    this.game.assets.content.prepare(needs, prog).then(
+      () => {
+        if (!this.alive || this.index !== which) return;
+        this.loading = null;
+        this.startMove(true);
+      },
+      (err: unknown) => {
+        console.warn('PERSONAJES: no se pudieron cargar los movimientos.', err);
+        if (this.index === which) this.loading = null;
+      },
+    );
   }
 
   private buildHeader(): void {
@@ -496,6 +529,7 @@ export class CharactersScene implements Scene {
   }
 
   exit(): void {
+    this.alive = false;
     this.game.sfx.silence(this.def.id);
     backdrop.detach(this.game);
     this.game.display.hud.removeChild(this.ui);
@@ -521,8 +555,8 @@ export class CharactersScene implements Scene {
       this.sel = (this.sel + (m.down ? 1 : n - 1)) % n;
       this.game.sfx.play('menuMove');
       this.updateSelection();
-      this.startMove(true);
-    } else if (m.confirm) {
+      if (!this.loading) this.startMove(true);
+    } else if (m.confirm && !this.loading) {
       this.startMove(true);
     }
 
@@ -574,5 +608,7 @@ export class CharactersScene implements Scene {
   render(): void {
     backdrop.render();
     this.fx.sync();
+    this.bar.container.visible = !!this.loading;
+    if (this.loading) this.bar.update(this.loading);
   }
 }

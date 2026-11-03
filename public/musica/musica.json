@@ -3,30 +3,35 @@
     "archivo": "titulo.mp3",
     "bpm": 144.86,
     "loopStart": 5.8,
-    "loopEnd": 112.2116
+    "loopEnd": 112.2116,
+    "liviano": "liviano/titulo.mp3"
   },
   "rene-cabana": {
     "archivo": "rene-cabana.mp3",
     "bpm": 131.84,
     "loopStart": 34.7,
-    "loopEnd": 67.4442
+    "loopEnd": 67.4442,
+    "liviano": "liviano/rene-cabana.mp3"
   },
   "rene-plaza": {
     "archivo": "rene-plaza.mp3",
     "bpm": 100.08,
     "loopStart": 19.7,
-    "loopEnd": 77.2616
+    "loopEnd": 77.2616,
+    "liviano": "liviano/rene-plaza.mp3"
   },
   "pablito-calle": {
     "archivo": "pablito-calle.mp3",
     "bpm": 113.88,
     "loopStart": 6.5,
-    "loopEnd": 113.7884
+    "loopEnd": 113.7884,
+    "liviano": "liviano/pablito-calle.mp3"
   },
   "lena-valparaiso": {
     "archivo": "lena-valparaiso.mp3",
     "bpm": 137.9,
     "loopStart": 18.6,
-    "loopEnd": 79.6116
+    "loopEnd": 79.6116,
+    "liviano": "liviano/lena-valparaiso.mp3"
   }
 }

@@ -2,7 +2,7 @@ import { BlurFilter, Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import { STAGE_W, VIEW_H, VIEW_W } from '../config';
 import { autoFullscreen } from '../app/fullscreen';
 import type { Game, Scene } from '../app/game';
-import type { FighterAsset } from '../content/mannequin/fighters';
+import type { FighterAsset } from '../content/loadFighter';
 import { attackKeys } from '../input/devices';
 import { FxLayer } from '../render/fx';
 import type { StageView } from '../render/stage';

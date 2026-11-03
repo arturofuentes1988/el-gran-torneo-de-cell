@@ -4,7 +4,6 @@
 
 /** Botones de ataque. */
 export type Btn = 'lp' | 'hp' | 'lk' | 'hk';
-export const ATTACK_BUTTONS: readonly Btn[] = ['lp', 'hp', 'lk', 'hk'];
 
 /**
  * Caja relativa a los pies del luchador, mirando a la derecha.
@@ -386,9 +385,3 @@ export const REQUIRED_ANIMS = [
   'throwGrab', 'throwToss', 'taunt', 'win', 'lose', 'intro',
 ] as const;
 
-/**
- * Animaciones opcionales. Si faltan se usan otras: 'roll' → 'crouch';
- * 'powerUp' → 'taunt' (o 'intro'); 'idleRelax' (guardia baja, brazos abajo: el
- * muñeco de práctica indefenso) → 'idle'. El supersalto y el salto corto usan las del salto.
- */
-export const OPTIONAL_ANIMS = ['roll', 'powerUp', 'idleRelax'] as const;

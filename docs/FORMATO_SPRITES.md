@@ -2,8 +2,7 @@
 
 Este documento explica cómo entregar un luchador definitivo (por ejemplo, con
 sprites hechos con IA) para que el motor lo use **sin tocar el código del
-motor**. Los luchadores provisorios (Rojo y Azul) se generan por código, pero
-producen exactamente este mismo formato.
+motor**.
 
 ## 1. Medidas y convenciones
 
@@ -15,8 +14,7 @@ producen exactamente este mismo formato.
   la ventana). Por eso el arte puede tener mucho más detalle que una unidad por pixel.
 - **`texScale`**: unidades de mundo por pixel de textura. Ejemplo: un cuadro de
   512 px donde el personaje mide ~470 px, para un luchador de ~150 unidades de
-  alto, lleva `texScale` ≈ 150 / 470 ≈ **0,32**. Los provisorios usan 1 (un
-  pixel de textura = una unidad, se ven "pixelados").
+  alto, lleva `texScale` ≈ 150 / 470 ≈ **0,32**.
 - **Filtrado** (`texFilter`): `linear` para arte HD (por defecto al cargar desde
   archivos, con mipmaps) y `nearest` para pixel art a escala de mundo.
 - Un luchador de pie mide **unos 150 a 160 unidades** de alto.
@@ -53,6 +51,32 @@ debe traer `anchor` apuntando a los pies:
 Los nombres de cuadro son libres; se recomienda `id/animación/número`.
 Proyectiles, efectos y retratos van en los mismos atlas o en otros, con el
 mismo formato. Tamaño máximo recomendado por imagen: 4096 × 4096 px.
+
+### Calidades y grupos de carga (`atlas.json`)
+
+`herramientas/calidades.py` (lo corre solo `armar_luchador.py` al final) reparte
+los atlas de cada luchador en dos calidades y dos grupos, y escribe la lista en
+`public/luchadores/<id>/atlas.json`:
+
+```json
+{
+  "hd":      { "menu": ["hd/menu-0.json"],      "pelea": ["hd/pelea-0.json", "hd/pelea-1.json"] },
+  "liviano": { "menu": ["liviano/menu-0.json"], "pelea": ["liviano/pelea-0.json", "liviano/pelea-1.json"] }
+}
+```
+
+- **hd/**: tamaño completo, páginas de 4096 px (computadores).
+- **liviano/**: mitad de tamaño, páginas de 2048 px, con `"scale": "0.5"` en el
+  JSON: Pixi los dibuja del mismo tamaño que los HD. Pesan ~3 veces menos y usan
+  4 veces menos memoria de video (celulares).
+- **menu**: los cuadros que salen en los menús (`idle`, `win`, `lose`, `jumpUp`,
+  `jumpTop`, `jumpFall`, `land`, `powerUp`): se bajan al abrir el juego.
+- **pelea**: todo lo demás; se baja antes de la primera pelea con ese luchador.
+- Los cuadros que la definición no usa se descartan.
+
+Los efectos compartidos (`public/efectos/atlas.json`) usan el mismo formato con
+un solo grupo (`todo`), a 75 % en HD y 45 % en liviano. Un `atlas.json` que es
+una lista simple (formato viejo) se carga entero con los menús.
 
 ## 3. Definición del luchador (`FighterDef` en JSON)
 
@@ -281,12 +305,15 @@ ruido, y el juego los sintetiza al cargar.
 
 ## 7. Cómo se carga
 
-`src/content/loadFighter.ts` tiene `loadFighter(atlas, definicionJson)`, donde
-`atlas` es la ruta de un JSON de atlas o una lista de rutas. Lee la definición,
-carga los atlas con el filtrado de `texFilter`, valida todo (`validateFighter`)
-y devuelve `{ def, textures }`, el mismo objeto que generan los provisorios en
-`src/content/mannequin/fighters.ts`. Para cambiar un luchador basta con pasar
-ese objeto al juego en lugar del provisorio.
+Al abrir el juego, `loadFighterFolder()` (`src/content/loadFighter.ts`) lee la
+definición y `atlas.json` de cada carpeta y baja solo el grupo `menu` de la
+calidad elegida (`src/content/calidad.ts`: HD en computadores, liviana en
+celulares; se cambia en OPCIONES > GRÁFICOS o con `?calidad=hd|liviano`).
+Antes de cada pelea, `Contenido.prepare()` (`src/content/contenido.ts`) baja el
+grupo `pelea` de sus luchadores, sus voces, los efectos y el escenario, con
+barra de carga, y al empezar la pelea suelta lo que lleva rato sin usarse (en
+celulares queda en memoria solo lo de la pelea en curso). En desarrollo,
+`validateFighter` avisa en la consola si a un luchador le falta algo.
 
 ## 8. De una hoja de AutoSprite a una animación
 
@@ -432,9 +459,16 @@ Nombres que usa la pelea (`src/audio/announcer.ts`): `voz/round1` a `voz/round4`
 `voz/final`, `voz/fight`, `voz/ko`, `voz/doubleKo`, `voz/perfect`, `voz/time`,
 `voz/draw` y `voz/winner`.
 
-El fondo de la pantalla de título es un escenario más (mismo formato) en
-`public/titulo/escenario.json`, fuera de la lista. Si no existe, el título usa
-el primer escenario de la lista.
+El fondo del título y de los menús es un escenario más (mismo formato) en
+`public/torneo/escenario.json`, fuera de la lista (también es el ring de la
+pelea final del ARCADE).
+
+Cada capa puede traer su versión liviana para celulares, que arma
+`herramientas/escenario_liviano.py` (imágenes y video a la mitad, en `liviano/`):
+
+```json
+{ "video": "fondo.mp4", "scale": 0.374637, "liviano": { "video": "liviano/fondo.mp4", "scale": 0.561956 } }
+```
 
 ## 12. Voces de los luchadores
 

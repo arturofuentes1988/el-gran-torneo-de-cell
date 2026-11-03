@@ -1,1 +1,1 @@
-["carlitos-0.json", "carlitos-1.json", "carlitos-2.json", "carlitos-3.json"]
+{"hd": {"menu": ["hd/menu-0.json"], "pelea": ["hd/pelea-0.json", "hd/pelea-1.json", "hd/pelea-2.json", "hd/pelea-3.json"]}, "liviano": {"menu": ["liviano/menu-0.json"], "pelea": ["liviano/pelea-0.json", "liviano/pelea-1.json", "liviano/pelea-2.json", "liviano/pelea-3.json"]}}

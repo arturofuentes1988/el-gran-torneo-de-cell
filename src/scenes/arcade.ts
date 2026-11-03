@@ -18,6 +18,8 @@ import { DIFFICULTIES } from '../sim/difficulty';
 import { FightScene } from './fight';
 import { MainMenuScene } from './modeSelect';
 import { loadTitleArena } from './title';
+import { Progreso } from '../content/descargas';
+import { BarraCarga } from '../render/barraCarga';
 import { backdrop } from './backdrop';
 
 /** Dónde es una pelea: el escenario (null = el ring de EL GRAN TORNEO), su nombre y su lugar en el mapa. */
@@ -179,6 +181,8 @@ class ArcadeVsScene extends ArcadeScreen {
   private go: Text;
   private loaded = false;
   private failed = false;
+  private bar = new BarraCarga(200, 6, 'CARGANDO PELEA');
+  private prog: Progreso | null = null;
 
   constructor(game: Game, private run: ArcadeRun) {
     super(game);
@@ -200,14 +204,28 @@ class ArcadeVsScene extends ArcadeScreen {
     this.go = this.text('', 7, VIEW_W / 2, 196, 0xd8d0e8);
     const venue = run.venues[run.index];
     this.text(arcade(venue.nombre), 7, VIEW_W / 2, 150, 0xffffff);
-    const load = venue.stageId ? game.assets.stages.get(venue.stageId) : loadTitleArena();
-    load.then(
-      (st) => {
-        game.assets.stage = st;
+    this.bar.container.position.set(VIEW_W / 2, 198);
+    this.ui.addChild(this.bar.container);
+    this.load();
+  }
+
+  /** Baja lo que falte para la pelea (luchadores y escenario; la final es en el ring del título). */
+  private load(): void {
+    const game = this.game;
+    const venue = this.run.venues[this.run.index];
+    const prog = new Progreso();
+    this.prog = prog;
+    this.failed = false;
+    const fighters = [this.run.player, this.run.opponents[this.run.index]];
+    Promise.all([game.assets.content.prepare({ fighters, stage: venue.stageId }, prog), venue.stageId ? null : loadTitleArena(prog)]).then(
+      ([stage, arena]) => {
+        const st = stage ?? arena;
+        if (st) game.assets.stage = st;
+        game.assets.stageId = venue.stageId ?? '';
         this.loaded = true;
       },
-      () => {
-        this.loaded = true;
+      (err: unknown) => {
+        console.warn('ARCADE: no se pudo cargar la pelea.', err);
         this.failed = true;
       },
     );
@@ -217,14 +235,16 @@ class ArcadeVsScene extends ArcadeScreen {
     this.t++;
     this.left.step();
     this.right.step();
-    this.go.text = arcade(this.loaded ? 'ACEPTAR PARA PELEAR' : 'CARGANDO...');
-    this.go.visible = !this.loaded || Math.floor(this.t / 20) % 2 === 0;
+    this.go.text = arcade(this.failed ? 'NO SE PUDO CARGAR · ACEPTAR PARA REINTENTAR' : 'ACEPTAR PARA PELEAR');
+    this.go.visible = (this.loaded || this.failed) && Math.floor(this.t / 20) % 2 === 0;
+    this.bar.container.visible = !this.loaded && !this.failed;
     const m = this.game.menu;
     if (m.back && this.t > 10) {
       this.game.sfx.play('menuBack');
       this.game.setScene(new MainMenuScene(this.game));
       return;
     }
+    if (this.failed && m.confirm) this.load();
     if (this.loaded && ((m.confirm && this.t > 20) || this.t >= 210)) this.fight();
   }
 
@@ -237,7 +257,6 @@ class ArcadeVsScene extends ArcadeScreen {
     const base = DIFFICULTIES.indexOf(loadDifficulty());
     const level = Math.min(DIFFICULTIES.length - 1, base + Math.floor(run.index / 3) + (run.index === n - 1 && n > 1 ? 1 : 0));
     g.sfx.play('menuConfirm');
-    if (this.failed) console.warn('ARCADE: no se pudo cargar el escenario del rival; se usa el actual.');
     g.setScene(
       new FightScene(g, 'cpu', undefined, {
         fighters: [run.player, opp],
@@ -254,6 +273,7 @@ class ArcadeVsScene extends ArcadeScreen {
 
   override render(): void {
     super.render();
+    if (this.bar.container.visible) this.bar.update(this.prog);
   }
 }
 

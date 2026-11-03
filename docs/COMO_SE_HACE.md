@@ -270,7 +270,12 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 
 - `npm run dev` (puerto 5173), `npx tsc --noEmit -p .` y `npm run build`.
 - Atajos de URL: `?escena=pelea&modo=cpu|2p|demo|practica&luchadores=i,j&escenario=<id>`
-  (índices del plantel: 0 René, 1 Pablito, 2 Flaitiano, 3 Vendedor de Leña).
+  (índices del plantel: 0 René, 1 Pablito, 2 Flaitiano, 3 Vendedor de Leña, 4 Carlitos Run).
+- `?calidad=hd` o `?calidad=liviano` fuerza la calidad de los gráficos (si no, la de OPCIONES >
+  GRÁFICOS, o la que corresponde al aparato). `?tactil=1` muestra los controles de celular.
+- Peso: el arranque baja solo lo de los menús (~9,5 MB en HD, ~4 MB en liviano); cada pelea baja
+  lo suyo con barra de carga (la primera vez). Para medirlo, el navegador automático puede sumar
+  los bytes con CDP (`Network.loadingFinished`).
 - `?qa=1` agrega el puente de pruebas: el estado del juego se lee del elemento `#qa-state`
   y se mandan órdenes escribiendo en `#qa-cmd`, una por línea:
   - `input:<lado>:<entradas>`: un cuadro por elemento, dirección de teclado numérico absoluta,
@@ -296,6 +301,9 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 | `musica_suno.py` | Temas con Suno por kie.ai (`KIE_API_KEY`). |
 | `kie_video.py` | Animaciones con Kling 3.0 por kie.ai desde `arte/<luchador>/kie.json` (`KIE_API_KEY`). |
 | `efectos_vfx.py` | Efectos pintados compartidos (`public/efectos/`) desde videos sobre negro y objetos pintados (`arte/efectos/vfx.json`). |
+| `calidades.py` | Reparte los atlas de un luchador o de los efectos en HD y liviano, y en grupos menú / pelea (lo corren solos `armar_luchador.py` y `efectos_vfx.py`). |
+| `escenario_liviano.py` | Achica un escenario: video HD a 2208 px y versión liviana de cada capa para celulares. Correrlo después de `armar_escenario.py`. |
+| `tamanos.mjs` | Escribe `public/tamanos.json` (tamaño de cada archivo, para las barras de carga). Corre solo antes de `npm run dev` y `npm run build`. |
 | `musica_loop.py` | Prepara un tema para sonar en loop y lo agrega a `musica.json`. |
 | `musica_lluvia.py` | Cama de lluvia sintetizada para mezclar bajo un tema. |
 | `musica.py` | Temas sintetizados desde cero (respaldo, sin IA). |

@@ -5,7 +5,7 @@
 import { Container, Graphics, Sprite, type Text, type Texture } from 'pixi.js';
 import { VIEW_W } from '../config';
 import type { FightMode, Game, Scene } from '../app/game';
-import type { FighterAsset } from '../content/mannequin/fighters';
+import type { FighterAsset } from '../content/loadFighter';
 import { P1_KEYS, P2_KEYS } from '../input/devices';
 import { NEON_CYAN, NEON_PINK } from '../render/live';
 import { arcade, outlinedText } from '../render/text';
@@ -333,7 +333,7 @@ export class TeamSelectScene implements Scene {
     const g = this.game;
     const teams: [number[], number[]] = [[...this.picks[0]], [...this.picks[1]]];
     const mode: FightMode = this.joined ? '2p' : 'cpu';
-    g.setScene(new StageSelectScene(g, () => new FightScene(g, mode, undefined, { teams }), () => new TeamSelectScene(g)));
+    g.setScene(new StageSelectScene(g, () => new FightScene(g, mode, undefined, { teams }), () => new TeamSelectScene(g), [...teams[0], ...teams[1]]));
   }
 
   render(): void {

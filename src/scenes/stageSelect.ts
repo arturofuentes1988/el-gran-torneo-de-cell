@@ -2,6 +2,8 @@ import { BlurFilter, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { Game, Scene } from '../app/game';
 import { VIEW_H, VIEW_W } from '../config';
 import type { StageEntry } from '../content/stages';
+import { Progreso } from '../content/descargas';
+import { BarraCarga } from '../render/barraCarga';
 import type { StageView } from '../render/stage';
 import { arcade, outlinedText } from '../render/text';
 
@@ -29,8 +31,9 @@ interface Card {
 
 /**
  * "ELIGE ESCENARIO", antes de cada pelea: miniaturas en grilla, vista previa
- * grande del escenario marcado y su nombre. Al aceptar se carga (CARGANDO...),
- * queda en game.assets.stage y empieza la pelea con start(). Atrás: back().
+ * grande del escenario marcado y su nombre. Al aceptar se baja lo que falte para
+ * la pelea (el escenario y los luchadores `fighters`, con barra de carga), queda
+ * en game.assets.stage y empieza la pelea con start(). Atrás: back().
  */
 export class StageSelectScene implements Scene {
   /** El tema de la pantalla de título sigue sonando en los menús. */
@@ -51,10 +54,18 @@ export class StageSelectScene implements Scene {
   private alive = true;
   private loading = false;
   /** Escenario ya cargado: la pelea empieza en el próximo cuadro. */
-  private ready: StageView | null = null;
+  private ready: { stage: StageView; id: string } | null = null;
   private failTimer = 0;
+  private bar = new BarraCarga(PREVIEW_W, 6, 'CARGANDO PELEA');
+  private prog: Progreso | null = null;
 
-  constructor(private game: Game, private start: () => Scene, private back: () => Scene) {
+  constructor(
+    private game: Game,
+    private start: () => Scene,
+    private back: () => Scene,
+    /** Luchadores de la pelea (índices del plantel): se bajan junto con el escenario. */
+    private fighters: number[] = [],
+  ) {
     const list: Array<StageEntry | null> = [...game.assets.stages.entries, null];
     this.sel = Math.min(lastSel, list.length - 1);
 
@@ -105,7 +116,9 @@ export class StageSelectScene implements Scene {
       this.cards.push({ entry, root, thumb, frame });
     });
 
-    this.ui.addChild(this.backdrop, shade, title, this.previewBox, this.preview, this.question, this.name, this.owner, this.status, this.grid);
+    this.bar.container.position.set(VIEW_W / 2, PREVIEW_Y + PREVIEW_H - 10);
+    this.bar.container.visible = false;
+    this.ui.addChild(this.backdrop, shade, title, this.previewBox, this.preview, this.question, this.name, this.owner, this.status, this.grid, this.bar.container);
     this.refresh();
   }
 
@@ -114,7 +127,7 @@ export class StageSelectScene implements Scene {
     // Miniaturas: llegan de a poco (la del escenario de prueba se dibuja aquí mismo).
     const lib = this.game.assets.stages;
     for (const e of lib.entries) {
-      void lib.thumbnail(e.id, this.game.display.app.renderer).then((tex) => {
+      void lib.thumbnail(e.id).then((tex) => {
         if (!tex || !this.alive) return;
         this.textures.set(e.id, tex);
         this.refresh();
@@ -132,7 +145,8 @@ export class StageSelectScene implements Scene {
   step(): void {
     this.t++;
     if (this.ready) {
-      this.game.assets.stage = this.ready;
+      this.game.assets.stage = this.ready.stage;
+      this.game.assets.stageId = this.ready.id;
       this.game.setScene(this.start());
       return;
     }
@@ -165,17 +179,20 @@ export class StageSelectScene implements Scene {
     const entry = this.cards[this.sel].entry ?? pool[Math.floor(Math.random() * pool.length)];
     this.loading = true;
     this.failTimer = 0;
-    this.status.text = 'CARGANDO...';
+    this.status.text = '';
     this.game.sfx.play('menuConfirm');
-    this.game.assets.stages.get(entry.id).then(
+    const prog = new Progreso();
+    this.prog = prog;
+    this.game.assets.content.prepare({ fighters: this.fighters, stage: entry.id }, prog).then(
       (stage) => {
-        if (this.alive) this.ready = stage;
+        if (this.alive && stage) this.ready = { stage, id: entry.id };
       },
       (err: unknown) => {
-        console.warn(`No se pudo cargar el escenario "${entry.id}".`, err);
+        console.warn(`No se pudo cargar la pelea en "${entry.id}".`, err);
         if (!this.alive) return;
         this.loading = false;
-        this.status.text = 'NO SE PUDO CARGAR';
+        this.prog = null;
+        this.status.text = 'NO SE PUDO CARGAR: REVISA TU CONEXIÓN';
         this.failTimer = 150;
       },
     );
@@ -236,5 +253,7 @@ export class StageSelectScene implements Scene {
     const pulse = 0.5 + 0.5 * Math.sin(this.t / 7);
     this.cards[this.sel].frame.alpha = 0.55 + 0.45 * pulse;
     this.status.visible = this.failTimer > 0 || Math.floor(this.t / 18) % 2 === 0;
+    this.bar.container.visible = this.loading;
+    if (this.loading) this.bar.update(this.prog);
   }
 }

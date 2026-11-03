@@ -1,7 +1,8 @@
 import type { Texture } from 'pixi.js';
 import { MusicLibrary } from '../audio/music';
 import type { Sfx } from '../audio/sfx';
-import type { FighterAsset } from '../content/mannequin/fighters';
+import type { Contenido } from '../content/contenido';
+import type { FighterAsset } from '../content/loadFighter';
 import type { StageLibrary } from '../content/stages';
 import { saveMuted } from './settings';
 import type { Gamepads, Keyboard, MenuInput } from '../input/devices';
@@ -24,12 +25,16 @@ export interface Assets {
   fighters: [FighterAsset, FighterAsset];
   /** Todos los luchadores elegibles (equipos del 2 VS 2, pantalla de movimientos). */
   roster: FighterAsset[];
-  /** Texturas de todos los luchadores del plantel. */
+  /** Texturas cargadas: las de los menús de todo el plantel, los efectos y las de pelea que se hayan bajado. */
   textures: Record<string, Texture>;
-  /** Escenario actual: al empezar, el primero de la lista; después lo cambia ELIGE ESCENARIO. */
+  /** Escenario de la pelea (lo deja ELIGE ESCENARIO, el ARCADE o la DEMOSTRACIÓN antes de pelear). */
   stage: StageView;
-  /** Escenarios para elegir antes de pelear (el procedural de prueba solo si no hay ninguno HD). */
+  /** Su id en la lista de escenarios. */
+  stageId: string;
+  /** Escenarios para elegir antes de pelear. */
   stages: StageLibrary;
+  /** Lo que se baja antes de cada pelea (texturas de pelea, voces, efectos, escenario). */
+  content: Contenido;
 }
 
 export type FightMode = 'cpu' | '2p' | 'demo' | 'practica';

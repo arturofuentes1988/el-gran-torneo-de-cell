@@ -5,7 +5,7 @@
 
 import { BlurFilter, Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { Assets } from '../app/game';
-import type { FighterAsset } from '../content/mannequin/fighters';
+import type { FighterAsset } from '../content/loadFighter';
 import { P1_KEYS, P2_KEYS, keyLabel, type Keyboard, type KeyBindings, type MenuInput } from '../input/devices';
 import type { Btn, FighterDef, MotionId } from '../sim/types';
 import { VIEW_H, VIEW_W } from '../config';
@@ -250,7 +250,7 @@ export class MoveListPanel {
 
   /** Todo el plantel (también los que solo pelean en 2 VS 2). */
   private get fighters(): FighterAsset[] {
-    return this.assets.roster.length ? this.assets.roster : this.assets.fighters;
+    return this.assets.roster;
   }
 
   private show(): void {

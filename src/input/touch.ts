@@ -1,4 +1,4 @@
-// Controles táctiles para celulares y tablets: joystick flotante a la izquierda y botones a la
+// Controles táctiles para celulares y tablets: cruceta a la izquierda y botones a la
 // derecha, en HTML encima del juego (semitransparentes, así se ve la pelea por debajo). Aprietan
 // teclas virtuales del jugador 1 (Keyboard.press/release), así funcionan igual en la pelea, en los
 // menús (el golpe débil acepta, ☰ vuelve o pausa) y en la pantalla de título.
@@ -48,14 +48,23 @@ const CSS = `
   font-family: Oswald, 'Arial Narrow', sans-serif; -webkit-user-select: none; user-select: none;
   -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 body.tactil-on #tactil { display: block; }
-#tactil .zona { position: absolute; left: 0; bottom: 0; width: 48%; height: 72%; pointer-events: auto; touch-action: none; }
-#tactil .base { position: absolute; width: var(--stick); height: var(--stick); margin: calc(var(--stick) / -2) 0 0 calc(var(--stick) / -2);
-  border-radius: 50%; border: 2px solid rgba(255, 220, 140, 0.55); background: radial-gradient(circle, rgba(40, 20, 60, 0.35), rgba(20, 8, 30, 0.55));
-  box-shadow: 0 0 18px rgba(176, 42, 144, 0.45); opacity: 0.55; transition: opacity 0.15s; }
-#tactil .base.activa { opacity: 0.95; }
-#tactil .perilla { position: absolute; left: 50%; top: 50%; width: 46%; height: 46%; margin: -23% 0 0 -23%; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffe7a8, #c8902a 60%, #6a3a08); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
-#tactil .flecha { position: absolute; color: rgba(255, 230, 170, 0.7); font-size: calc(var(--stick) * 0.13); line-height: 1; }
+#tactil .zona { position: absolute; left: calc(env(safe-area-inset-left) + var(--m) - var(--pad) * 0.25);
+  bottom: calc(env(safe-area-inset-bottom) + var(--m) - var(--pad) * 0.25); width: calc(var(--pad) * 1.5); height: calc(var(--pad) * 1.5);
+  pointer-events: auto; touch-action: none; }
+#tactil .cruz { position: absolute; left: 50%; top: 50%; width: var(--pad); height: var(--pad); margin: calc(var(--pad) / -2) 0 0 calc(var(--pad) / -2);
+  opacity: 0.62; transition: opacity 0.1s; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.6)); }
+#tactil .cruz.activa { opacity: 0.95; }
+#tactil .brazo { position: absolute; box-sizing: border-box; background: linear-gradient(#3a1a50, #1a0828); border: 2px solid rgba(255, 220, 140, 0.6);
+  display: flex; align-items: center; justify-content: center; color: rgba(255, 230, 170, 0.85); font-size: calc(var(--pad) * 0.13); }
+#tactil .brazo.on { background: linear-gradient(#ffd27a, #c8902a); color: #3a1a08; border-color: #fff4d0; }
+#tactil .arriba, #tactil .abajo { left: 33%; width: 34%; height: 37%; }
+#tactil .arriba { top: 0; border-radius: 10px 10px 3px 3px; border-bottom: 0; }
+#tactil .abajo { bottom: 0; border-radius: 3px 3px 10px 10px; border-top: 0; }
+#tactil .izquierda, #tactil .derecha { top: 33%; height: 34%; width: 37%; }
+#tactil .izquierda { left: 0; border-radius: 10px 3px 3px 10px; border-right: 0; }
+#tactil .derecha { right: 0; border-radius: 3px 10px 10px 3px; border-left: 0; }
+#tactil .centro { position: absolute; left: 33%; top: 33%; width: 34%; height: 34%; background: #1a0828; }
+#tactil .centro::after { content: ''; position: absolute; inset: 28%; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #5a3a70, #24102e); }
 #tactil .botones { position: absolute; right: calc(env(safe-area-inset-right) + var(--m)); bottom: calc(env(safe-area-inset-bottom) + var(--m));
   display: grid; grid-template-columns: repeat(2, var(--btn)); gap: calc(var(--btn) * 0.16); pointer-events: none; }
 #tactil .chicos { position: absolute; right: calc(env(safe-area-inset-right) + var(--m)); bottom: calc(env(safe-area-inset-bottom) + var(--m) + var(--btn) * 2.5);
@@ -85,11 +94,10 @@ body.tactil-vertical #tactil .girar { display: block; }
 
 export class TouchControls {
   private root = document.createElement('div');
-  private base = document.createElement('div');
-  private knob = document.createElement('div');
+  private pad = document.createElement('div');
+  private arms = new Map<Dir, HTMLElement>();
   private hint = document.createElement('div');
-  private stickId: number | null = null;
-  private origin = { x: 0, y: 0 };
+  private padId: number | null = null;
   private held = new Map<Dir, string[]>();
   private on = false;
 
@@ -125,25 +133,28 @@ export class TouchControls {
   }
 
   private build(): void {
+    // Cruceta: la zona que recibe el dedo es un poco más grande que el dibujo.
     const zone = document.createElement('div');
     zone.className = 'zona';
-    this.base.className = 'base';
-    this.knob.className = 'perilla';
-    this.base.appendChild(this.knob);
-    for (const [txt, l, t] of [['▲', '50%', '6%'], ['▼', '50%', '94%'], ['◀', '6%', '50%'], ['▶', '94%', '50%']]) {
-      const a = document.createElement('div');
-      a.className = 'flecha';
-      a.textContent = txt;
-      a.style.left = l;
-      a.style.top = t;
-      a.style.transform = 'translate(-50%, -50%)';
-      this.base.appendChild(a);
+    this.pad.className = 'cruz';
+    const arms: Array<[Dir, string, string]> = [['up', 'arriba', '▲'], ['down', 'abajo', '▼'], ['left', 'izquierda', '◀'], ['right', 'derecha', '▶']];
+    for (const [dir, cls, txt] of arms) {
+      const arm = document.createElement('div');
+      arm.className = `brazo ${cls}`;
+      arm.textContent = txt;
+      this.arms.set(dir, arm);
+      this.pad.appendChild(arm);
     }
-    zone.appendChild(this.base);
-    zone.addEventListener('pointerdown', (e) => this.stickDown(e, zone));
-    zone.addEventListener('pointermove', (e) => this.stickMove(e));
-    zone.addEventListener('pointerup', (e) => this.stickUp(e));
-    zone.addEventListener('pointercancel', (e) => this.stickUp(e));
+    const center = document.createElement('div');
+    center.className = 'centro';
+    this.pad.appendChild(center);
+    zone.appendChild(this.pad);
+    zone.addEventListener('pointerdown', (e) => this.padDown(e, zone));
+    zone.addEventListener('pointermove', (e) => this.padMove(e));
+    zone.addEventListener('pointerup', (e) => this.padUp(e));
+    zone.addEventListener('pointercancel', (e) => this.padUp(e));
+    zone.addEventListener('lostpointercapture', (e) => this.padUp(e));
+    zone.addEventListener('contextmenu', (e) => e.preventDefault());
     this.root.appendChild(zone);
 
     const grid = document.createElement('div');
@@ -186,60 +197,42 @@ export class TouchControls {
     return el;
   }
 
-  // --- Joystick flotante: aparece donde se toca y marca 8 direcciones ---
+  // --- Cruceta fija: 4 direcciones y las diagonales (apretando entre dos brazos) ---
 
-  private restPos(zone: HTMLElement): { x: number; y: number } {
-    const r = zone.getBoundingClientRect();
-    const s = this.stickSize();
-    return { x: s * 0.75 + 16, y: r.height - s * 0.75 - 10 };
-  }
-
-  private stickDown(e: PointerEvent, zone: HTMLElement): void {
-    if (this.stickId !== null) return;
+  private padDown(e: PointerEvent, zone: HTMLElement): void {
+    if (this.padId !== null) return;
     e.preventDefault();
     zone.setPointerCapture?.(e.pointerId);
-    this.stickId = e.pointerId;
-    const r = zone.getBoundingClientRect();
-    this.origin = { x: e.clientX - r.left, y: e.clientY - r.top };
-    this.base.style.left = `${this.origin.x}px`;
-    this.base.style.top = `${this.origin.y}px`;
-    this.base.classList.add('activa');
-    this.stickMove(e);
+    this.padId = e.pointerId;
+    this.pad.classList.add('activa');
+    this.padMove(e);
   }
 
-  private stickMove(e: PointerEvent): void {
-    if (e.pointerId !== this.stickId) return;
-    const zone = this.base.parentElement as HTMLElement;
-    const r = zone.getBoundingClientRect();
-    const R = this.stickSize() / 2;
-    let dx = e.clientX - r.left - this.origin.x;
-    let dy = e.clientY - r.top - this.origin.y;
-    const d = Math.hypot(dx, dy);
-    // Si el dedo se aleja mucho, la base lo sigue (no hay que volver al centro exacto).
-    if (d > R * 1.25) {
-      const k = (d - R * 1.25) / d;
-      this.origin.x += dx * k;
-      this.origin.y += dy * k;
-      this.base.style.left = `${this.origin.x}px`;
-      this.base.style.top = `${this.origin.y}px`;
-      dx -= dx * k;
-      dy -= dy * k;
+  private padMove(e: PointerEvent): void {
+    if (e.pointerId !== this.padId) return;
+    const r = this.pad.getBoundingClientRect();
+    const dx = e.clientX - (r.left + r.width / 2);
+    const dy = e.clientY - (r.top + r.height / 2);
+    // Al centro, nada. Afuera, por ángulo: 50° para cada dirección y 40° para cada diagonal
+    // (así es fácil marcar abajo-atrás para cubrirse agachado y los cuartos de círculo).
+    if (Math.hypot(dx, dy) < r.width * 0.12) {
+      this.setDirs({ up: false, down: false, left: false, right: false });
+      return;
     }
-    const lim = Math.min(1, R / Math.max(1, Math.hypot(dx, dy)));
-    this.knob.style.transform = `translate(${dx * lim}px, ${dy * lim}px)`;
-    const t = R * 0.38;
-    this.setDirs({ up: dy < -t, down: dy > t, left: dx < -t, right: dx > t });
+    const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+    this.setDirs({
+      right: Math.abs(deg) < 65,
+      left: Math.abs(deg) > 115,
+      down: deg > 25 && deg < 155,
+      up: deg < -25 && deg > -155,
+    });
   }
 
-  private stickUp(e: PointerEvent): void {
-    if (e.pointerId !== this.stickId) return;
-    this.stickId = null;
-    this.knob.style.transform = '';
-    this.base.classList.remove('activa');
+  private padUp(e: PointerEvent): void {
+    if (e.pointerId !== this.padId) return;
+    this.padId = null;
+    this.pad.classList.remove('activa');
     this.setDirs({ up: false, down: false, left: false, right: false });
-    const rest = this.restPos(this.base.parentElement as HTMLElement);
-    this.base.style.left = `${rest.x}px`;
-    this.base.style.top = `${rest.y}px`;
   }
 
   private setDirs(want: Record<Dir, boolean>): void {
@@ -249,18 +242,20 @@ export class TouchControls {
         const codes = DIR_CODES[dir]();
         for (const c of codes) this.kb.press(c);
         this.held.set(dir, codes);
+        navigator.vibrate?.(6);
       } else if (!want[dir] && cur) {
         for (const c of cur) this.kb.release(c);
         this.held.delete(dir);
       }
+      this.arms.get(dir)?.classList.toggle('on', want[dir]);
     }
   }
 
   // --- Tamaños y orientación ---
 
-  private stickSize(): number {
+  private padSize(): number {
     const m = Math.min(window.innerWidth, window.innerHeight);
-    return Math.round(Math.max(110, Math.min(190, m * 0.36)));
+    return Math.round(Math.max(120, Math.min(200, m * 0.38)));
   }
 
   private layout(): void {
@@ -269,7 +264,7 @@ export class TouchControls {
     const m = Math.min(w, h);
     const btn = Math.round(Math.max(50, Math.min(88, m * 0.17)));
     this.root.style.setProperty('--btn', `${btn}px`);
-    this.root.style.setProperty('--stick', `${this.stickSize()}px`);
+    this.root.style.setProperty('--pad', `${this.padSize()}px`);
     this.root.style.setProperty('--m', `${Math.round(m * 0.03)}px`);
     const vertical = this.on && h > w;
     document.body.classList.toggle('tactil-vertical', vertical);
@@ -280,11 +275,6 @@ export class TouchControls {
     if (vertical) {
       const gameH = (w * 270) / 480;
       this.hint.style.top = `${Math.round(this.display.topOffset + gameH + 14)}px`;
-    }
-    if (this.stickId === null) {
-      const rest = this.restPos(this.base.parentElement as HTMLElement);
-      this.base.style.left = `${rest.x}px`;
-      this.base.style.top = `${rest.y}px`;
     }
   }
 }
