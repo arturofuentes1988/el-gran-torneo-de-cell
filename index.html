@@ -2,80 +2,47 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#07040c" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="description" content="El Gran Torneo de Cell: juego de pelea 2D gratis en el navegador, con ranking de jugadores." />
     <title>El Gran Torneo de Cell</title>
     <link rel="icon" type="image/png" href="icono.png" />
-    <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: #07040c;
-      }
-      body { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
-      canvas { display: block; }
-      /* En pantalla completa no se ve el puntero. */
-      :fullscreen canvas { cursor: none; }
-      /* Pantalla de carga del arranque: la barra muestra lo bajado en MB (la llena src/main.ts). */
-      #loading {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        color: #fff4e0;
-        font: 700 14px Oswald, Impact, 'Arial Narrow', sans-serif;
-        letter-spacing: 1.5px;
-        text-align: center;
-        padding: 0 24px;
-      }
-      #loading .titulo {
-        font-size: clamp(22px, 6vw, 44px);
-        color: #ffd040;
-        text-shadow: 0 3px 0 #5a0a10, 0 0 18px rgba(255, 120, 40, 0.45);
-        letter-spacing: 2px;
-      }
-      #loading .barra {
-        width: min(80vw, 420px);
-        height: 14px;
-        border: 2px solid #5a4a70;
-        border-radius: 9px;
-        background: #07030e;
-        overflow: hidden;
-      }
-      #loading .lleno {
-        width: 0;
-        height: 100%;
-        border-radius: 7px;
-        background: linear-gradient(90deg, #ff7a2a, #ffd040);
-        transition: width 0.15s linear;
-      }
-      #loading .texto { color: #d8d0e8; font-size: 13px; font-weight: 500; }
-      #loading .reintentar {
-        font: inherit;
-        color: #07030e;
-        background: #ffd040;
-        border: 0;
-        border-radius: 6px;
-        padding: 8px 18px;
-        cursor: pointer;
-      }
-    </style>
   </head>
   <body>
-    <div id="loading">
-      <div class="titulo">EL GRAN TORNEO DE CELL</div>
-      <div class="barra"><div class="lleno"></div></div>
-      <div class="texto">CARGANDO…</div>
-      <button class="reintentar" hidden onclick="location.reload()">REINTENTAR</button>
-    </div>
-    <script type="module" src="/src/main.ts"></script>
+    <header class="cabecera">
+      <a class="logo" href="./">EL GRAN TORNEO <b>DE CELL</b></a>
+      <nav class="pestanas">
+        <button type="button" data-pestana="jugar" class="activa">JUGAR</button>
+        <button type="button" data-pestana="ranking">RANKING</button>
+      </nav>
+    </header>
+    <main>
+      <section id="jugar" class="pestana">
+        <div class="marco">
+          <iframe id="juego" title="El Gran Torneo de Cell" allow="fullscreen; autoplay; gamepad"></iframe>
+        </div>
+        <p class="ayuda">
+          FLECHAS PARA MOVERTE · <b>A</b> Y <b>S</b> COMBOS · <b>Z</b> Y <b>X</b> PATADAS · <b>ESC</b> PAUSA · TAMBIÉN CON JOYSTICK
+          <br />SI EL TECLADO NO RESPONDE, HAZ CLIC EN EL JUEGO
+        </p>
+      </section>
+      <section id="ranking" class="pestana" hidden>
+        <div class="caja">
+          <h1>RANKING</h1>
+          <div class="acento"></div>
+          <nav class="tablas">
+            <button type="button" data-tabla="puntos" class="activa">PUNTOS DE LIGA</button>
+            <button type="button" data-tabla="victorias">VICTORIAS</button>
+            <button type="button" data-tabla="racha">MEJOR RACHA</button>
+            <button type="button" data-tabla="arcade">CAMPEONES DEL ARCADE</button>
+          </nav>
+          <nav class="dificultades" hidden></nav>
+          <p class="explica"></p>
+          <div class="tabla"></div>
+        </div>
+        <footer class="pie">EL GRAN TORNEO DE CELL · PARODIA SIN FINES DE LUCRO</footer>
+      </section>
+    </main>
+    <script type="module" src="/src/web/portal.ts"></script>
   </body>
 </html>

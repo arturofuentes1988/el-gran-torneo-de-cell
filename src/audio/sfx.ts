@@ -503,6 +503,13 @@ export class Sfx {
     this.buffers.set(name, b);
   }
 
+  /** La web esconde el juego (pestaña RANKING): se calla todo hasta que vuelva a JUGAR. */
+  pausarAudio(on: boolean): void {
+    if (!this.ctx) return;
+    if (on) void this.ctx.suspend();
+    else void this.ctx.resume();
+  }
+
   /** Debe llamarse desde un gesto del usuario (tecla, clic, toque). */
   unlock(): void {
     if (!this.ctx) {

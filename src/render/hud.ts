@@ -4,6 +4,7 @@ import type { SimEvent } from '../sim/events';
 import type { Fighter } from '../sim/fighter';
 import { DANGER, FIGHT_AT, type Match } from '../sim/match';
 import type { FighterDef } from '../sim/types';
+import { tactil } from '../input/touch';
 import { arcade, outlinedText, pixelText } from './text';
 
 type AnnounceKind = Extract<SimEvent, { type: 'announce' }>['kind'];
@@ -11,7 +12,7 @@ type AnnounceKind = Extract<SimEvent, { type: 'announce' }>['kind'];
 /** Lo que muestra el HUD en el modo práctica. */
 export interface PracticeHudInfo {
   infiniteMeter: boolean;
-  /** Nombre visible de la opción del muñeco. */
+  /** Nombre visible de la opción del sparring. */
   dummy: string;
   health: 'recupera' | 'normal';
   /** Combo actual o el último (queda hasta que empieza otro). */
@@ -28,6 +29,8 @@ interface PracticeHud {
   /** Dos filas de la barra de opciones: textos de etiqueta y valor alternados. */
   rows: Array<{ c: Container; parts: Text[] }>;
   key: string;
+  /** Borde de arriba de la barra de opciones. */
+  y: number;
 }
 
 const golpes = (n: number) => `${n} ${n === 1 ? 'GOLPE' : 'GOLPES'}`;
@@ -44,6 +47,9 @@ const RED_LIFE_TOP = 0xd0406a;
 /** Cuadros que se ve la barra de opciones de la práctica al empezar y después de cambiar una opción. */
 const PRACTICE_PANEL_START = 240;
 const PRACTICE_PANEL_CHANGE = 180;
+/** Borde de arriba de la barra de opciones; en el celular horizontal sube (abajo están sus botones). */
+const PRACTICE_PANEL_Y = 212;
+const PRACTICE_PANEL_Y_TACTIL = 176;
 
 /** Elementos del 2 VS 2 de un lado: nombre del compañero y estado de AYUDA y CAMBIO. */
 interface TeamRow {
@@ -297,20 +303,27 @@ export class Hud {
   setPractice(info: PracticeHudInfo): void {
     if (!this.practiceHud) this.practiceHud = this.buildPractice();
     const p = this.practiceHud;
-    const key = JSON.stringify(info);
+    // En el celular las opciones van en botones con íconos (sin números); en horizontal los
+    // botones quedan sobre la pelea, así que esta barra sube para no quedar debajo de ellos.
+    const touch = tactil();
+    const raise = touch && window.innerWidth > window.innerHeight;
+    const key = JSON.stringify({ ...info, touch, raise });
     if (key === p.key) return;
     p.key = key;
+    p.y = raise ? PRACTICE_PANEL_Y_TACTIL : PRACTICE_PANEL_Y;
     p.combo.text = arcade(`DAÑO DEL COMBO: ${info.combo.damage} (${golpes(info.combo.hits)})`);
     p.best.text = arcade(`MEJOR COMBO: ${info.best.damage} (${golpes(info.best.hits)})`);
     p.combo.visible = info.combo.hits > 0;
     p.best.visible = info.best.hits > 0;
+    const n = (d: number) => (touch ? '' : `${d} `);
     const rows = [
-      ['1 SÚPER INFINITO: ', info.infiniteMeter ? 'SÍ' : 'NO', '   3 VIDA: ', info.health === 'recupera' ? 'SE RECUPERA' : 'NORMAL'],
-      ['2 MUÑECO: ', info.dummy, '   4 REINICIAR POSICIÓN', ''],
+      [`${n(1)}SÚPER INFINITO: `, info.infiniteMeter ? 'SÍ' : 'NO', `   ${n(3)}VIDA: `, info.health === 'recupera' ? 'SE RECUPERA' : 'NORMAL'],
+      [`${n(2)}SPARRING: `, info.dummy, `   ${n(4)}REINICIAR POSICIÓN`, ''],
     ];
     let maxW = 0;
     rows.forEach((texts, r) => {
       const row = p.rows[r];
+      row.c.y = p.y + 3 + r * 11;
       let x = 0;
       row.parts.forEach((t, i) => {
         t.text = arcade(texts[i]);
@@ -321,7 +334,7 @@ export class Hud {
       maxW = Math.max(maxW, x);
     });
     p.panel.clear();
-    p.panel.roundRect(Math.round((VIEW_W - maxW) / 2) - 6, 212, maxW + 12, 25, 3).fill({ color: 0x08040e, alpha: 0.62 });
+    p.panel.roundRect(Math.round((VIEW_W - maxW) / 2) - 6, p.y, maxW + 12, 25, 3).fill({ color: 0x08040e, alpha: 0.62 });
   }
 
   private buildPractice(): PracticeHud {
@@ -345,7 +358,7 @@ export class Hud {
     const panel = new Graphics();
     const rows = [0, 1].map((r) => {
       const c = new Container();
-      c.y = 215 + r * 11;
+      c.y = PRACTICE_PANEL_Y + 3 + r * 11;
       // Etiqueta, valor, etiqueta, valor (los valores en amarillo).
       const parts = [0, 1, 2, 3].map((i) => outlinedText('', 8, i % 2 ? 0xffd040 : 0xd8cce0));
       c.addChild(...parts);
@@ -358,7 +371,7 @@ export class Hud {
     this.container.addChildAt(label, idx);
     this.container.addChildAt(combo, idx);
     this.container.addChildAt(best, idx);
-    return { infinity: inf, label, combo, best, panel, rows, key: '' };
+    return { infinity: inf, label, combo, best, panel, rows, key: '', y: PRACTICE_PANEL_Y };
   }
 
   /**
@@ -367,8 +380,9 @@ export class Hud {
    */
   practiceOptionAt(x: number, y: number): number {
     const p = this.practiceHud;
-    const r = Math.floor((y - 213) / 11);
-    if (!p || r < 0 || r > 1) return 0;
+    if (!p) return 0;
+    const r = Math.floor((y - p.y - 1) / 11);
+    if (r < 0 || r > 1) return 0;
     const row = p.rows[r];
     const lx = x - row.c.x;
     const width = row.parts.reduce((w, t) => w + (t.text ? t.width : 0), 0);
@@ -377,7 +391,7 @@ export class Hud {
       this.showPracticePanel();
       return 0;
     }
-    // Arriba: 1 SÚPER INFINITO y 3 VIDA; abajo: 2 MUÑECO y 4 REINICIAR POSICIÓN.
+    // Arriba: 1 SÚPER INFINITO y 3 VIDA; abajo: 2 SPARRING y 4 REINICIAR POSICIÓN.
     const second = lx >= row.parts[2].x;
     return r === 0 ? (second ? 3 : 1) : second ? 4 : 2;
   }

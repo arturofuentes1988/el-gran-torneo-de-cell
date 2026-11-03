@@ -1,15 +1,15 @@
 import { Application, Container, Graphics, RenderTexture, Sprite } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
+import { dibujo } from '../content/calidad';
 import { renderScale } from '../render/scale';
 
-/** Límites de la escala de dibujo del mundo (S = 4 → 1920x1080). */
+/** Escala de dibujo del mundo mínima (S = 2 → 960x540); la máxima depende de los gráficos (S = 4 → 1920x1080). */
 const MIN_S = 2;
-const MAX_S = 4;
 
 /**
  * Capas de dibujo (todas en unidades de mundo de 480x270):
  *  - world: escenario, luchadores y proyectiles. No está en app.stage: se
- *    dibuja a una textura S veces más grande (S entre 2 y 4 según la pantalla)
+ *    dibuja a una textura S veces más grande (S entre 2 y 4 según la pantalla y los gráficos)
  *    y esa textura se muestra en worldView. Así el arte HD se ve nítido.
  *  - fx: partículas y brillos, dibujados directo a resolución de pantalla, misma cámara.
  *  - hud: interfaz, texto nítido a resolución de pantalla.
@@ -41,7 +41,8 @@ export class Display {
   private listeners: Array<() => void> = [];
 
   async init(): Promise<void> {
-    this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    // Densidad de pantalla con tope según los gráficos (BAJA: 1; ULTRA: hasta 3).
+    this.dpr = Math.min(dibujo().dpr, window.devicePixelRatio || 1);
     await this.app.init({
       background: '#07040c',
       resizeTo: window,
@@ -74,7 +75,7 @@ export class Display {
     this.scale = Math.min(W / VIEW_W, H / VIEW_H);
     // S: los pixeles reales por unidad de mundo, redondeado hacia arriba
     // (con un margen para no saltar de nivel por un pixel de más).
-    const s = Math.max(MIN_S, Math.min(MAX_S, Math.ceil(this.scale * this.dpr - 0.05)));
+    const s = Math.max(MIN_S, Math.min(dibujo().maxS, Math.ceil(this.scale * this.dpr - 0.05)));
     if (s !== this.renderScale || !this.rt) {
       this.renderScale = s;
       renderScale.s = s;

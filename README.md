@@ -7,6 +7,10 @@ con pixel art y efectos modernos. Parodia sin fines de lucro.
 Flaitiano, el Vendedor de Leña y Carlitos Run (sprites, voces y poderes definitivos) en los escenarios de René, en
 la calle del Pablito (Valdivia, con lluvia), en los cerros de Valparaíso y en Santiago de noche. Los demás luchadores del plantel vienen después.
 
+La web (`index.html`) tiene dos pestañas: **JUGAR**, con el juego (`juego.html`) dentro, y
+**RANKING**: puntos de liga, victorias y mejor racha en línea, y los campeones del ARCADE
+(los más rápidos en coronarse, por dificultad).
+
 Documentación del proyecto en `docs/`: [estado del proyecto](docs/ESTADO_DEL_PROYECTO.md)
 (qué está hecho, qué falta y las reglas acordadas), [luchadores](docs/LUCHADORES.md),
 [cómo se hace](docs/COMO_SE_HACE.md) un luchador, un escenario o un tema, y el
@@ -124,20 +128,22 @@ CORREO o JUGAR SIN CUENTA (queda recordado). La cuenta solo hace falta para EN L
 **MENÚ PRINCIPAL** tiene:
 
 - **ARCADE**: eliges tu luchador y le ganas a cada uno de los demás contra la
-  CPU. Antes de cada pelea, un mapa de Chile (acostado, el norte a la izquierda)
-  muestra el avión saliendo de la ciudad de tu luchador (el campo `ciudad` de su
-  definición: René y el Flaitiano son de Santiago, Pablito de Valdivia y el Vendedor de Leña de Valparaíso) hacia la
-  ciudad de cada rival, siempre a la más cercana. Cada rival pelea en su
-  escenario (o en uno de su ciudad), y la final es en el ring de EL GRAN TORNEO,
-  contra quien no tenga escenario propio (la última pelea es un poco más
-  difícil). Si pierdes, ¿CONTINUAR? repite esa pelea; si les ganas a todos,
-  ¡CAMPEÓN!
+  CPU. Antes de cada pelea, **LA TORRE**: un rascacielos de neón con un piso por rival
+  y la final en la azotea; el ascensor sube con tu cara hasta el piso del próximo rival
+  (los vencidos quedan en gris con una X) y a los lados salen los dos luchadores. El
+  orden sale de las ciudades (campo `ciudad` de cada definición), siempre a la más
+  cercana. Cada rival pelea en su escenario (o en uno de su ciudad), y la final es en
+  el ring de EL GRAN TORNEO, contra quien no tenga escenario propio (la última pelea es
+  un poco más difícil). Si pierdes, ¿CONTINUAR? repite esa pelea; si les ganas a todos,
+  ¡CAMPEÓN!, con el tiempo total (lo que duraron tus peleas, también las perdidas), que
+  se sube al ranking de la web si entraste con tu cuenta.
 - **EN LÍNEA**: pide cuenta y un apodo único (3 a 14 letras) la primera vez. Por ahora tiene
   CAMBIAR APODO y CERRAR SESIÓN; CREAR SALA, UNIRSE CON CÓDIGO y PARTIDA RÁPIDA llegan en la
   fase 2. Las cuentas están en Supabase (`src/online/`, tablas en `supabase/migraciones/`).
 - **CASUAL**: 1 VS CPU, 1 VS 1, 2 VS 2 y PRÁCTICA.
 - **OPCIONES**: PERSONAJES, MOVIMIENTOS, ESCENARIOS, DEMOSTRACIÓN, CONTROLES,
-  DIFICULTAD (izquierda / derecha) y SONIDO. **DEMOSTRACIÓN** es la CPU contra la
+  DIFICULTAD (izquierda / derecha), SONIDO y GRÁFICOS (BAJA, MEDIA, ALTA o ULTRA; si no se
+  cambia, se elige solo: MEDIA en celulares, ALTA o ULTRA en computadores). **DEMOSTRACIÓN** es la CPU contra la
   CPU en MUY DIFÍCIL, sin fin: cada round es una pelea nueva con otros dos
   luchadores (y colores) en otro escenario. Aceptar o volver sale.
 - **SALIR**: deja la pantalla completa y vuelve al título (el navegador no deja
@@ -196,8 +202,7 @@ comandos son dos toques de una dirección y un botón):
 
 Sus combos se encienden mientras más largos: brasas, aura de llamas,
 estallidos y, desde 12 golpes, un pilar de fuego. Cuando los dos jugadores lo
-eligen, el segundo sale con su ropa de **VISITA** (la polera blanca); también se
-elige como color en ELIGE LUCHADOR.
+eligen, el segundo sale con su ropa de **VISITA** (la polera blanca).
 
 Los toques perdonan el tiempo de una persona: la última flecha y el botón no
 tienen que caer juntos (si el botón cae un pelo antes, el golpe que alcanzó a
@@ -303,8 +308,10 @@ La tabla está en `src/render/comboNames.ts`.
 
 - **1 jugador contra la CPU.**
 - **2 jugadores** en el mismo teclado (o con joysticks).
-- **Práctica:** el jugador 1 entrena contra un muñeco, sin reloj ni K.O.
-- **Movimientos:** los comandos de cada luchador (también desde la pausa).
+- **Práctica:** el jugador 1 entrena contra un sparring, sin reloj ni K.O.
+- **Movimientos:** los especiales, súper, ultra y combos sugeridos de cada luchador
+  (los golpes y las mecánicas están en PERSONAJES). Desde la pausa abre en el luchador
+  con que estás peleando.
 - **Escenarios:** cada escenario a pantalla completa, con su animación y su tema
   musical, sin luchadores. ← → cambia, Esc vuelve.
 
@@ -313,12 +320,10 @@ Peleas al mejor de 3 rounds de 99 segundos.
 Antes de pelear se elige luchador (**ELIGE LUCHADOR**): al centro, 8 casillas
 con la cara de cada luchador (las que todavía no tienen uno, bloqueadas) y
 ALEATORIO; a los lados, en grande, el luchador de cada jugador, en gris mientras
-se marca y a color cuando se elige. Después se elige el **color de la ropa**
-con izquierda / derecha y se confirma (el mismo luchador no puede repetir
-color en una pelea). Solo cambia la ropa que dice su definición (`costume`:
-ropa oscura, clara o ciertos tonos); la cara, el pelo y las zapatillas quedan
-igual. En 1 VS CPU y práctica el jugador 1 elige el suyo y
-después el rival (CPU o muñeco); en 1 VS 1 cada uno elige con su cursor al mismo
+se marca y a color cuando se elige. No se elige color de ropa: si los dos eligen
+al mismo luchador, el segundo sale con otra ropa (solo cambia la que dice su
+definición, `costume`; la cara, el pelo y las zapatillas quedan igual). En 1 VS CPU
+y práctica el jugador 1 elige el suyo y después el rival (CPU o sparring); en 1 VS 1 cada uno elige con su cursor al mismo
 tiempo (el jugador 2 con sus teclas o el segundo joystick). Esc / Retroceso
 vuelve un paso atrás o al menú. Las caras salen de `herramientas/caras.py`. El plantel son los luchadores de
 `public/luchadores/` (René, Pablito, el Flaitiano, el Vendedor de Leña y Carlitos Run).
@@ -333,26 +338,30 @@ lista falta o está vacía.
 
 En OPCIONES, la fila **DIFICULTAD** se cambia con izquierda / derecha (o
 Enter). Queda guardada en el navegador; por defecto es NORMAL. Vale para
-1 jugador contra la CPU y para el muñeco de práctica en modo CPU. La demo
+1 jugador contra la CPU y para el sparring de práctica en modo CPU. La demo
 (CPU contra CPU) siempre juega en NORMAL.
 
 | Nivel | Cómo juega |
 |---|---|
-| FÁCIL | Lenta, bloquea poco y casi no combea: le gana un principiante |
-| NORMAL | Bloquea más o menos la mitad de los golpes, castiga a veces, usa especiales y cadenas |
-| DIFÍCIL | Reacciona rápido, bloquea la mayoría, castiga seguido y usa el lanzador |
-| MUY DIFÍCIL | Bloquea casi todo, castiga casi siempre, rueda los proyectiles y gasta la barra en súper, Modo Poder y contraataques |
+| FÁCIL | Reacciona tarde, casi nunca se cubre y pega golpes sueltos; rara vez especiales, nunca súper ni ultra, y a ratos camina sin atacar |
+| NORMAL | Se cubre la mitad de las veces, combos cortos, algún especial y súper de vez en cuando |
+| DIFÍCIL | Se cubre casi todo, castiga cuando fallas, combos con especiales, salta lejos de los imbloqueables y remata con el ultra |
+| MUY DIFÍCIL | Reacciona al instante y no suelta la guardia, castiga casi todo, combos completos y gasta súper y ultra apenas puede |
+
+`npx tsx herramientas/dificultad_sim.ts [semillas]` juega CPU contra CPU sin dibujar y muestra
+cuánto le gana cada nivel a los otros (MUY DIFÍCIL le gana a FÁCIL y a NORMAL el 100 %).
 
 ### Práctica
 
 Empieza como una pelea ("ROUND 1"… "FIGHT!", con la voz del anunciador). Después
 no hay reloj ni fin de round: la vida nunca llega a cero. Las opciones se
-cambian con las teclas numéricas y se ven en la barra de abajo:
+cambian con las teclas numéricas (en el celular, con los cuatro botones con íconos
+de abajo al centro) y se ven en la barra de abajo:
 
 | Tecla | Opción | Valores |
 |---|---|---|
 | 1 | Súper infinito | SÍ / NO (la barra de súper del jugador siempre llena) |
-| 2 | Muñeco | GUARDIA BAJA (brazos abajo, nunca bloquea) / AGACHADO / SALTA / BLOQUEA TODO / BLOQUEA TRAS EL 1ER GOLPE / CPU (con la dificultad elegida) |
+| 2 | Sparring | GUARDIA BAJA (brazos abajo, nunca bloquea) / AGACHADO / SALTA / BLOQUEA TODO / BLOQUEA TRAS EL 1ER GOLPE / CPU (con la dificultad elegida) |
 | 3 | Vida | SE RECUPERA (se rellena un segundo después de cada combo) / NORMAL (baja, pero nunca hay K.O.) |
 | 4 | Reiniciar posición | Los dos vuelven al centro |
 
@@ -385,13 +394,15 @@ El Gran Torneo de Cell vive en los lives, así que la pelea se ve como uno:
   cuadro por elemento: dirección de teclado numérico, botones con `+` y `*N`
   para repetir).
 - `?escenario=rene-plaza` (un id de la lista) cambia el escenario de la pelea de prueba.
-- `?calidad=hd` o `?calidad=liviano` fuerza la calidad de los gráficos y `?tactil=1`
-  muestra los controles de celular (cruceta y botones).
+- `?calidad=baja|media|alta|ultra` fuerza los gráficos (`hd` y `liviano` siguen
+  sirviendo: son ALTA y MEDIA) y `?tactil=1` muestra los controles de celular.
+- Los atajos van en `juego.html` (o en la web, que se los pasa al juego).
 
 ## Estructura
 
 ```
-index.html            página de entrada
+index.html            la web: pestañas JUGAR (el juego en un iframe) y RANKING (src/web/)
+juego.html            el juego
 src/
   main.ts             arranque y bucle (lógica a 60 Hz fijos)
   config.ts           constantes (resolución 480x270, tiempos, barras)

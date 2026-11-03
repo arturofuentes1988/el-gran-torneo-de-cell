@@ -7,7 +7,7 @@ import { announcerVoice } from '../audio/announcer';
 import { COMBO_BREAKER, ULTRA_COMBO, comboNameFor } from '../render/comboNames';
 import type { FrameInput } from '../input/buffer';
 import { P1_KEYS, P2_KEYS, PlayerInput, type KeyBindings } from '../input/devices';
-import { mandosDePelea } from '../input/touch';
+import { mandosDePelea, mandosDePractica } from '../input/touch';
 import { FighterView, ProjectileViews, type WorldLayers } from '../render/fighterView';
 import { DiscoShow } from '../render/disco';
 import { StormShow, bolt } from '../render/elemental';
@@ -57,14 +57,20 @@ function mergeKeys(a: KeyBindings, b: KeyBindings): KeyBindings {
 }
 
 const PAUSE_OPTIONS = ['CONTINUAR', 'REINICIAR COMBATE', 'MOVIMIENTOS', 'CONTROLES', 'SALIR AL MENÚ'] as const;
-/** Menú de pausa compacto (mismo estilo que el menú de modos). */
-const P_FONT = 8;
-const P_ROW = 13;
-const P_W = 184;
-const P_PAD = 9;
-const P_H = P_PAD * 2 + (PAUSE_OPTIONS.length - 1) * P_ROW + P_FONT;
+/**
+ * Menú de pausa (mismo estilo que los menús: una barra inclinada por opción). Grande para tocarlo
+ * en el celular: cada fila mide P_ROW unidades (~45 px en un celular horizontal) y toda la fila cuenta.
+ */
+const P_FONT = 11;
+const P_ROW = 31;
+const P_BAR = 24;
+const P_W = 252;
+const P_PAD = 10;
+const P_H = P_PAD * 2 + (PAUSE_OPTIONS.length - 1) * P_ROW + P_BAR;
 const P_X = Math.round((VIEW_W - P_W) / 2);
-const P_Y = Math.round((VIEW_H - P_H) / 2) + 6;
+const P_Y = Math.round((VIEW_H - P_H) / 2) + 8;
+/** Arriba de la barra de cada opción. */
+const pauseBarY = (i: number): number => P_Y + P_PAD + i * P_ROW;
 
 /** Colores para distinguir a un luchador repetido en la misma pelea (el primero va sin cambio). */
 
@@ -79,8 +85,8 @@ export interface FightOptions {
   colors?: [number, number];
   /** Dificultad de la CPU para esta pelea (ARCADE la sube de a poco); si falta, la guardada. */
   difficulty?: DifficultyId;
-  /** Qué viene al terminar (ARCADE: la siguiente pelea o CONTINUAR); si falta, el menú principal. */
-  next?: (winner: 0 | 1 | -1) => Scene;
+  /** Qué viene al terminar (ARCADE: la siguiente pelea o CONTINUAR; frames = lo que duró); si falta, el menú principal. */
+  next?: (winner: 0 | 1 | -1, frames: number) => Scene;
   /** Un solo round (la DEMOSTRACIÓN cambia de luchadores en cada uno). */
   singleRound?: boolean;
   /** DEMOSTRACIÓN: adónde vuelve al apretar aceptar o volver. */
@@ -163,7 +169,10 @@ export class FightScene implements Scene {
   private pauseUi = new Container();
   private pauseItems: Text[] = [];
   private pauseBar = new Graphics();
+  private pauseGlow = new Graphics();
   private pauseCursor = outlinedText('>', P_FONT, 0xffd040, 0x5a0a10, 2);
+  /** Lado de quien pausó (1 VS 1 entre dos con el joystick 2: J2); MOVIMIENTOS abre en su luchador. */
+  private pausedBy: 0 | 1 = 0;
   private pauseT = 0;
   /** Brillo persistente del Modo Poder, uno por luchador (se crea al activarlo). */
   private powerGlows: [Sprite | null, Sprite | null] = [null, null];
@@ -353,29 +362,59 @@ export class FightScene implements Scene {
 
   private buildPause(): void {
     const bg = new Graphics();
-    bg.rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0x05020c, alpha: 0.55 });
-    bg.roundRect(P_X, P_Y, P_W, P_H, 5).fill({ color: 0x140a24, alpha: 0.9 }).stroke({ color: 0xc89a3a, width: 1 });
-    const title = outlinedText('PAUSA', 12, 0xfff4e0, 0x5a0a10, 3);
+    bg.rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0x05020c, alpha: 0.6 });
+    bg.roundRect(P_X, P_Y, P_W, P_H, 6).fill({ color: 0x140a24, alpha: 0.92 }).stroke({ color: 0xc89a3a, width: 1.2 });
+    const title = outlinedText('PAUSA', 14, 0xfff4e0, 0x5a0a10, 3);
     title.anchor.set(0.5);
-    title.position.set(VIEW_W / 2, P_Y - 12);
-    this.pauseUi.addChild(bg, this.pauseBar, title, this.pauseCursor);
+    title.position.set(VIEW_W / 2, P_Y - 15);
+    this.pauseGlow.blendMode = 'add';
+    this.pauseCursor.anchor.set(0, 0.5);
+    this.pauseUi.addChild(bg, this.pauseGlow, this.pauseBar, title, this.pauseCursor);
     PAUSE_OPTIONS.forEach((o, i) => {
       const t = outlinedText(o, P_FONT, 0xffffff, 0x1a0a24, 2);
-      t.position.set(P_X + 22, P_Y + P_PAD + i * P_ROW);
+      t.anchor.set(0.5);
+      t.position.set(VIEW_W / 2, pauseBarY(i) + P_BAR / 2);
       this.pauseItems.push(t);
       this.pauseUi.addChild(t);
     });
     this.pauseUi.visible = false;
   }
 
-  /** Opción marcada de la pausa: color, barra y cursor que pestañea. */
+  /** Opción de la pausa bajo el toque de este cuadro (toda la fila cuenta), o -1. */
+  private pauseTapped(): number {
+    const mi = this.game.menu;
+    return PAUSE_OPTIONS.findIndex((_, i) => mi.tapIn(P_X, pauseBarY(i) - (P_ROW - P_BAR) / 2, P_W, P_ROW));
+  }
+
+  /** Barras de la pausa: la marcada se enciende (magenta con borde dorado), con cursor que pestañea. */
   private paintPause(): void {
-    this.pauseItems.forEach((t, i) => {
-      t.style.fill = i === this.pauseSel ? 0xffd040 : 0xffffff;
+    const g = this.pauseBar.clear();
+    this.pauseGlow.clear();
+    const slant = 7;
+    const pulse = 0.5 + 0.5 * Math.sin(this.pauseT * 0.12);
+    PAUSE_OPTIONS.forEach((_, i) => {
+      const on = i === this.pauseSel;
+      const w = P_W - 36 + (on ? 10 : 0);
+      const x = VIEW_W / 2 - w / 2;
+      const y = pauseBarY(i);
+      const shape = [x + slant, y, x + w + slant, y, x + w - slant, y + P_BAR, x - slant, y + P_BAR];
+      if (on) {
+        this.pauseGlow.roundRect(x - 8, y - 4, w + 16, P_BAR + 8, 8).fill({ color: 0xff3ac0, alpha: 0.14 + 0.1 * pulse });
+        g.poly(shape).fill({ color: 0xb02a90, alpha: 0.92 }).stroke({ color: 0xffd76a, width: 1.2 });
+      } else {
+        g.poly(shape).fill({ color: 0x1a0c2e, alpha: 0.8 }).stroke({ color: 0xb98cff, width: 0.6, alpha: 0.35 });
+      }
+      this.pauseItems[i].style.fill = on ? 0xffffff : 0xd8cfe8;
+      this.pauseItems[i].scale.set(on ? 1.06 : 1);
     });
-    const y = P_Y + P_PAD + this.pauseSel * P_ROW;
-    this.pauseBar.clear().roundRect(P_X + 5, y - 3, P_W - 10, P_FONT + 6, 3).fill({ color: 0xffd040, alpha: 0.12 });
-    this.pauseCursor.position.set(P_X + 10 + (Math.floor(this.pauseT / 10) % 2), y);
+    const y = pauseBarY(this.pauseSel) + P_BAR / 2;
+    this.pauseCursor.position.set(P_X + 8 + (Math.floor(this.pauseT / 10) % 2), y);
+  }
+
+  /** Luchador con que pelea un lado ahora (en 2 VS 2, el que está en la pelea de su equipo). */
+  private activeFighter(side: 0 | 1): Fighter {
+    const team = this.match.teams?.[side];
+    return team ? team.members[team.point] : this.match.fighters[side];
   }
 
   enter(): void {
@@ -396,10 +435,13 @@ export class FightScene implements Scene {
     this.negative.enabled = false;
     // Celular: la cruceta y los botones salen en la pelea (no en la DEMOSTRACIÓN).
     mandosDePelea(this.mode !== 'demo');
+    // Práctica: botones de las opciones 1-4 abajo al centro (se esconden en la pausa con los demás).
+    mandosDePractica(this.mode === 'practica');
   }
 
   exit(): void {
     mandosDePelea(false);
+    mandosDePractica(false);
     this.closeMoveList();
     this.closeControls();
     const d = this.game.display;
@@ -428,6 +470,7 @@ export class FightScene implements Scene {
   step(): void {
     const g = this.game;
     const pausePressed = g.kb.hit('Escape') || [0, 1, 2, 3].some((i) => g.pads.pressed(i, 9));
+    if (pausePressed && !this.paused) this.pausedBy = this.mode === '2p' && g.pads.pressed(1, 9) ? 1 : 0;
     if (this.paused) {
       this.stepPause(pausePressed);
       return;
@@ -487,7 +530,7 @@ export class FightScene implements Scene {
     if (this.punchT > 0) this.punchT--;
 
     if (m.over) {
-      if (this.opts.next) g.setScene(this.opts.next(m.matchWinner ?? -1));
+      if (this.opts.next) g.setScene(this.opts.next(m.matchWinner ?? -1, m.frame));
       else if (this.mode === 'demo') g.setScene(new FightScene(g, 'demo', this.seed + 1, this.opts));
       else g.setScene(new MainMenuScene(g));
     }
@@ -520,7 +563,7 @@ export class FightScene implements Scene {
     }
     // Tocar una opción la elige.
     let confirm = mi.confirm;
-    const hit = PAUSE_OPTIONS.findIndex((_, i) => mi.tapIn(P_X, P_Y + P_PAD + i * P_ROW - (P_ROW - P_FONT) / 2, P_W, P_ROW));
+    const hit = this.pauseTapped();
     if (hit >= 0) {
       this.pauseSel = hit;
       confirm = true;
@@ -541,7 +584,10 @@ export class FightScene implements Scene {
     }
     if (confirm && this.pauseSel === 2) {
       g.sfx.play('menuConfirm');
-      this.moveList = new MoveListPanel(g.assets, 0);
+      // Abre en el luchador con que está peleando quien pausó (con ← → se ven los demás).
+      const side = this.pausedBy;
+      const id = this.activeFighter(side).def.id;
+      this.moveList = new MoveListPanel(g.assets, g.assets.roster.findIndex((r) => r.def.id === id), side);
       g.display.overlay.addChild(this.moveList.container);
       this.pauseUi.visible = false;
       return;

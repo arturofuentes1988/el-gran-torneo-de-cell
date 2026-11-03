@@ -66,13 +66,16 @@ export function saveControls(c: unknown): boolean {
 
 const KEY_QUALITY = 'torneoDeCell.calidad';
 
-/** Calidad de los gráficos: 'auto' (según el aparato), 'hd' o 'liviano'. */
-export type QualityPref = 'auto' | 'hd' | 'liviano';
+/** Calidad de los gráficos: 'auto' (según el aparato) o un nivel de OPCIONES > GRÁFICOS. */
+export type QualityPref = 'auto' | 'baja' | 'media' | 'alta' | 'ultra';
 
 export function loadQuality(): QualityPref {
   try {
     const v = localStorage.getItem(KEY_QUALITY);
-    if (v === 'hd' || v === 'liviano') return v;
+    // Antes había solo HD y liviano: pasan a ALTA y MEDIA.
+    if (v === 'hd') return 'alta';
+    if (v === 'liviano') return 'media';
+    if (v === 'baja' || v === 'media' || v === 'alta' || v === 'ultra') return v;
   } catch {
     // Sin acceso a localStorage: automática.
   }

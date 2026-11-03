@@ -2,13 +2,14 @@ import '@fontsource/oswald/500.css';
 import '@fontsource/oswald/700.css';
 import type { Texture } from 'pixi.js';
 import { Display } from './app/display';
+import { contextoDeErrores, reportarError, vigilarErrores, vigilarPantalla } from './app/errores';
 import { autoFullscreen, installFullscreen } from './app/fullscreen';
 import { installQaBridge } from './app/qa';
 import { Game, type FightMode } from './app/game';
 import { loadMuted } from './app/settings';
 import { Sfx } from './audio/sfx';
 import { FRAME_MS, GAME_FONT } from './config';
-import { calidad } from './content/calidad';
+import { calidad, nivel } from './content/calidad';
 import { Contenido } from './content/contenido';
 import { cargarTamanos, Progreso } from './content/descargas';
 import { loadFighterFolder, type FighterAsset } from './content/loadFighter';
@@ -21,6 +22,7 @@ import { setTextResolution } from './render/text';
 import { DemoScene } from './scenes/demo';
 import { FightScene } from './scenes/fight';
 import { LoadingScene } from './scenes/loading';
+import { MainMenuScene } from './scenes/modeSelect';
 import { TitleScene, loadTitleArena } from './scenes/title';
 
 /** Luchadores del plantel (carpetas de public/luchadores/), en este orden. */
@@ -55,6 +57,7 @@ function watchBoot(prog: Progreso): () => void {
 }
 
 async function main(): Promise<void> {
+  vigilarErrores();
   // Si hay una sesión guardada (o se vuelve de entrar con Google), la cuenta se conecta mientras baja el resto.
   iniciarCuenta();
   const prog = new Progreso();
@@ -64,6 +67,7 @@ async function main(): Promise<void> {
 
   const display = new Display();
   await display.init();
+  vigilarPantalla(display.app.canvas);
   installFullscreen();
   setTextResolution(display.textResolution);
   display.onResize(() => setTextResolution(display.textResolution));
@@ -151,30 +155,58 @@ async function main(): Promise<void> {
     game.setScene(new TitleScene(game));
   }
   (window as unknown as { __game?: Game }).__game = game;
+  contextoDeErrores(() => ({
+    escena: game.scene?.constructor.name ?? '',
+    pantalla: `${innerWidth}x${innerHeight} dpr ${devicePixelRatio} ${nivel()}${navigator.maxTouchPoints > 0 ? ' táctil' : ''}${window.top !== window ? ' web' : ''}`,
+  }));
+  // Dentro de la web (iframe): la pestaña RANKING esconde el juego y lo calla hasta volver a JUGAR.
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin) return;
+    const msg = (e.data as { torneo?: string } | null)?.torneo;
+    if (msg === 'escondido' || msg === 'visible') sfx.pausarAudio(msg === 'escondido');
+  });
   const qa = params.has('qa') ? installQaBridge(game) : null;
 
   // Bucle: lógica a 60 Hz fijos, dibujo a la frecuencia de la pantalla.
+  // Un error en un cuadro no lo corta (si no, la imagen se queda pegada): se anota y sigue;
+  // si falla 90 cuadros seguidos (1,5 s), se vuelve al menú.
   let acc = 0;
   let last = performance.now();
+  let fallos = 0;
   display.app.ticker.add(() => {
-    const now = performance.now();
-    acc += Math.min(250, now - last);
-    last = now;
-    display.layout();
-    let steps = 0;
-    while (acc >= FRAME_MS && steps < 5) {
-      pads.poll();
-      menu.sample();
-      game.globalKeys();
-      game.scene?.step();
+    try {
+      const now = performance.now();
+      acc += Math.min(250, now - last);
+      last = now;
+      display.layout();
+      let steps = 0;
+      while (acc >= FRAME_MS && steps < 5) {
+        pads.poll();
+        menu.sample();
+        game.globalKeys();
+        game.scene?.step();
+        kb.endFrame();
+        acc -= FRAME_MS;
+        steps++;
+      }
+      if (steps >= 5) acc = 0;
+      game.scene?.render();
+      display.renderWorld();
+      qa?.();
+      fallos = 0;
+    } catch (err) {
+      reportarError(err, 'cuadro');
       kb.endFrame();
-      acc -= FRAME_MS;
-      steps++;
+      acc = 0;
+      if (++fallos === 90) {
+        try {
+          game.setScene(new MainMenuScene(game));
+        } catch (err2) {
+          reportarError(err2, 'rescate');
+          location.reload();
+        }
+      }
     }
-    if (steps >= 5) acc = 0;
-    game.scene?.render();
-    display.renderWorld();
-    qa?.();
   });
 
   stopBoot();

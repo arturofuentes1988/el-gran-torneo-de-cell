@@ -3,7 +3,7 @@
 // animadas y video de fondo. Se cargan con StageView.load().
 
 import { Container, Graphics, Rectangle, Sprite, Texture, TilingSprite } from 'pixi.js';
-import type { Calidad } from '../content/calidad';
+import { dibujo, type Calidad } from '../content/calidad';
 import { bajarJson, bajarTextura, bajarVideo, type Progreso } from '../content/descargas';
 import { FRAME_MS, GROUND_SCREEN_Y, STAGE_W, VIEW_H, VIEW_W } from '../config';
 import type { TexFilter } from '../sim/types';
@@ -262,11 +262,14 @@ export class StageView {
   private particles: ParticleField[] = [];
   private darkAlpha = 0;
   private lastTime = performance.now();
+  /** Las texturas que bajó este escenario (las únicas que suelta al destruirse). */
+  private own: Texture[];
 
   /** Escenario HD ya cargado (ver StageView.load). */
   constructor(hd: { name: string; layers: Array<{ def: StageLayerDef; textures: Texture[] }>; particles?: StageParticlesDef[]; music?: string }) {
     this.music = hd.music ?? null;
     this.name = hd.name;
+    this.own = hd.layers.flatMap((l) => l.textures);
     for (const { def, textures } of hd.layers) this.addHd(def, textures);
     for (const p of hd.particles ?? []) {
       const field = new ParticleField(p);
@@ -288,7 +291,11 @@ export class StageView {
     const abs = (src: string) => new URL(src, base).href;
     const scaleMode = def.filter ?? 'linear';
     const op = { scaleMode, mipmaps: calidad === 'hd' && scaleMode === 'linear' };
-    const layers = def.layers.map((l) => (calidad === 'liviano' && l.liviano ? { ...l, ...l.liviano } : l));
+    // Gráficos BAJA: sin videos de fondo (queda la imagen fija que va debajo de cada uno).
+    const conVideo = dibujo().video;
+    const layers = def.layers
+      .map((l) => (calidad === 'liviano' && l.liviano ? { ...l, ...l.liviano } : l))
+      .filter((l) => conVideo || !l.video);
     const files = (l: StageLayerDef) => (l.video ? [l.video] : (l.frames ?? (l.src ? [l.src] : [])));
     if (prog) for (const l of layers) for (const f of files(l)) prog.esperar(abs(f));
     // Video en loop, mudo (así el navegador lo deja reproducirse solo); si no parte, queda la imagen fija.
@@ -317,7 +324,13 @@ export class StageView {
       v.load();
     }
     this.videos = [];
-    this.container.destroy({ children: true, texture: true, textureSource: true });
+    // Solo sus propias texturas: las de las partículas (punto y estela de lluvia) son una para todos
+    // los escenarios. Antes se destruían también, y el escenario que seguía en pantalla quedaba con
+    // partículas rotas: el dibujo fallaba en cada cuadro y la imagen se congelaba (celulares en
+    // calidad liviana, que sueltan escenarios en casi cada pelea).
+    this.container.destroy({ children: true });
+    for (const t of this.own) t.destroy(true);
+    this.own = [];
   }
 
   /** Videos del escenario: se reproducen solo mientras el escenario se está dibujando. */

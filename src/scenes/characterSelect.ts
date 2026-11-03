@@ -1,9 +1,9 @@
 // Pantalla "ELIGE LUCHADOR" del 1 VS 1 y del ARCADE.
 // Al centro, 8 casillas con la cara de cada luchador (las que faltan, bloqueadas) y
 // ALEATORIO debajo. A los lados, en grande, el luchador de cada jugador: en gris
-// mientras se elige y a color al elegirlo; después se elige el color de la ropa
-// (izquierda / derecha) y se confirma.
-// 1 VS CPU y PRÁCTICA: el jugador 1 elige el suyo y después el rival (CPU o muñeco).
+// mientras se elige y a color al elegirlo. No se elige color de ropa: todos salen con
+// el suyo, y si los dos eligen al mismo, el segundo se viste distinto solo (FightScene).
+// 1 VS CPU y PRÁCTICA: el jugador 1 elige el suyo y después el rival (CPU o sparring).
 // 1 VS 1: cada uno elige con su cursor al mismo tiempo. ARCADE: solo el jugador 1.
 // Después: ELIGE ESCENARIO (o, en ARCADE, la primera pelea).
 
@@ -13,7 +13,7 @@ import type { FightMode, Game, Scene } from '../app/game';
 import type { FighterAsset } from '../content/loadFighter';
 import { P1_KEYS, P2_KEYS } from '../input/devices';
 import { tactil } from '../input/touch';
-import { COSTUME_COUNT, costumeFilter } from '../render/costume';
+import { costumeFilter } from '../render/costume';
 import { NEON_CYAN, NEON_PINK } from '../render/live';
 import { arcade, outlinedText } from '../render/text';
 import { startArcade } from './arcade';
@@ -104,15 +104,14 @@ interface Cell {
   h: number;
 }
 
-/** Cada lado: eligiendo, eligiendo color o listo. */
-type Stage = 'choose' | 'color' | 'done';
+/** Cada lado: eligiendo o listo. */
+type Stage = 'choose' | 'done';
 
 /** Vista grande de un lado: el luchador marcado (gris) o elegido (a color), con su nombre. */
 interface Big {
   sprite: Sprite;
   question: Text;
   name: Text;
-  colorText: Text;
   frames: Frames;
   fi: number;
   ft: number;
@@ -142,9 +141,8 @@ export class CharacterSelectScene implements Scene {
   readonly music = 'titulo';
   private ui = new Container();
   private cells: Cell[] = [];
-  /** Índice del plantel elegido por cada lado (-1: todavía no) y su color de ropa. */
+  /** Índice del plantel elegido por cada lado (-1: todavía no). */
   private picks: [number, number] = [-1, -1];
-  private colors: [number, number] = [0, 0];
   private stages: [Stage, Stage] = ['choose', 'choose'];
   /** Casilla marcada por cada cursor. */
   private pos: [number, number];
@@ -178,8 +176,8 @@ export class CharacterSelectScene implements Scene {
       this.ui.addChild(vs);
     }
 
-    // Vistas grandes: J1 a la izquierda; CPU / J2 / MUÑECO a la derecha (en ARCADE, los rivales).
-    const rival = mode === '2p' ? 'J2' : mode === 'practica' ? 'MUÑECO' : mode === 'arcade' ? 'RIVALES' : 'CPU';
+    // Vistas grandes: J1 a la izquierda; CPU / J2 / SPARRING a la derecha (en ARCADE, los rivales).
+    const rival = mode === '2p' ? 'J2' : mode === 'practica' ? 'SPARRING' : mode === 'arcade' ? 'RIVALES' : 'CPU';
     const makeBig = (side: 0 | 1): Big => {
       const x = side === 0 ? BIG_X : VIEW_W - BIG_X;
       const color = side === 0 ? NEON_PINK : NEON_CYAN;
@@ -194,21 +192,18 @@ export class CharacterSelectScene implements Scene {
       const name = outlinedText('', 8, 0xffffff, 0x0a0610, 2);
       name.anchor.set(0.5);
       name.position.set(x, BIG_Y + 14);
-      const colorText = outlinedText('', 6, 0xffd040, 0x0a0610, 2);
-      colorText.anchor.set(0.5);
-      colorText.position.set(x, BIG_Y + 30);
       // Quién elige este lado, en la esquina de arriba.
       const label = outlinedText(side === 0 ? 'J1' : rival, 10, color, 0x0a0610, 2);
       label.anchor.set(side === 0 ? 0 : 1, 0.5);
       // (En el celular, el botón ☰ va en la esquina derecha: la etiqueta se corre.)
       label.position.set(side === 0 ? 14 : VIEW_W - 14 - (tactil() ? 36 : 0), 18);
-      this.ui.addChild(glow, sprite, question, plate, name, colorText, label);
+      this.ui.addChild(glow, sprite, question, plate, name, label);
       if (side === 1 && mode === 'arcade') {
         // En ARCADE el lado derecho muestra los rivales que vienen.
         plate.visible = false;
         glow.visible = false;
       }
-      return { sprite, question, name, colorText, frames: [], fi: 0, ft: 0, shown: '' };
+      return { sprite, question, name, frames: [], fi: 0, ft: 0, shown: '' };
     };
     this.bigs = [makeBig(0), makeBig(1)];
 
@@ -303,22 +298,17 @@ export class CharacterSelectScene implements Scene {
 
   private refreshHint(): void {
     const side = this.p1Side();
-    const rival = this.mode === 'practica' ? 'EL MUÑECO' : 'TU RIVAL';
-    const colorStep = (side !== null && this.stages[side] === 'color') || (this.mode === '2p' && this.stages.includes('color'));
+    const rival = this.mode === 'practica' ? 'TU SPARRING' : 'TU RIVAL';
     const touch = tactil();
     const back = touch ? '☰ VUELVE' : 'ESC VUELVE';
     this.hint.text = arcade(
-      colorStep
-        ? touch
-          ? 'TOCA ◄ ► PARA EL COLOR · TOCA AL LUCHADOR PARA ACEPTAR'
-          : '◄ ► CAMBIA EL COLOR · ACEPTAR'
-        : this.mode === '2p'
-          ? `CADA JUGADOR ELIGE CON SU CURSOR · ${back}`
-          : side === 1
-            ? `AHORA ELIGE A ${rival}${touch ? ': TOCA SU CARA DOS VECES' : ''} · ${back}`
-            : touch
-              ? `TOCA UNA CARA Y TÓCALA OTRA VEZ PARA ELEGIR · ${back}`
-              : `ELIGE TU LUCHADOR · ${back}`,
+      this.mode === '2p'
+        ? `CADA JUGADOR ELIGE CON SU CURSOR · ${back}`
+        : side === 1
+          ? `AHORA ELIGE A ${rival}${touch ? ': TOCA SU CARA DOS VECES' : ''} · ${back}`
+          : touch
+            ? `TOCA UNA CARA Y TÓCALA OTRA VEZ PARA ELEGIR · ${back}`
+            : `ELIGE TU LUCHADOR · ${back}`,
     );
   }
 
@@ -354,29 +344,11 @@ export class CharacterSelectScene implements Scene {
     return true;
   }
 
-  /** Elige la casilla marcada (ALEATORIO se resuelve aquí) y pasa a elegir el color. */
+  /** Elige la casilla marcada (ALEATORIO se resuelve aquí): el lado queda listo; si los dos lo están, ¡LISTOS! */
   private pick(side: 0 | 1): void {
     const roster = this.game.assets.roster;
     const c = this.cells[this.pos[side]];
-    const idx = c.random ? Math.floor(Math.random() * roster.length) : roster.indexOf(c.asset!);
-    this.picks[side] = idx;
-    this.colors[side] = this.freeColor(side, 0, 1);
-    this.stages[side] = 'color';
-    this.game.sfx.play('menuConfirm');
-    this.refreshHint();
-  }
-
-  /** Color libre desde `from` en la dirección `dir` (el mismo luchador no puede repetir color). */
-  private freeColor(side: 0 | 1, from: number, dir: number): number {
-    const other = side === 0 ? 1 : 0;
-    const clash = (c: number) => this.picks[other] === this.picks[side] && this.picks[other] >= 0 && this.colors[other] === c && this.stages[other] !== 'choose';
-    let c = ((from % COSTUME_COUNT) + COSTUME_COUNT) % COSTUME_COUNT;
-    for (let k = 0; k < COSTUME_COUNT && clash(c); k++) c = (c + dir + COSTUME_COUNT) % COSTUME_COUNT;
-    return c;
-  }
-
-  /** Confirma el color: el lado queda listo; si los dos lo están, ¡LISTOS! */
-  private confirmColor(side: 0 | 1): void {
+    this.picks[side] = c.random ? Math.floor(Math.random() * roster.length) : roster.indexOf(c.asset!);
     this.stages[side] = 'done';
     this.game.sfx.play('menuConfirm');
     this.refreshHint();
@@ -386,12 +358,14 @@ export class CharacterSelectScene implements Scene {
   /** Un lado vuelve un paso atrás; sin nada que deshacer, vuelve al menú. Devuelve false si salió. */
   private undo(side: 0 | 1): boolean {
     this.game.sfx.play('menuBack');
-    if (this.stages[side] === 'done') this.stages[side] = 'color';
-    else if (this.stages[side] === 'color') {
+    if (this.stages[side] === 'done') {
       this.stages[side] = 'choose';
       this.picks[side] = -1;
-    } else if (side === 1 && this.mode !== '2p') this.stages[0] = 'color';
-    else if (side === 0) {
+    } else if (side === 1 && this.mode !== '2p') {
+      // Eligiendo al rival: vuelve a elegir el suyo.
+      this.stages[0] = 'choose';
+      this.picks[0] = -1;
+    } else if (side === 0) {
       this.game.setScene(this.mode === 'arcade' ? new MainMenuScene(this.game) : new CasualMenuScene(this.game));
       return false;
     }
@@ -404,48 +378,23 @@ export class CharacterSelectScene implements Scene {
     return this.game.menu.tapIn(c.x - GAP / 2, c.y - GAP / 2, c.w + GAP, c.h + GAP);
   }
 
-  /**
-   * Toques del jugador 1 en su lado: tocar una casilla la marca y tocarla otra vez la elige.
-   * Eligiendo el color: los costados del luchador grande (◄ ►) lo cambian; el luchador o su casilla lo aceptan.
-   */
+  /** Toques del jugador 1 en su lado: tocar una casilla la marca y tocarla otra vez la elige. */
   private handleTap(side: 0 | 1): void {
-    const m = this.game.menu;
-    if (!m.tap) return;
-    if (this.stages[side] === 'choose') {
-      const i = this.cells.findIndex((c, k) => this.selectable(k) && this.tapCell(c));
-      if (i < 0) return;
-      if (this.pos[side] === i) this.pick(side);
-      else {
-        this.pos[side] = i;
-        this.game.sfx.play('menuMove');
-      }
-    } else if (this.stages[side] === 'color') {
-      const asset = this.game.assets.roster[this.picks[side]];
-      const cell = this.cells.find((c) => c.asset === asset);
-      if (cell && this.tapCell(cell)) return this.confirmColor(side);
-      const cx = side === 0 ? BIG_X : VIEW_W - BIG_X;
-      if (!m.tapIn(cx - 64, 40, 128, VIEW_H - 40)) return;
-      const dx = m.tap.x - cx;
-      if (Math.abs(dx) < 20) return this.confirmColor(side);
-      const dir = Math.sign(dx);
-      this.colors[side] = this.freeColor(side, this.colors[side] + dir, dir);
+    if (!this.game.menu.tap || this.stages[side] !== 'choose') return;
+    const i = this.cells.findIndex((c, k) => this.selectable(k) && this.tapCell(c));
+    if (i < 0) return;
+    if (this.pos[side] === i) this.pick(side);
+    else {
+      this.pos[side] = i;
       this.game.sfx.play('menuMove');
     }
   }
 
-  /** Lo que hace la mano de un lado según su etapa (elegir o cambiar el color). */
+  /** Lo que hace la mano de un lado mientras elige (moverse y aceptar) o volver. */
   private handle(side: 0 | 1, h: MenuHand): boolean {
-    const sfx = this.game.sfx;
     if (this.stages[side] === 'choose') {
-      if (this.move(side, h)) sfx.play('menuMove');
+      if (this.move(side, h)) this.game.sfx.play('menuMove');
       if (h.ok) this.pick(side);
-    } else if (this.stages[side] === 'color') {
-      if (h.left || h.right) {
-        const dir = h.left ? -1 : 1;
-        this.colors[side] = this.freeColor(side, this.colors[side] + dir, dir);
-        sfx.play('menuMove');
-      }
-      if (h.ok) this.confirmColor(side);
     }
     if (h.back) return this.undo(side);
     return true;
@@ -460,16 +409,14 @@ export class CharacterSelectScene implements Scene {
       b.sprite.visible = false;
       b.question.visible = true;
       b.name.text = '';
-      b.colorText.text = '';
       return;
     }
     const picked = this.stages[side] !== 'choose';
     const cell = this.cells[this.pos[side]];
     const asset = picked ? roster[this.picks[side]] : cell.asset;
-    const key = `${picked ? 'p' : 'h'}:${asset?.def.id ?? (cell.random ? 'random' : 'none')}:${picked ? this.colors[side] : -1}`;
-    // La ropa de visita (color 1 de quien la tiene) se nombra así.
-    const away = this.colors[side] === 1 && !!asset?.def.costume?.visita;
-    b.colorText.text = this.stages[side] === 'color' ? arcade(away ? '◄ VISITA ►' : `◄ COLOR ${this.colors[side] + 1} ►`) : '';
+    // Si los dos eligieron al mismo, el de la derecha se ve con la otra ropa (como en la pelea).
+    const color = side === 1 && picked && this.picks[0] === this.picks[1] ? 1 : 0;
+    const key = `${picked ? 'p' : 'h'}:${asset?.def.id ?? (cell.random ? 'random' : 'none')}:${color}`;
     if (b.shown === key) return;
     b.shown = key;
     b.question.visible = !asset;
@@ -487,7 +434,7 @@ export class CharacterSelectScene implements Scene {
     const k = ((asset.def.texScale ?? 1) * BIG_H) / 160;
     // Los dos miran al centro.
     b.sprite.scale.set(side === 0 ? k : -k, k);
-    const costume = picked ? costumeFilter(this.colors[side], asset.def.costume) : null;
+    const costume = picked ? costumeFilter(color, asset.def.costume) : null;
     b.sprite.filters = picked ? (costume ? [costume] : []) : [this.grey[side]];
   }
 
@@ -533,13 +480,12 @@ export class CharacterSelectScene implements Scene {
   private next(): void {
     const g = this.game;
     if (this.mode === 'arcade') {
-      g.setScene(startArcade(g, this.picks[0], this.colors[0]));
+      g.setScene(startArcade(g, this.picks[0], 0));
       return;
     }
     const fighters: [number, number] = [this.picks[0], this.picks[1]];
-    const colors: [number, number] = [this.colors[0], this.colors[1]];
     const mode = this.mode;
-    g.setScene(new StageSelectScene(g, () => new FightScene(g, mode, undefined, { fighters, colors }), () => new CharacterSelectScene(g, mode), fighters));
+    g.setScene(new StageSelectScene(g, () => new FightScene(g, mode, undefined, { fighters }), () => new CharacterSelectScene(g, mode), fighters));
   }
 
   render(): void {

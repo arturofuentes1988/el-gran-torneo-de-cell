@@ -5,6 +5,7 @@
 
 import { AdvancedBloomFilter } from 'pixi-filters';
 import { CanvasSource, Container, Sprite, Texture } from 'pixi.js';
+import { dibujo } from '../content/calidad';
 import type { SparkKind } from '../sim/types';
 
 interface Particle {
@@ -111,6 +112,8 @@ export class FxLayer {
   readonly tex: { dot: Texture; spark: Texture; ring: Texture; star: Texture; ray: Texture };
   /** Rayos quebrados (tres formas al azar) para los golpes fuertes. */
   private bolts: Texture[] = [];
+  /** Fracción de partículas de cada ráfaga (según los gráficos). */
+  private particulas = dibujo().particulas;
 
   constructor() {
     this.tex = {
@@ -193,8 +196,14 @@ export class FxLayer {
         }),
       );
     }
-    this.glowLayer.filters = [new AdvancedBloomFilter({ threshold: 0.25, bloomScale: 1.2, brightness: 1, blur: 6, quality: 5 })];
+    // Gráficos BAJA: brillo con menos pasadas (es lo que más le cuesta a la tarjeta de video).
+    this.glowLayer.filters = [new AdvancedBloomFilter({ threshold: 0.25, bloomScale: 1.2, brightness: 1, blur: 6, quality: dibujo().bloom })];
     this.container.addChild(this.normalLayer, this.glowLayer);
+  }
+
+  /** Gráficos BAJA: de cada ráfaga de partículas sale la mitad (se salta una de cada dos). */
+  private salta(i: number): boolean {
+    return this.particulas < 1 && i % 2 === 1;
   }
 
   private spawn(tex: Texture, glow: boolean, p: Omit<Particle, 'sprite'>, tint: number, rot = 0): void {
@@ -219,6 +228,7 @@ export class FxLayer {
 
   private sparks(x: number, y: number, n: number, dir: number, spread: number, speed: [number, number], color: number, life: [number, number], size = 0.35): void {
     for (let i = 0; i < n; i++) {
+      if (this.salta(i)) continue;
       const base = dir >= 0 ? 0 : Math.PI;
       const a = base + rand(-spread, spread);
       const v = rand(speed[0], speed[1]);
@@ -257,6 +267,7 @@ export class FxLayer {
     const nRays = [10, 16, 22][k];
     const base = dir >= 0 ? 0 : Math.PI;
     for (let i = 0; i < nRays; i++) {
+      if (this.salta(i)) continue;
       // La mitad de los rayos sale hacia donde va el golpe; el resto, para cualquier lado.
       const a = i % 2 === 0 ? base + rand(-1.1, 1.1) : rand(0, Math.PI * 2);
       const l = Math.round(rand(7, 11) + k * 3);
@@ -293,6 +304,7 @@ export class FxLayer {
 
   dust(x: number, y: number, n: number, big: boolean): void {
     for (let i = 0; i < n; i++) {
+      if (this.salta(i)) continue;
       const l = Math.round(rand(18, 30));
       const s = big ? rand(0.25, 0.45) : rand(0.15, 0.28);
       this.spawn(this.tex.dot, false, {
@@ -306,6 +318,7 @@ export class FxLayer {
     this.flash(x, y, big ? 1.6 : 0.9, 0xffffff, big ? 14 : 10);
     this.ring(x, y, 0.1, big ? 1.4 : 0.7, color, big ? 18 : 12);
     for (let i = 0; i < (big ? 22 : 12); i++) {
+      if (this.salta(i)) continue;
       const a = rand(0, Math.PI * 2);
       const v = rand(1, big ? 5 : 3.5);
       const l = Math.round(rand(12, 24));
@@ -335,6 +348,7 @@ export class FxLayer {
     this.flash(x, y, 2.2, 0xffffff, 26);
     this.ring(x, y, 0.2, 2.4, color, 30);
     for (let i = 0; i < 14; i++) {
+      if (this.salta(i)) continue;
       const a = (i / 14) * Math.PI * 2;
       const l = 28;
       this.spawn(this.tex.spark, true, {
@@ -376,6 +390,7 @@ export class FxLayer {
   splash(x: number, y: number, big: boolean): void {
     const n = big ? 14 : 3;
     for (let i = 0; i < n; i++) {
+      if (this.salta(i)) continue;
       const l = Math.round(rand(14, 26));
       this.spawn(this.tex.dot, true, {
         x: x + rand(-8, 8), y, vx: rand(-1.6, 1.6), vy: rand(big ? -4.5 : -2.6, -1), life: l, max: l,
@@ -394,6 +409,7 @@ export class FxLayer {
   /** Géiser: columna de agua que sube y se abre arriba (remate de rastas y del piquero). */
   geyser(x: number, y: number, h: number): void {
     for (let i = 0; i < 26; i++) {
+      if (this.salta(i)) continue;
       const l = Math.round(rand(18, 34));
       this.spawn(this.tex.dot, true, {
         x: x + rand(-6, 6), y: y - rand(0, 10), vx: rand(-1.2, 1.2), vy: -rand(h * 0.04, h * 0.075), life: l, max: l,
@@ -407,6 +423,7 @@ export class FxLayer {
   /** Bebida con gas: burbujas blancas y gotas cafés que saltan y suben (golpes y combos de Carlitos). */
   fizz(x: number, y: number, n: number): void {
     for (let i = 0; i < n; i++) {
+      if (this.salta(i)) continue;
       const l = Math.round(rand(14, 28));
       const foam = Math.random() < 0.55;
       this.spawn(this.tex.dot, foam, {
@@ -420,6 +437,7 @@ export class FxLayer {
   /** Fuego: llamas y brasas que suben desde (x, y) hasta ~h de alto (combos y especiales de fuego). */
   fire(x: number, y: number, h: number): void {
     for (let i = 0; i < 30; i++) {
+      if (this.salta(i)) continue;
       const l = Math.round(rand(16, 30));
       this.spawn(this.tex.dot, true, {
         x: x + rand(-12, 12), y: y - rand(0, 12), vx: rand(-0.8, 0.8), vy: -rand(h * 0.03, h * 0.06), life: l, max: l,
@@ -435,6 +453,7 @@ export class FxLayer {
     this.ring(x, y - 70, 0.08, 1.1, color, 14);
     this.flash(x, y - 70, 0.9, color, 8);
     for (let i = 0; i < 14; i++) {
+      if (this.salta(i)) continue;
       const ang = rand(0, Math.PI * 2);
       const v = rand(2.5, 5);
       const l = Math.round(rand(10, 18));
@@ -475,6 +494,7 @@ export class FxLayer {
     this.flash(x, y, 1, 0xffffff, 10);
     this.ring(x, y, 0.1, 0.8, 0x9ae0ff, 14);
     for (let i = 0; i < 10; i++) {
+      if (this.salta(i)) continue;
       const a = -Math.PI / 2 + rand(-0.5, 0.5);
       const v = rand(4, 8);
       const l = Math.round(rand(10, 16));

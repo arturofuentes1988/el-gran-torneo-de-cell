@@ -1,6 +1,6 @@
-// Panel "MOVIMIENTOS": golpes, especiales, súper, mecánicas y combos de cada
+// Panel "MOVIMIENTOS": especiales, súper, ultra y combos sugeridos de cada
 // luchador, armado desde sus datos (FighterDef). Lo usan la pantalla del menú
-// y la pausa. Los botones se muestran como las teclas que el jugador tiene
+// y la pausa (que lo abre en el luchador con que se está peleando). Los botones se muestran como las teclas que el jugador tiene
 // configuradas (CONTROLES), nunca con abreviaturas.
 
 import { BlurFilter, Container, Graphics, Sprite, type Texture } from 'pixi.js';
@@ -13,7 +13,8 @@ import { capHeight, textTokens, tokenLine, type Token } from './keycap';
 import { tactil } from '../input/touch';
 import { outlinedText } from './text';
 
-const SIZE = 7;
+/** Letra de la lista (más grande que antes: ahora la lista es corta y se lee bien en el celular). */
+const SIZE = 8;
 const ROW = capHeight(SIZE) + 3;
 /** Zona desplazable (a la derecha de la tarjeta del luchador). */
 const AREA_X = 138;
@@ -49,7 +50,6 @@ export const cap = (label: string): Token => ({ cap: label });
 export const txt = (text: string, color?: number): Token[] => textTokens(text, color);
 /** Palabra corta entre teclas ("O", "+", ">"), con poco aire a los lados. */
 export const joint = (t: string): Token[] => [{ gap: 2 }, { text: t, color: C_SOFT }, { gap: 4 }];
-const sep = joint('>');
 
 /** Botones de un especial: una tecla, o "A O S" si sirve cualquier golpe (cambia la fuerza). */
 export function buttonTokens(buttons: Btn[] | undefined, c: Caps): Token[] {
@@ -98,103 +98,46 @@ function items(def: FighterDef, c: Caps): Item[] {
     if (out.length) out.push({ kind: 'space' });
     out.push({ kind: 'head', text, color });
   };
-
-  head('BOTONES');
-  const btn = (label: string, k: string): Token[] => [cap(k), { gap: 3 }, { text: label, color: C_TEXT }];
-  out.push({ kind: 'pair', left: btn('GOLPE DÉBIL', c.lp), right: btn('GOLPE FUERTE', c.hp) });
-  out.push({ kind: 'pair', left: btn('PATADA DÉBIL', c.lk), right: btn('PATADA FUERTE', c.hk) });
-  out.push({ kind: 'pair', left: btn('MODO PODER', c.power), right: btn('RODADA', c.roll) });
-  out.push({
-    kind: 'pair',
-    left: btn('PELÁ', c.taunt),
-    right: [cap(c.up), cap(c.down), cap(c.left), cap(c.right), { gap: 3 }, { text: 'MOVERSE', color: C_TEXT }],
-  });
-
-  const stance = (st: 'stand' | 'crouch' | 'air', label: Token[]) => {
-    const n = def.normals[st];
-    const cell = (b: Btn): Token[] => [cap(c[b]), { gap: 3 }, { text: (def.moves[n[b]]?.name ?? '-').toUpperCase(), color: C_TEXT }];
-    out.push({ kind: 'line', tokens: label });
-    out.push({ kind: 'pair', left: cell('lp'), right: cell('hp') });
-    out.push({ kind: 'pair', left: cell('lk'), right: cell('hk') });
-  };
-  head('GOLPES');
-  stance('stand', txt('DE PIE', C_SOFT));
-  stance('crouch', [...txt('AGACHADO (MANTÉN ', C_SOFT), cap(c.down), ...txt(')', C_SOFT)]);
-  stance('air', txt('EN EL AIRE', C_SOFT));
-
-  // Las versiones débil y fuerte (mismo nombre) van en una fila, del más simple al más complejo.
-  const especiales = new Map<string, { motion?: MotionId; buttons: Btn[] }>();
-  let superRow: { name: string; motion?: MotionId; buttons?: Btn[]; cost: number } | null = null;
-  let ultraRow: { name: string; motion?: MotionId; buttons?: Btn[]; cost: number; danger: number } | null = null;
-  for (const id of [...def.specials].reverse()) {
-    const mv = def.moves[id];
-    if (!mv) continue;
-    if (mv.kind === 'super') {
-      superRow = { name: mv.name, motion: mv.motion, buttons: mv.buttons, cost: Math.round((mv.meterCost ?? 100) / 100) };
-      continue;
-    }
-    if (mv.kind === 'ultra') {
-      ultraRow = {
-        name: mv.name, motion: mv.motion, buttons: mv.buttons, cost: Math.round((mv.meterCost ?? 200) / 100),
-        danger: Math.round((mv.ultra?.danger ?? 0.25) * 100),
-      };
-      continue;
-    }
-    const e = especiales.get(mv.name) ?? { motion: mv.motion, buttons: [] };
-    for (const b of mv.buttons ?? []) if (!e.buttons.includes(b)) e.buttons.push(b);
-    especiales.set(mv.name, e);
-  }
+  const bars = (cost: number | undefined, base: number): number => Math.round((cost ?? base) / 100);
   const command = (motion: MotionId | undefined, buttons: Btn[] | undefined): Token[] => [
     ...(motion ? txt(MOTION[motion]) : []),
     ...joint('+'),
     ...buttonTokens(buttons, c),
   ];
-  head('ESPECIALES');
-  for (const [name, e] of especiales) out.push({ kind: 'row', name: name.toUpperCase(), color: C_NAME, cmd: command(e.motion, e.buttons) });
-  if (superRow) {
-    head(`SÚPER · ${superRow.cost} BARRA${superRow.cost > 1 ? 'S' : ''}`, C_SUPER);
-    out.push({ kind: 'row', name: superRow.name.toUpperCase(), color: C_SUPER, cmd: command(superRow.motion, superRow.buttons) });
+
+  // Solo lo que hay que aprender de cada luchador: especiales, súper, ultra y combos sugeridos
+  // (los golpes normales y las mecánicas son iguales para todos y se ven en la galería PERSONAJES).
+  // Las versiones débil y fuerte (mismo nombre) van en una fila, del más simple al más complejo.
+  const especiales = new Map<string, { motion?: MotionId; buttons: Btn[] }>();
+  const supers: Array<{ name: string; motion?: MotionId; buttons?: Btn[]; cost: number }> = [];
+  const ultras: Array<{ name: string; motion?: MotionId; buttons?: Btn[]; cost: number; danger: number }> = [];
+  for (const id of [...def.specials].reverse()) {
+    const mv = def.moves[id];
+    if (!mv) continue;
+    if (mv.kind === 'super') {
+      supers.unshift({ name: mv.name, motion: mv.motion, buttons: mv.buttons, cost: bars(mv.meterCost, 100) });
+    } else if (mv.kind === 'ultra') {
+      ultras.unshift({ name: mv.name, motion: mv.motion, buttons: mv.buttons, cost: bars(mv.meterCost, 200), danger: Math.round((mv.ultra?.danger ?? 0.25) * 100) });
+    } else {
+      const e = especiales.get(mv.name) ?? { motion: mv.motion, buttons: [] };
+      for (const b of mv.buttons ?? []) if (!e.buttons.includes(b)) e.buttons.push(b);
+      especiales.set(mv.name, e);
+    }
   }
-  if (ultraRow) {
-    head(`ULTRA · ${ultraRow.cost} BARRAS`, C_ULTRA);
-    out.push({ kind: 'row', name: ultraRow.name.toUpperCase(), color: C_ULTRA, cmd: command(ultraRow.motion, ultraRow.buttons) });
-    out.push({ kind: 'line', tokens: txt(`RIVAL EN PELIGRO: ${ultraRow.danger}% DE VIDA O MENOS`, C_SOFT) });
+  if (especiales.size) {
+    head('ESPECIALES');
+    for (const [name, e] of especiales) out.push({ kind: 'row', name: name.toUpperCase(), color: C_NAME, cmd: command(e.motion, e.buttons) });
+  }
+  for (const sp of supers) {
+    head(`SÚPER · ${sp.cost} BARRA${sp.cost > 1 ? 'S' : ''}`, C_SUPER);
+    out.push({ kind: 'row', name: sp.name.toUpperCase(), color: C_SUPER, cmd: command(sp.motion, sp.buttons) });
+  }
+  for (const ul of ultras) {
+    head(`ULTRA · ${ul.cost} BARRAS`, C_ULTRA);
+    out.push({ kind: 'row', name: ul.name.toUpperCase(), color: C_ULTRA, cmd: command(ul.motion, ul.buttons) });
+    out.push({ kind: 'line', tokens: txt(`RIVAL EN PELIGRO: ${ul.danger}% DE VIDA O MENOS`, C_SOFT) });
     out.push({ kind: 'line', tokens: txt('SI CONECTA, HACE TODOS SUS GOLPES SOLO', C_SOFT) });
   }
-
-  head('MECÁNICAS');
-  const mec = (name: string, cmd: Token[]) => out.push({ kind: 'row', name, color: C_NAME, cmd });
-  const chain = [cap(c.lp), ...sep, cap(c.lk), ...sep, cap(c.hp), ...sep, cap(c.hk)];
-  mec('BLOQUEAR', txt('MANTÉN ← · BAJOS: ↙'));
-  mec('CADENA', [...chain, ...txt(' AL CONECTAR', C_SOFT)]);
-  // El lanzador lleva el nombre del golpe del luchador (René: GANCHO, como en Mortal Kombat).
-  const launcherId = def.mechanics?.launcher ?? def.normals.crouch.hp;
-  const launcherName = (launcherId && def.moves[launcherId]?.name) || 'Lanzador';
-  if (launcherId) mec(launcherName.toUpperCase(), [...txt('↓'), ...joint('+'), cap(c.hp), ...txt(' Y LUEGO ↑')]);
-  mec('COMBO AÉREO', [...txt('EN EL AIRE: ', C_SOFT), ...chain]);
-  mec('SUPERSALTO', txt('↓ Y LUEGO ↑ RÁPIDO'));
-  mec('SALTO CORTO', txt('TOCA ↑ Y SUELTA'));
-  mec('RODADA', [cap(c.roll), ...joint('O'), cap(c.lp), ...joint('+'), cap(c.lk), ...txt(' · CON ← ATRÁS', C_SOFT)]);
-  mec('MODO PODER', [cap(c.power), ...joint('O'), cap(c.hp), ...joint('+'), cap(c.hk), ...txt(' · 1 BARRA', C_SOFT)]);
-  mec('CONTRAATAQUE', [...txt('BLOQUEANDO: →'), ...joint('+'), cap(c.roll), ...txt(' · 1 BARRA', C_SOFT)]);
-  mec('AGARRE', [...txt('PEGADO: ', C_SOFT), cap(c.lp), ...joint('+'), cap(c.lk), ...txt(' · CON ← ATRÁS', C_SOFT)]);
-  mec('PELÁ', [cap(c.taunt), ...txt(' LE QUITA SÚPER AL RIVAL', C_SOFT)]);
-
-  head('COMBOS KILLER');
-  const anyBtn = [cap(c.lp), ...joint('O'), cap(c.hp), ...joint('O'), cap(c.lk), ...joint('O'), cap(c.hk)];
-  mec('DOBLE', [...txt('ESPECIAL QUE PEGA', C_SOFT), ...sep, ...anyBtn]);
-  mec('ENLACE', [...txt('EN EL DOBLE: ESPECIAL CON ', C_SOFT), cap(c.lp), ...joint('O'), cap(c.lk)]);
-  mec('REMATE', [...txt('ESPECIAL CON ', C_SOFT), cap(c.hp), ...joint('O'), cap(c.hk), ...txt(', SÚPER O ULTRA', C_SOFT)]);
-  out.push({ kind: 'line', tokens: txt('DOBLE: 2 GOLPES SOLOS, HASTA 4 POR COMBO', C_SOFT) });
-  mec('COMBO BREAKER', [...txt('DOBLE DÉBIL: ', C_SOFT), cap(c.roll), ...joint('O'), cap(c.lp), ...joint('+'), cap(c.lk)]);
-  mec('', [...txt('DOBLE FUERTE: ', C_SOFT), cap(c.power), ...joint('O'), cap(c.hp), ...joint('+'), cap(c.hk)]);
-  mec('BLOQUEO', txt('SI FALLAS: 2 SEGUNDOS SIN BREAKER', C_SOFT));
-
-  head('2 VS 2');
-  mec('CAMBIO', [cap(c.tag), ...txt(' EN NEUTRO', C_SOFT)]);
-  mec('AYUDA', [cap(c.assist), ...txt(' TU COMPAÑERO HACE SU ESPECIAL', C_SOFT)]);
-  mec('SÚPER EN EQUIPO', [...txt('DURANTE TU SÚPER: '), cap(c.tag)]);
-  mec('VIDA ROJA', txt('SE RECUPERA AFUERA', C_SOFT));
 
   const combos = def.combos?.length
     ? def.combos
@@ -227,8 +170,10 @@ export class MoveListPanel {
   /** Centro del nombre del encabezado: tocar a su izquierda o derecha cambia de luchador. */
   private nameMid = VIEW_W - 60;
 
-  constructor(private assets: Assets, start = 0) {
-    this.index = start;
+  /** start: luchador del plantel con que abre; player: de quién son las teclas que muestra (J1 / J2). */
+  constructor(private assets: Assets, start = 0, player: 0 | 1 = 0) {
+    this.index = Math.max(0, start);
+    this.player = player;
     const bg = new Graphics();
     bg.rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0x05020c, alpha: 0.86 });
     // Panel principal y tarjeta del luchador.
@@ -284,14 +229,14 @@ export class MoveListPanel {
         continue;
       }
       if (it.kind === 'head') {
-        const t = outlinedText(it.text, 8, it.color ?? C_HEAD);
+        const t = outlinedText(it.text, 9, it.color ?? C_HEAD);
         t.position.set(AREA_X, y);
         const line = new Graphics()
-          .moveTo(AREA_X + t.width + 6, y + 5)
-          .lineTo(AREA_X + AREA_W, y + 5)
+          .moveTo(AREA_X + t.width + 6, y + 6)
+          .lineTo(AREA_X + AREA_W, y + 6)
           .stroke({ color: it.color ?? C_HEAD, width: 1, alpha: 0.35 });
         this.body.addChild(line, t);
-        y += 14;
+        y += 16;
         stripe = 0;
         continue;
       }

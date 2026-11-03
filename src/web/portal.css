@@ -1,0 +1,323 @@
+/* Web del juego: mismo estilo que los menús (morado, dorado, botones inclinados). */
+:root {
+  --oro: #ffd040;
+  --oro-suave: #ffd76a;
+  --rosa: #ff4fd8;
+  --cab: 56px;
+  --fuente: Oswald, 'Arial Narrow', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* El color de fondo va solo en html: si el body lo tuviera, taparía la imagen de abajo. */
+html {
+  background: #07040c;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  color: #fff4e0;
+  font-family: var(--fuente);
+  letter-spacing: 0.5px;
+}
+
+/* De fondo, el ring del torneo, borroso y oscuro. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -20px;
+  z-index: -1;
+  background: url('/torneo/liviano/fondo.webp') center / cover no-repeat;
+  filter: blur(6px) brightness(0.32) saturate(1.2);
+}
+
+.cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  height: var(--cab);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  background: linear-gradient(rgba(26, 8, 40, 0.97), rgba(20, 6, 31, 0.88));
+  border-bottom: 2px solid var(--oro);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.logo {
+  color: #fff4e0;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 21px;
+  letter-spacing: 1.5px;
+  white-space: nowrap;
+  text-shadow: 0 2px 0 #5a0a10;
+}
+
+.logo b {
+  color: var(--oro);
+}
+
+.pestanas,
+.tablas,
+.dificultades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button {
+  font: 700 15px var(--fuente);
+  letter-spacing: 1px;
+  color: #d8cfe8;
+  background: #1a0c2e;
+  border: 1px solid rgba(185, 140, 255, 0.45);
+  border-radius: 4px;
+  padding: 7px 16px;
+  transform: skewX(-12deg);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:hover {
+  filter: brightness(1.25);
+}
+
+button.activa {
+  color: #fff;
+  background: #b02a90;
+  border-color: var(--oro-suave);
+  box-shadow: 0 0 14px rgba(255, 58, 192, 0.35);
+}
+
+main {
+  padding: 16px;
+}
+
+/* JUGAR: el juego en 16:9, lo más grande que quepa. */
+#jugar .marco {
+  margin: 0 auto;
+  width: min(100%, calc((100dvh - var(--cab) - 96px) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  border: 2px solid var(--oro);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 0 0 1px #3a0a40, 0 12px 50px rgba(0, 0, 0, 0.7), 0 0 40px rgba(255, 58, 192, 0.2);
+}
+
+#jugar iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.ayuda {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #b8acc8;
+}
+
+.ayuda b {
+  color: var(--oro-suave);
+}
+
+/* RANKING */
+#ranking {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.caja {
+  padding: 22px 24px 18px;
+  border-radius: 10px;
+  background: linear-gradient(rgba(42, 15, 62, 0.94), rgba(20, 6, 31, 0.94));
+  border: 2px solid var(--oro-suave);
+  box-shadow: 0 0 0 1px #3a0a40, 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(255, 58, 192, 0.2);
+}
+
+h1 {
+  margin: 0;
+  text-align: center;
+  font-size: 30px;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 0 #3a0a40;
+}
+
+.acento {
+  width: 110px;
+  height: 2px;
+  margin: 6px auto 16px;
+  background: var(--rosa);
+  box-shadow: 0 4px 0 -1px var(--oro);
+}
+
+.tablas,
+.dificultades {
+  justify-content: center;
+}
+
+.dificultades {
+  margin-top: 10px;
+}
+
+.dificultades button {
+  font-size: 13px;
+  padding: 5px 12px;
+}
+
+.explica {
+  margin: 14px 0 12px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #d8cfe8;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+}
+
+th {
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  color: var(--oro-suave);
+  border-bottom: 1px solid rgba(255, 215, 106, 0.4);
+}
+
+td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(185, 140, 255, 0.15);
+}
+
+tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+td.num,
+th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+td.puesto {
+  width: 44px;
+  font-weight: 700;
+  color: #b8acc8;
+}
+
+td.apodo {
+  font-weight: 700;
+}
+
+tr.oro td.puesto {
+  color: #ffd040;
+}
+
+tr.plata td.puesto {
+  color: #d8e0ec;
+}
+
+tr.bronce td.puesto {
+  color: #e09a5a;
+}
+
+tr.oro td.apodo {
+  color: #ffe9a0;
+}
+
+td.luchador {
+  white-space: nowrap;
+}
+
+td.luchador img {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 215, 106, 0.5);
+  vertical-align: middle;
+  margin-right: 8px;
+  object-fit: cover;
+}
+
+.vacio {
+  padding: 26px 10px;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #ffe6a0;
+}
+
+.vacio button {
+  margin-top: 12px;
+}
+
+.pie {
+  margin: 18px 0 8px;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: #8a7fa0;
+}
+
+/* Celular (vertical u horizontal): el juego ocupa todo lo que queda bajo la cabecera (el juego acomoda sus controles). */
+@media (pointer: coarse), (max-width: 700px), (max-height: 500px) {
+  :root {
+    --cab: 48px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+
+  main {
+    padding: 0;
+  }
+
+  #jugar .marco {
+    width: 100%;
+    height: calc(100dvh - var(--cab));
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .ayuda {
+    display: none;
+  }
+
+  #ranking {
+    padding: 12px;
+  }
+
+  .caja {
+    padding: 16px 12px 12px;
+  }
+
+  table {
+    font-size: 14px;
+  }
+
+  td,
+  th {
+    padding: 6px 5px;
+  }
+}

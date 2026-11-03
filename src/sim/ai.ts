@@ -40,31 +40,48 @@ export interface AiParams {
   assist: number;
   /** Probabilidad de intentar un COMBO BREAKER contra cada DOBLE (acierta la fuerza ~70% de las veces). */
   breaker: number;
+  /** Probabilidad de tirar el ultra cuando se puede (rival en peligro y barra llena). */
+  ultraUse: number;
+  /** Probabilidad de quedarse en guardia mientras el rival siga amenazando (si no, la suelta a los 18 cuadros). */
+  guardHold: number;
+  /** Peso de caminar o quedarse sin atacar (la CPU fácil "da vueltas"). */
+  wander: number;
 }
 
-/** Parámetros de cada nivel de dificultad. Todo determinista: solo cambian probabilidades y tiempos. */
+/**
+ * Parámetros de cada nivel de dificultad. Todo determinista: solo cambian probabilidades y tiempos.
+ * Los saltos entre niveles son grandes a propósito, para que se note la diferencia:
+ * - FÁCIL: reacciona tarde, casi no bloquea, golpes sueltos, casi nunca especiales, nunca súper
+ *   ni ultra, y a veces camina o se queda quieto sin atacar.
+ * - NORMAL: bloquea la mitad, algún combo corto y algún especial; súper y ultra de vez en cuando.
+ * - DIFÍCIL: bloquea casi todo, castiga, combos con especial y súper cuando puede rematar.
+ * - MUY DIFÍCIL: reacciona al instante, bloquea alto y bajo sin equivocarse mientras dure el ataque,
+ *   castiga todo, combos completos y gasta súper y ultra apenas puede.
+ */
 export const AI_LEVELS: Record<DifficultyId, AiParams> = {
-  // Lento, bloquea poco, casi no combea: le gana un principiante.
   facil: {
-    reaction: 22, block: 0.22, blockCorrect: 0.55, antiAir: 0.008,
-    specials: 0.45, combos: 0.12, launcher: 0, superUse: 0.03, powerUse: 0,
-    roll: 0.02, guardCancel: 0, punish: 0.05, idle: [18, 42], mistake: 0.2, aggression: 0.65, assist: 0.04, breaker: 0.05,
+    reaction: 30, block: 0.1, blockCorrect: 0.45, antiAir: 0.003,
+    specials: 0.15, combos: 0.05, launcher: 0, superUse: 0, powerUse: 0, ultraUse: 0,
+    roll: 0, guardCancel: 0, punish: 0.02, idle: [28, 60], mistake: 0.35, aggression: 0.55, assist: 0.03, breaker: 0,
+    guardHold: 0, wander: 0.5,
   },
   normal: {
-    reaction: 11, block: 0.52, blockCorrect: 0.8, antiAir: 0.045,
-    specials: 1, combos: 0.6, launcher: 0.5, superUse: 0.12, powerUse: 0.04,
-    roll: 0.15, guardCancel: 0.12, punish: 0.3, idle: [6, 18], mistake: 0.06, aggression: 1, assist: 0.1, breaker: 0.15,
+    reaction: 12, block: 0.5, blockCorrect: 0.78, antiAir: 0.035,
+    specials: 0.9, combos: 0.5, launcher: 0.4, superUse: 0.1, powerUse: 0.03, ultraUse: 0.2,
+    roll: 0.12, guardCancel: 0.1, punish: 0.28, idle: [7, 18], mistake: 0.07, aggression: 1, assist: 0.1, breaker: 0.12,
+    guardHold: 0.2, wander: 0.08,
   },
   dificil: {
-    reaction: 5, block: 0.78, blockCorrect: 0.93, antiAir: 0.1,
-    specials: 1.2, combos: 1, launcher: 1, superUse: 0.2, powerUse: 0.08,
-    roll: 0.3, guardCancel: 0.28, punish: 0.62, idle: [3, 10], mistake: 0.02, aggression: 1.15, assist: 0.16, breaker: 0.3,
+    reaction: 6, block: 0.75, blockCorrect: 0.9, antiAir: 0.09,
+    specials: 1.2, combos: 0.9, launcher: 0.9, superUse: 0.25, powerUse: 0.08, ultraUse: 0.55,
+    roll: 0.3, guardCancel: 0.28, punish: 0.6, idle: [3, 10], mistake: 0.02, aggression: 1.2, assist: 0.16, breaker: 0.35,
+    guardHold: 0.6, wander: 0.03,
   },
-  // Reacciona casi al instante, bloquea casi todo y castiga.
   muyDificil: {
-    reaction: 2, block: 0.95, blockCorrect: 0.98, antiAir: 0.2,
-    specials: 1.3, combos: 1.3, launcher: 1.4, superUse: 0.3, powerUse: 0.12,
-    roll: 0.45, guardCancel: 0.45, punish: 0.9, idle: [1, 6], mistake: 0, aggression: 1.3, assist: 0.22, breaker: 0.45,
+    reaction: 2, block: 0.97, blockCorrect: 1, antiAir: 0.3,
+    specials: 1.5, combos: 1.4, launcher: 1.5, superUse: 0.6, powerUse: 0.15, ultraUse: 0.95,
+    roll: 0.5, guardCancel: 0.55, punish: 0.95, idle: [0, 4], mistake: 0, aggression: 1.5, assist: 0.24, breaker: 0.6,
+    guardHold: 1, wander: 0,
   },
 };
 
@@ -133,6 +150,12 @@ export class CpuController {
   private cooldown = 40;
   private blockFrames = 0;
   private blockLow = false;
+  /** Con este bloqueo, ¿sigue en guardia mientras el rival amenace? Y cuántos cuadros lleva en guardia. */
+  private holdGuard = false;
+  private guardHeld = 0;
+  /** Ataque del rival ya evaluado para "respetarlo" (cubrirse en vez de meterse a golpear encima). */
+  private respectSerial = -1;
+  private respecting = false;
   /** Cuadro en que empieza a bloquear (tiempo de reacción); -1 si no hay nada pendiente. */
   private blockAt = -1;
   private pendingLow = false;
@@ -217,7 +240,14 @@ export class CpuController {
     // esperaba (guardia inmediata); de lejos se pone en guardia después de su tiempo de reacción.
     if (opp.state === 'attack' && opp.move && opp.move.kind !== 'throw' && opp.attackSerial !== this.seenSerial) {
       this.seenSerial = opp.attackSerial;
-      if (dist < 175 && r.chance(P.block)) {
+      if (opp.move.hit.guard === 'unblockable') {
+        if (canAct && dist < 140 && r.chance(P.block * P.guardHold)) {
+          this.blockAt = -1;
+          this.blockFrames = 0;
+          this.queue = repeat(s(7), 6);
+          return this.queue.shift()!;
+        }
+      } else if (dist < 175 && r.chance(P.block)) {
         const low = opp.move.hit.guard === 'low' && opp.grounded;
         this.pendingLow = r.chance(P.blockCorrect) ? low : !low;
         this.blockAt = m.frame + (dist < CLOSE ? 0 : Math.round(P.reaction * (0.75 + r.next() * 0.5)));
@@ -255,11 +285,16 @@ export class CpuController {
       this.blockAt = -1;
       this.blockLow = this.pendingLow;
       this.blockFrames = 18;
+      this.holdGuard = r.chance(P.guardHold);
+      this.guardHeld = 0;
       this.queue.length = 0;
       this.holdFrames = 0;
     }
     if (this.blockFrames > 0) {
       this.blockFrames--;
+      // Los niveles altos no sueltan la guardia mientras el ataque (o el proyectil) siga encima.
+      if (this.blockFrames === 0 && this.holdGuard && this.guardHeld < 90 && m.threatens(opp, me)) this.blockFrames = 1;
+      this.guardHeld++;
       return s(this.blockLow ? 1 : 4);
     }
     if (me.state === 'blockstun') return s(this.blockLow ? 1 : 4);
@@ -278,7 +313,7 @@ export class CpuController {
     // Ventana de DOBLE abierta: ¿lo hace?
     if (me.kiWindow > 0 && opp.inCombo && me.kiOpenFrame !== this.kiSeenWindow) {
       this.kiSeenWindow = me.kiOpenFrame;
-      if (me.kiDobles < MAX_DOBLES && r.chance(Math.min(0.95, 0.35 + 0.5 * P.combos))) {
+      if (me.kiDobles < MAX_DOBLES && r.chance(Math.min(0.95, 0.85 * P.combos))) {
         const strong = r.chance(0.4);
         this.queue = [s(5, strong ? r.pick([B_HP, B_HK]) : r.pick([B_LP, B_LK]))];
         return this.queue.shift()!;
@@ -287,15 +322,15 @@ export class CpuController {
     // El DOBLE conectó dos veces: enlace o remate.
     if (me.isDoble && me.dobleHits >= 2 && me.attackSerial !== this.kiSeenDoble) {
       this.kiSeenDoble = me.attackSerial;
-      if (!r.chance(Math.min(0.97, 0.5 + 0.4 * P.combos))) return null;
+      if (!r.chance(Math.min(0.97, 0.1 + 0.75 * P.combos))) return null;
       const ultra = this.ultraMove(m, me);
-      if (ultra && r.chance(0.8)) {
+      if (ultra && r.chance(P.ultraUse)) {
         this.queue = motionSteps(ultra.motion, buttonOf(ultra, false));
         return this.queue.shift()!;
       }
       const remate = me.kiDobles >= MAX_DOBLES || me.kiDobles >= 1 + r.int(0, Math.round(P.combos * 2)) || r.chance(0.25);
       const sup = this.superMove(me);
-      if (remate && sup && me.meter >= (sup.meterCost ?? 100) && r.chance(P.superUse)) {
+      if (remate && sup && !this.savingForUltra(me, opp) && me.meter >= (sup.meterCost ?? 100) && r.chance(P.superUse)) {
         this.queue = motionSteps(sup.motion, buttonOf(sup, true));
         return this.queue.shift()!;
       }
@@ -339,6 +374,21 @@ export class CpuController {
     return null;
   }
 
+  /**
+   * Los niveles que usan el ultra guardan la barra cuando al rival le falta poco para quedar en
+   * peligro y todavía no alcanza (así lo rematan con el ultra en vez de gastarla en súper).
+   */
+  private savingForUltra(me: Fighter, opp: Fighter): boolean {
+    if (this.p.ultraUse < 0.5) return false;
+    for (const id of me.def.specials) {
+      const mv = me.def.moves[id];
+      if (mv?.kind !== 'ultra' || !mv.ultra) continue;
+      const cost = mv.meterCost ?? 200;
+      return me.meter < cost + 100 && opp.health <= opp.def.health * 0.6;
+    }
+    return false;
+  }
+
   /** Un especial del luchador que cumpla la condición (o null). */
   private pickSpecial(me: Fighter, ok: (mv: MoveDef) => boolean): MoveDef | null {
     const opts = this.specialMoves(me).filter(ok);
@@ -351,6 +401,20 @@ export class CpuController {
     const dist = Math.abs(opp.x - me.x);
     if (!ACTIONABLE.has(me.state)) return s(5);
 
+    // Respeta el ataque del rival (una decisión por ataque): se cubre en vez de meterse a golpear encima.
+    if (m.threatens(opp, me)) {
+      if (opp.attackSerial !== this.respectSerial) {
+        this.respectSerial = opp.attackSerial;
+        this.respecting = r.chance(P.guardHold);
+      }
+      if (this.respecting) {
+        this.queue.length = 0;
+        this.holdFrames = 0;
+        const low = !!opp.move && opp.move.hit.guard === 'low' && opp.grounded;
+        return s(low && r.chance(P.blockCorrect) ? 1 : 4);
+      }
+    }
+
     // Antiaéreo.
     const approaching = !opp.grounded && opp.state === 'jump' && Math.sign(opp.vx) === Math.sign(me.x - opp.x);
     if (approaching && dist < 125 && r.chance(P.antiAir)) {
@@ -359,7 +423,7 @@ export class CpuController {
       return this.queue.shift()!;
     }
     // Castiga un golpe fallado cerca.
-    if (opp.state === 'attack' && !opp.connected && opp.stateFrame > 6 && dist < 90 && r.chance(P.punish * 0.15)) {
+    if (opp.state === 'attack' && !opp.connected && opp.stateFrame > 6 && dist < 90 && r.chance(P.punish * 0.3)) {
       this.queue = this.punish(dist);
       return this.queue.shift()!;
     }
@@ -397,16 +461,17 @@ export class CpuController {
 
     // Ultra si el rival está en peligro (de cerca), súper o Modo Poder si hay barra.
     const ultra = this.ultraMove(m, me);
-    if (ultra && dist < 85 && r.chance(Math.min(0.9, P.superUse * 2 + 0.1))) {
+    if (ultra && dist < 85 && r.chance(P.ultraUse)) {
       this.queue = motionSteps(ultra.motion, buttonOf(ultra, false));
       return this.queue.shift()!;
     }
     const sup = this.superMove(me);
-    if (sup && me.meter >= (sup.meterCost ?? 100) && dist < 230 && r.chance(P.superUse)) {
+    const saving = this.savingForUltra(me, opp);
+    if (sup && !saving && me.meter >= (sup.meterCost ?? 100) && dist < 230 && r.chance(P.superUse)) {
       this.queue = motionSteps(sup.motion, buttonOf(sup, true));
       return this.queue.shift()!;
     }
-    if (me.meter >= 100 && me.powerTimer === 0 && dist < 260 && r.chance(P.powerUse)) {
+    if (!saving && me.meter >= 100 && me.powerTimer === 0 && dist < 260 && r.chance(P.powerUse)) {
       this.queue = [s(5, B_HP | B_HK | B_POWER_KEY)];
       return this.queue.shift()!;
     }
@@ -420,6 +485,8 @@ export class CpuController {
     const hasFireball = !!fireballMv;
     const A = P.aggression;
     const opts: Array<[number, () => void]> = [];
+    // Da vueltas sin atacar: camina para cualquier lado o se queda parado (sobre todo en FÁCIL).
+    if (P.wander > 0) opts.push([P.wander, () => this.walk(r.pick([4, 5, 5, 6]), r.int(20, 50))]);
     if (dist > 220) {
       opts.push([0.4 * A, () => this.walk(6, r.int(16, 34))]);
       if (hasFireball && me.projectileCount === 0) opts.push([0.22 * P.specials, () => this.fireball()]);
@@ -499,7 +566,7 @@ export class CpuController {
     const q = [s(5, B_LP), ...repeat(s(5), 8), s(5, B_LK), ...repeat(s(5), 9), s(5, B_HP)];
     const me = this.lastPoint;
     const mv = me ? (this.pickSpecial(me, (x) => !x.projectile && x.motion !== 'charge') ?? this.pickSpecial(me, (x) => !!x.projectile)) : null;
-    if (mv && this.rng.chance(Math.min(1, this.p.specials * 0.5))) q.push(...repeat(s(5), 3), ...motionSteps(mv.motion, buttonOf(mv, false)));
+    if (mv && this.rng.chance(Math.min(1, this.p.combos * 0.75))) q.push(...repeat(s(5), 3), ...motionSteps(mv.motion, buttonOf(mv, false)));
     this.queue = q;
   }
 

@@ -5,7 +5,7 @@
 
 import type { Game, Scene } from '../app/game';
 import { loadDifficulty, loadQuality, saveDifficulty, saveMuted, saveQuality, type QualityPref } from '../app/settings';
-import { calidad, elegirCalidad } from '../content/calidad';
+import { elegirNivel, nivel, NIVELES, NOMBRE_NIVEL } from '../content/calidad';
 import { arcade } from '../render/text';
 import { DIFFICULTIES, DIFFICULTY_NAME, type DifficultyId } from '../sim/difficulty';
 import { CharacterSelectScene } from './characterSelect';
@@ -73,12 +73,10 @@ export class CasualMenuScene extends MenuScene {
   }
 }
 
-const QUALITIES: readonly QualityPref[] = ['auto', 'hd', 'liviano'];
-
 /** OPCIONES: fichas y movimientos de los luchadores, escenarios, controles, dificultad, sonido y gráficos. */
 export class OptionsMenuScene extends MenuScene {
   private difficulty: DifficultyId = loadDifficulty();
-  /** Gráficos elegidos (se aplican al aceptar: el juego se recarga con la otra calidad). */
+  /** Gráficos elegidos: BAJA, MEDIA, ALTA o ULTRA ('auto' mientras no se cambien). Se aplican al aceptar (recarga). */
   private quality: QualityPref = loadQuality();
 
   constructor(game: Game) {
@@ -100,25 +98,25 @@ export class OptionsMenuScene extends MenuScene {
 
   private updateQualityLabel(): void {
     const i = this.options.findIndex((o) => o.id === 'graficos');
-    const name = (q: 'hd' | 'liviano') => (q === 'hd' ? 'HD' : 'LIVIANOS');
-    const label = this.quality === 'auto' ? `AUTOMÁTICOS (${name(elegirCalidad('auto'))})` : name(this.quality);
+    // Sin elegir todavía: el nivel que corresponde al aparato, con la marca (AUTO).
+    const label = NOMBRE_NIVEL[elegirNivel(this.quality, false)] + (this.quality === 'auto' ? ' (AUTO)' : '');
     const pending = this.quality !== loadQuality() ? ' · ACEPTAR' : '';
     this.items[i].text = arcade(`GRÁFICOS: < ${label} >${pending}`);
   }
 
   private changeQuality(step: number): void {
-    const n = QUALITIES.length;
-    this.quality = QUALITIES[(QUALITIES.indexOf(this.quality) + step + n) % n];
+    const n = NIVELES.length;
+    const cur = NIVELES.indexOf(elegirNivel(this.quality, false));
+    this.quality = NIVELES[(cur + step + n) % n];
     this.updateQualityLabel();
     this.game.sfx.play('menuMove');
   }
 
-  /** Guarda los gráficos elegidos y recarga el juego si cambian (HD: computador; LIVIANOS: celular). */
+  /** Guarda los gráficos elegidos y recarga el juego si cambia el nivel (el arte y la escala de dibujo se eligen al abrir). */
   private applyQuality(): void {
     if (this.quality === loadQuality()) return;
-    const before = calidad();
     saveQuality(this.quality);
-    if (elegirCalidad(this.quality) !== before) location.reload();
+    if (elegirNivel(this.quality) !== nivel()) location.reload();
     else this.updateQualityLabel();
   }
 

@@ -253,11 +253,29 @@ export async function entrarConGoogle(motivo: Motivo): Promise<string | null> {
   try {
     const c = await aTiempo(obtenerCliente());
     escribir(() => sessionStorage, KEY_VOLVER, motivo);
-    const { error } = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
-    return error ? traducir(error) : null;
+    // Dentro de la web (iframe), Google no se deja mostrar en un marco: se va con la página
+    // entera y vuelve a la web, que le pasa al juego lo que trae (?code=…).
+    const arriba = ventanaDeArriba();
+    const { data, error } = await c.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: arriba.location.origin + arriba.location.pathname, skipBrowserRedirect: true },
+    });
+    if (error) return traducir(error);
+    arriba.location.assign(data.url);
+    return null;
   } catch (err) {
     return traducir(err);
   }
+}
+
+/** La página de la web si el juego va dentro de ella (mismo sitio); si no, la del juego. */
+function ventanaDeArriba(): Window {
+  try {
+    if (window.top && window.top !== window && window.top.location.origin === location.origin) return window.top;
+  } catch {
+    // Dentro de otro sitio: no se puede tocar la página de arriba.
+  }
+  return window;
 }
 
 /** Entra con correo y contraseña; devuelve el error para mostrar, o null si entró. */
@@ -331,6 +349,32 @@ export async function guardarApodo(a: string): Promise<string | null> {
     if (error) return traducir(error);
     perfil = { apodo: s };
     return null;
+  } catch (err) {
+    return traducir(err);
+  }
+}
+
+/** Un ARCADE ganado, para el ranking de campeones. */
+export interface RecordArcade {
+  dificultad: string;
+  luchador: string;
+  segundos: number;
+  continues: number;
+}
+
+/** Sube el tiempo de un ARCADE ganado; devuelve el aviso para mostrar si no se pudo, o null si quedó. */
+export async function subirRecordArcade(r: RecordArcade): Promise<string | null> {
+  if (!usuario) return 'ENTRA CON TU CUENTA PARA SALIR EN EL RANKING';
+  if (perfil === undefined) await leerPerfil().catch(() => undefined);
+  if (!perfil) return 'ELIGE TU APODO EN EN LÍNEA PARA SALIR EN EL RANKING';
+  try {
+    const c = await aTiempo(obtenerCliente());
+    const fila = { dificultad: r.dificultad, luchador: r.luchador, segundos: Math.round(r.segundos * 10) / 10, continues: r.continues };
+    const { error } = await aTiempo(c.from('arcade_records').insert(fila));
+    if (!error) return null;
+    if (error.code === '23514') return 'ESE TIEMPO NO SE PUEDE GUARDAR';
+    if (error.code === 'PGRST205' || error.code === '42P01') return 'EL RANKING TODAVÍA NO ESTÁ LISTO';
+    return traducir(error);
   } catch (err) {
     return traducir(err);
   }

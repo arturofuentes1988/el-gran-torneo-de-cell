@@ -253,6 +253,63 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   - Revisar que la URL Configuration del panel tenga la dirección del juego.
   - Borrar las cuentas de prueba `qa.torneo.*@example.com` en Authentication → Users.
 
+## Web con ranking y lote de mejoras (3 de noviembre)
+
+- **La web** (`index.html`, `src/web/`): pestañas JUGAR (el juego, `juego.html`, en un iframe;
+  en el celular ocupa toda la pantalla bajo la cabecera) y RANKING (`#ranking` en la dirección
+  la abre directo).
+  - Cuatro tablas: PUNTOS DE LIGA (tipo ELO, todos parten con 1.000), VICTORIAS (con % de
+    ganadas), MEJOR RACHA y CAMPEONES DEL ARCADE (mejor tiempo de cada jugador, por dificultad).
+  - Las de en línea quedan vacías hasta la fase 2 ("las salas llegan en la próxima actualización").
+  - Se leen sin cuenta con las funciones `ranking_liga` y `ranking_arcade`
+    (`supabase/migraciones/002_ranking_y_errores.sql`), que dan solo apodos y números.
+  - La pestaña RANKING calla el juego (`postMessage` → `Sfx.pausarAudio`).
+  - Dentro de la web, el juego no se pone solo en pantalla completa al primer toque: tiene su botón.
+  - Entrar con Google desde la web se hace con la página entera (Google no se deja mostrar en un
+    iframe). Vuelve a la web con `?code=…`, que se lo pasa al juego.
+- **ARCADE**:
+  - El mapa con avión pasó a ser **LA TORRE** (idea de Mortal Kombat, no igual): un rascacielos
+    de neón dibujado con código, con un piso por rival y la final en la azotea.
+  - Al coronarse muestra el tiempo total (`match.frame` de todas sus peleas, también las
+    perdidas) y los continues, y lo sube a `arcade_records` si tiene cuenta y apodo.
+- **Colores**: ya no se eligen. Si los dos eligen al mismo luchador, el segundo sale con otra
+  ropa (lo hacía `FightScene`).
+- **Práctica**:
+  - MUÑECO pasó a llamarse SPARRING.
+  - En el celular, cuatro botones con íconos abajo al centro (∞ SÚPER, SPARRING, VIDA,
+    ↺ POSICIÓN). Aprietan las teclas 1 a 4 y se esconden en la pausa.
+- **Celular**:
+  - Los botones dicen COMBO DÉBIL, COMBO FUERTE, PATADA DÉBIL y PATADA FUERTE.
+  - La cruceta muestra las diagonales (más chicas).
+  - Botón de pantalla completa: abajo a la derecha en los menús, junto a ☰ en la pelea y chico
+    en el computador. Pone el celular horizontal en Android; en iPhone no existe.
+- **MOVIMIENTOS**:
+  - Muestra solo especiales, súper, ultra y combos sugeridos.
+  - Desde la pausa abre en el luchador con que estás peleando.
+  - La pausa es más grande (filas de 31 unidades, unos 45 px en un celular) y se toca la fila entera.
+- **Dificultad**:
+  - Se rehízo la tabla de la CPU (`src/sim/ai.ts`) para que cada nivel se note.
+  - `herramientas/dificultad_sim.ts` lo mide: MUY DIFÍCIL le gana a DIFÍCIL el 86 % y a NORMAL y
+    FÁCIL el 100 %.
+  - FÁCIL ya no le gana ni a uno que aprieta botones al azar.
+- **GRÁFICOS**: BAJA, MEDIA, ALTA y ULTRA (`src/content/calidad.ts`).
+  - BAJA: arte liviano, escala 2, la mitad de las chispas y sin videos de fondo.
+  - MEDIA: liviano, como el celular de antes.
+  - ALTA: HD con escala 3.
+  - ULTRA: HD con escala 4.
+  - Lo guardado como "hd" se lee como ALTA y "liviano" como MEDIA.
+- **Que nada congele el juego** (`src/app/errores.ts`). Un error en un cuadro ya no corta el
+  bucle: se anota y el juego sigue. Si falla 1,5 s seguidos, vuelve al menú.
+  - Si el celular pierde la pantalla (WebGL), avisa y ofrece recargar.
+  - Los errores se mandan a la tabla `errores` de Supabase (se ven en el panel, Table Editor).
+    Los mapas del código se arman aparte (`sourcemap: 'hidden'`) para poder leerlos.
+  - **Causa de la imagen congelada** (práctica en el celular, y la final del ARCADE): al soltar
+    un escenario viejo (`StageLibrary.evict`), `StageView.destroy` destruía también las texturas
+    de las partículas, que son una sola para todos los escenarios. El escenario en pantalla
+    quedaba con partículas rotas, el dibujo fallaba y el bucle se cortaba. En calidad liviana se
+    sueltan escenarios en casi cada pelea, por eso pasaba en el celular. Ahora cada escenario
+    destruye solo las texturas que bajó.
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra

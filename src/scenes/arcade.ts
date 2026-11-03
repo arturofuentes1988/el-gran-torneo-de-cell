@@ -1,10 +1,11 @@
 // ARCADE: el jugador elige su luchador y tiene que ganarle a cada uno de los demás,
 // uno tras otro, contra la CPU (la última pelea es un poco más difícil).
-// Antes de cada pelea, el MAPA: Chile acostado (el norte a la izquierda), en neón, con
-// un avión que vuela de la sede anterior a la siguiente (como en Street Fighter II).
+// Antes de cada pelea, LA TORRE: un rascacielos de neón con un piso por rival y la final
+// en la azotea; el ascensor sube con la cara del jugador hasta el piso del próximo rival.
 // Cada rival pelea en su escenario (o en uno libre) y la final es en el ring de
-// EL GRAN TORNEO (el del título). Después del mapa, la pantalla VS. Si pierde:
-// ¿CONTINUAR? (cuenta regresiva; con aceptar repite esa pelea). Si gana todas: ¡CAMPEÓN!
+// EL GRAN TORNEO (el del título). Después de la torre, la pantalla VS. Si pierde:
+// ¿CONTINUAR? (cuenta regresiva; con aceptar repite esa pelea). Si gana todas: ¡CAMPEÓN!,
+// con el tiempo total (lo que duraron sus peleas), que se sube al ranking si tiene cuenta.
 
 import { ColorMatrixFilter, Container, Graphics, Sprite, type Filter, type Text, type Texture } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
@@ -15,7 +16,8 @@ import { NEON_CYAN, NEON_PINK } from '../render/live';
 import { arcade, outlinedText } from '../render/text';
 import { tactil } from '../input/touch';
 import type { StagePlace } from '../content/stages';
-import { DIFFICULTIES } from '../sim/difficulty';
+import { subirRecordArcade } from '../online/cuenta';
+import { DIFFICULTIES, DIFFICULTY_NAME, type DifficultyId } from '../sim/difficulty';
 import { FightScene } from './fight';
 import { MainMenuScene } from './modeSelect';
 import { loadTitleArena } from './title';
@@ -32,7 +34,7 @@ interface Venue {
 
 /** La final: el ring del título, en la costa central. */
 const RING: Venue = { stageId: null, nombre: 'EL GRAN TORNEO', lugar: { nombre: 'EL GRAN TORNEO', lat: -33.05, lon: -71.62 } };
-/** De dónde sale el avión si el luchador del jugador no tiene ciudad (el extremo norte). */
+/** Desde dónde se ordenan las sedes si el luchador del jugador no tiene ciudad (el extremo norte). */
 const START: StagePlace = { nombre: 'INICIO', lat: -18.48, lon: -70.31 };
 
 /** Una partida de ARCADE: el luchador del jugador (índice del plantel), su color, los rivales y sus sedes. */
@@ -45,6 +47,11 @@ export interface ArcadeRun {
   home: StagePlace;
   /** Pelea que toca (0 = la primera). */
   index: number;
+  /** Dificultad con que se empezó (la del ranking). */
+  dificultad: DifficultyId;
+  /** Cuadros que llevan sus peleas (las perdidas también) y veces que continuó. */
+  frames: number;
+  continues: number;
 }
 
 /**
@@ -98,7 +105,10 @@ export function startArcade(game: Game, player: number, color: number): Scene {
     here = next.venue.lugar;
   }
   const fights = [...before, { opp: last, venue: RING }];
-  return new ArcadeMapScene(game, { player, color, opponents: fights.map((f) => f.opp), venues: fights.map((f) => f.venue), home, index: 0 });
+  return new ArcadeTowerScene(game, {
+    player, color, opponents: fights.map((f) => f.opp), venues: fights.map((f) => f.venue), home, index: 0,
+    dificultad: loadDifficulty(), frames: 0, continues: 0,
+  });
 }
 
 type Frames = Array<{ tex: Texture; dur: number }>;
@@ -258,7 +268,7 @@ class ArcadeVsScene extends ArcadeScreen {
     const n = run.opponents.length;
     const opp = run.opponents[run.index];
     // La dificultad elegida; la pelea final, un nivel más (y uno más cada 3 peleas).
-    const base = DIFFICULTIES.indexOf(loadDifficulty());
+    const base = DIFFICULTIES.indexOf(run.dificultad);
     const level = Math.min(DIFFICULTIES.length - 1, base + Math.floor(run.index / 3) + (run.index === n - 1 && n > 1 ? 1 : 0));
     g.sfx.play('menuConfirm');
     g.setScene(
@@ -266,10 +276,11 @@ class ArcadeVsScene extends ArcadeScreen {
         fighters: [run.player, opp],
         colors: [run.color, opp === run.player ? run.color + 1 : 0],
         difficulty: DIFFICULTIES[level],
-        next: (winner) => {
-          if (winner !== 0) return new ArcadeContinueScene(g, run);
-          if (run.index + 1 < n) return new ArcadeMapScene(g, { ...run, index: run.index + 1 });
-          return new ArcadeEndScene(g, run);
+        next: (winner, frames) => {
+          const r = { ...run, frames: run.frames + frames };
+          if (winner !== 0) return new ArcadeContinueScene(g, r);
+          if (run.index + 1 < n) return new ArcadeTowerScene(g, { ...r, index: run.index + 1 });
+          return new ArcadeEndScene(g, r);
         },
       }),
     );
@@ -281,228 +292,262 @@ class ArcadeVsScene extends ArcadeScreen {
   }
 }
 
-/** Contorno simplificado de Chile (latitud, longitud): la costa de norte a sur y la frontera de vuelta. */
-const CHILE: ReadonlyArray<[number, number]> = [
-  [-17.5, -70.4], [-18.5, -70.3], [-20.2, -70.15], [-22.1, -70.2], [-23.6, -70.4], [-25.4, -70.5], [-27.1, -70.9],
-  [-29.9, -71.35], [-31.6, -71.55], [-33.0, -71.65], [-34.5, -72.05], [-36.8, -73.15], [-37.6, -73.65], [-39.8, -73.4],
-  [-41.5, -73.9], [-41.9, -74.0], [-43.4, -74.3], [-44.5, -74.6], [-46.5, -75.6], [-48.5, -75.5], [-50.5, -75.4],
-  [-52.4, -74.9], [-53.5, -73.5], [-54.5, -71.5], [-55.4, -69.5], [-55.9, -67.3], [-54.9, -66.8], [-53.0, -68.6],
-  [-52.6, -68.6], [-52.3, -69.0], [-52.0, -71.0], [-51.0, -72.3], [-49.5, -73.2], [-48.0, -72.4], [-46.5, -71.8],
-  [-45.0, -71.6], [-43.5, -71.8], [-42.0, -71.8], [-40.5, -71.9], [-39.0, -71.4], [-37.5, -71.1], [-36.0, -70.7],
-  [-34.5, -70.3], [-33.0, -70.0], [-31.0, -70.1], [-29.0, -69.9], [-27.3, -68.8], [-25.0, -68.4], [-23.0, -67.2],
-  [-21.5, -68.3], [-19.5, -68.6], [-18.0, -69.2], [-17.5, -69.5],
-];
+/** La torre: alto de cada piso y del vestíbulo, ancho (unidades de pantalla) y dónde queda en pantalla el piso al que se sube. */
+const PISO = 62;
+const VESTIBULO = 54;
+const TORRE_W = 168;
+const FOCO_Y = 150;
+/** Cuadros que dura la subida en ascensor. */
+const SUBIDA = 150;
 
-/** Chile acostado: el norte a la izquierda, el Pacífico abajo. */
-function mapXY(p: { lat: number; lon: number }): { x: number; y: number } {
-  return { x: 22 + (-p.lat - 17) * 11, y: 150 + (-71 - p.lon) * 9.5 };
+/** Ventanas encendidas: siempre las mismas (pseudoazar fijo). */
+function encendida(piso: number, k: number): boolean {
+  const h = Math.sin(piso * 127.1 + k * 311.7) * 43758.5453;
+  return h - Math.floor(h) < 0.42;
 }
 
-/** Cuadros que dura el vuelo. */
-const TRAVEL = 150;
+/** Centro de un piso en la torre (el suelo en y = 0, hacia arriba negativo); -1 es el vestíbulo. */
+function centroPiso(k: number): number {
+  return k < 0 ? -VESTIBULO / 2 : -(VESTIBULO + k * PISO + PISO / 2);
+}
 
-/** El mapa: el avión vuela hasta la sede de la próxima pelea; las caras marcan a cada rival. */
-class ArcadeMapScene extends ArcadeScreen {
-  private map = new Graphics();
-  private route = new Graphics();
-  private plane = new Graphics();
-  private marks = new Graphics();
-  private from: { x: number; y: number };
-  private to: { x: number; y: number };
-  private c1: { x: number; y: number };
-  private c2: { x: number; y: number };
-  private arrived: Text;
+/**
+ * Antes de cada pelea, LA TORRE: un rascacielos de neón con un piso por rival (la final en la
+ * azotea, bajo el letrero de EL GRAN TORNEO). El ascensor de vidrio sube con la cara del
+ * jugador desde el piso anterior (o la entrada) hasta el del próximo rival; los vencidos quedan
+ * en gris con una X. A los lados, el jugador y el rival en grande: el rival en sombra hasta que
+ * llega el ascensor.
+ */
+class ArcadeTowerScene extends ArcadeScreen {
+  private ciudad = new Container();
+  private torre = new Container();
+  private brillos = new Graphics();
+  private cabina = new Container();
+  private yo: BigFighter;
+  private rival: BigFighter;
+  private rivalFiltro: Filter | null;
+  private abajo: Text;
+  private camDesde: number;
+  private camHasta: number;
+  private alto: number;
 
   constructor(game: Game, private run: ArcadeRun) {
     super(game);
     const roster = game.assets.roster;
     const n = run.opponents.length;
-    const venue = run.venues[run.index];
-    this.from = mapXY(run.index === 0 ? run.home : run.venues[run.index - 1].lugar);
-    this.to = mapXY(venue.lugar);
-    if (Math.hypot(this.to.x - this.from.x, this.to.y - this.from.y) < 8) {
-      // Pelea en la misma ciudad: el avión da una vuelta en el aire y vuelve a bajar.
-      this.c1 = { x: this.from.x - 40, y: this.from.y - 52 };
-      this.c2 = { x: this.to.x + 40, y: this.to.y - 52 };
-    } else {
-      // El vuelo hace una curva por arriba (por el lado de la cordillera).
-      const ctrl = { x: (this.from.x + this.to.x) / 2, y: Math.min(this.from.y, this.to.y) - 46 };
-      this.c1 = { x: this.from.x + ((ctrl.x - this.from.x) * 2) / 3, y: this.from.y + ((ctrl.y - this.from.y) * 2) / 3 };
-      this.c2 = { x: this.to.x + ((ctrl.x - this.to.x) * 2) / 3, y: this.to.y + ((ctrl.y - this.to.y) * 2) / 3 };
-    }
-    this.drawMap();
-    this.ui.addChild(this.map, this.route, this.marks);
-    this.text('ARCADE', 12, VIEW_W / 2, 16, 0xfff4e0, 0x5a0a10);
-    const final = run.index === n - 1 && n > 1;
-    this.text(arcade(final ? `PELEA FINAL · RUMBO A ${venue.lugar.nombre}` : `PELEA ${run.index + 1} DE ${n} · RUMBO A ${venue.lugar.nombre}`), 7, VIEW_W / 2, 34, 0xffd040);
-    if (venue.lugar.nombre !== venue.nombre) this.text(arcade(venue.nombre), 6, VIEW_W / 2, 46, 0xd8d0e8);
-    // Las caras de los rivales sobre su ciudad (el de la final también, aunque pelee en el
-    // ring), con el nombre de la ciudad debajo: los ya vencidos en gris con una X.
-    const homes = run.opponents.map((o, i) => roster[o].def.ciudad ?? run.venues[i].lugar);
-    const named = new Set<string>();
-    homes.forEach((h, i) => {
-      const at = mapXY(h);
-      const face = roster[run.opponents[i]].face;
-      // Si dos ciudades caen juntas, las caras se separan hacia los lados.
-      const twins = homes.map((_, j) => j).filter((j) => Math.abs(mapXY(homes[j]).x - at.x) < 18);
-      const slot = twins.indexOf(i);
-      const dx = (slot - (twins.length - 1) / 2) * 30;
-      const fx = at.x + dx;
-      const fy = 72;
-      if (!named.has(h.nombre)) {
-        named.add(h.nombre);
-        const city = outlinedText(arcade(h.nombre), 5, 0xd8d0e8, 0x0a0610, 1);
-        city.anchor.set(0.5, 0);
-        city.position.set(at.x, fy + 14);
-        this.ui.addChild(city);
-      }
-      const frame = new Graphics();
-      frame.moveTo(at.x, at.y - 4).lineTo(fx, fy + 22).stroke({ color: 0x8a7aa8, width: 0.8, alpha: 0.7 });
-      frame.circle(at.x, at.y, 1.8).fill({ color: 0xd8d0e8 });
-      frame.roundRect(fx - 12, fy - 12, 24, 24, 3).fill({ color: 0x140a24 }).stroke({ color: i === run.index ? NEON_CYAN : i < run.index ? 0x5a4a6a : 0xc89a3a, width: i === run.index ? 1.6 : 1 });
-      this.ui.addChild(frame);
-      if (face) {
-        const s = new Sprite(face);
-        s.anchor.set(0.5);
-        s.width = 22;
-        s.height = 22;
-        s.position.set(fx, fy);
-        if (i < run.index) {
-          const grey = new ColorMatrixFilter();
-          grey.desaturate();
-          grey.brightness(0.55, true);
-          s.filters = [grey];
-        }
-        this.ui.addChild(s);
-      }
-      if (i < run.index) {
-        const x = new Graphics();
-        x.moveTo(fx - 9, fy - 9).lineTo(fx + 9, fy + 9).moveTo(fx + 9, fy - 9).lineTo(fx - 9, fy + 9).stroke({ color: 0xff3348, width: 2.2 });
-        this.ui.addChild(x);
-      }
-    });
-    const homeAt = mapXY(run.home);
-    const myFace = roster[run.player].face;
-    if (myFace && run.index === 0) {
-      const fy = 228 - 30;
-      const frame = new Graphics();
-      frame.moveTo(homeAt.x, homeAt.y + 4).lineTo(homeAt.x, fy - 12).stroke({ color: 0x8a7aa8, width: 0.8, alpha: 0.7 });
-      frame.roundRect(homeAt.x - 12, fy - 12, 24, 24, 3).fill({ color: 0x140a24 }).stroke({ color: NEON_PINK, width: 1.6 });
-      const s = new Sprite(myFace);
-      s.anchor.set(0.5);
-      s.width = 22;
-      s.height = 22;
-      s.position.set(homeAt.x, fy);
-      const tag = outlinedText(arcade(`SALIDA: ${run.home.nombre}`), 5, NEON_PINK, 0x0a0610, 1);
-      tag.anchor.set(0.5, 0);
-      tag.position.set(homeAt.x, fy + 13);
-      this.ui.addChild(frame, s, tag);
-    }
-    this.ui.addChild(this.plane);
-    const opp = roster[run.opponents[run.index]];
-    this.text(arcade(`PRÓXIMO RIVAL: ${opp.def.name.toUpperCase()}`), 8, VIEW_W / 2, 228, NEON_CYAN);
-    this.arrived = this.text('¡A PELEAR!', 16, VIEW_W / 2, 250, 0xffd040, 0x5a0a10);
-    this.arrived.visible = false;
+    const i = run.index;
+    const opp = run.opponents[i];
+    this.alto = VESTIBULO + n * PISO;
+    // La cámara parte en el piso anterior (o la entrada) y sube al del rival; en la final mira un poco más arriba (el letrero).
+    this.camDesde = FOCO_Y - centroPiso(i - 1);
+    this.camHasta = FOCO_Y - centroPiso(i) + (i === n - 1 ? 22 : 0);
+    this.torre.position.set(VIEW_W / 2, this.camDesde);
+    this.dibujarCiudad();
+    this.dibujarTorre();
+    this.ui.addChild(this.ciudad, this.torre);
+
+    // El jugador a la izquierda y el rival a la derecha (en sombra hasta que llega el ascensor).
+    this.yo = new BigFighter(game, run.player, 'idle', 118, 1, costumeFilter(run.color, roster[run.player].def.costume));
+    this.rivalFiltro = opp === run.player ? costumeFilter(run.color + 1, roster[opp].def.costume) : null;
+    this.rival = new BigFighter(game, opp, 'idle', 118, -1, null);
+    const sombra = new ColorMatrixFilter();
+    sombra.matrix = [0, 0, 0, 0, 0.1, 0, 0, 0, 0, 0.04, 0, 0, 0, 0, 0.2, 0, 0, 0, 1, 0];
+    this.rival.sprite.filters = [sombra];
+    this.yo.sprite.position.set(74, 238);
+    this.rival.sprite.position.set(VIEW_W - 74, 238);
+    const glowL = new Graphics().ellipse(74, 238, 44, 8).fill({ color: NEON_PINK, alpha: 0.3 });
+    const glowR = new Graphics().ellipse(VIEW_W - 74, 238, 44, 8).fill({ color: NEON_CYAN, alpha: 0.3 });
+    this.ui.addChild(glowL, glowR, this.yo.sprite, this.rival.sprite);
+    this.text(arcade(roster[run.player].def.name.toUpperCase()), 7, 74, 250, NEON_PINK);
+    this.text(arcade(roster[opp].def.name.toUpperCase()), 7, VIEW_W - 74, 250, NEON_CYAN);
+
+    const final = i === n - 1 && n > 1;
+    // Franja de arriba: los títulos no quedan encima de los letreros de los pisos.
+    const banda = new Graphics();
+    banda.rect(0, 0, VIEW_W, 50).fill({ color: 0x0a0414, alpha: 0.92 });
+    banda.rect(0, 50, VIEW_W, 1).fill({ color: NEON_PINK, alpha: 0.7 });
+    this.ui.addChild(banda);
+    this.text('ARCADE', 12, VIEW_W / 2, 14, 0xfff4e0, 0x5a0a10);
+    this.text(arcade(final ? `PELEA FINAL · LA AZOTEA` : `PISO ${i + 1} DE ${n}`), 8, VIEW_W / 2, 31, 0xffd040);
+    this.text(arcade(run.venues[i].nombre), 6, VIEW_W / 2, 43, 0xd8d0e8);
+    this.abajo = this.text(arcade(final ? 'SUBIENDO A LA AZOTEA…' : `SUBIENDO AL PISO ${i + 1}…`), 8, VIEW_W / 2, 260, 0xd8d0e8);
   }
 
-  /** Chile en neón, con el océano y la cordillera insinuados y las sedes del torneo. */
-  private drawMap(): void {
-    const g = this.map;
-    // Paralelos tenues cada 5 grados.
-    for (let lat = -20; lat >= -55; lat -= 5) {
-      const { x } = mapXY({ lat, lon: -70 });
-      g.moveTo(x, 92).lineTo(x, 212).stroke({ color: 0x3a2a5a, width: 0.6, alpha: 0.6 });
+  /** La ciudad de noche detrás de la torre (baja más lento que la torre mientras se sube). */
+  private dibujarCiudad(): void {
+    const g = new Graphics();
+    let x = -10;
+    let k = 0;
+    while (x < VIEW_W + 10) {
+      const w = 22 + ((k * 37) % 30);
+      const h = 34 + ((k * 53) % 70);
+      g.rect(x, -h, w, h + 60).fill({ color: k % 2 ? 0x1a0f33 : 0x150b2b, alpha: 0.95 });
+      for (let r = 0; r < h / 12 - 1; r++) {
+        for (let c = 0; c < w / 8 - 1; c++) {
+          if (encendida(k + 40, r * 9 + c)) g.rect(x + 4 + c * 8, -h + 6 + r * 12, 3, 5).fill({ color: 0xffc870, alpha: 0.35 });
+        }
+      }
+      x += w + 3;
+      k++;
     }
-    const pts = CHILE.map(([lat, lon]) => mapXY({ lat, lon }));
-    g.poly(pts.flatMap((p) => [p.x, p.y])).fill({ color: 0x1c1040, alpha: 0.92 });
+    this.ciudad.addChild(g);
+  }
+
+  private dibujarTorre(): void {
+    const run = this.run;
+    const roster = this.game.assets.roster;
+    const n = run.opponents.length;
+    const alto = this.alto;
+    const x0 = -TORRE_W / 2;
+    const g = new Graphics();
+    // La calle, con su línea de neón.
+    g.rect(-VIEW_W, 0, VIEW_W * 2, 60).fill({ color: 0x0a0614 });
+    g.rect(-VIEW_W, 0, VIEW_W * 2, 1.2).fill({ color: NEON_CYAN, alpha: 0.55 });
+    // Cuerpo de vidrio oscuro con una franja de reflejo.
+    g.rect(x0, -alto, TORRE_W, alto).fill({ color: 0x120a26 });
+    g.rect(x0, -alto, TORRE_W * 0.42, alto).fill({ color: 0x1c1238, alpha: 0.55 });
+    // Ventanas de cada piso (el letrero del piso va encima, al centro).
+    for (let k = 0; k < n; k++) {
+      const top = -(VESTIBULO + (k + 1) * PISO);
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 14; c++) {
+          const on = encendida(k, r * 14 + c);
+          g.rect(x0 + 7 + c * 11.4, top + 8 + r * 17, 6, 10).fill({ color: on ? 0xffd27a : 0x261a40, alpha: on ? 0.5 : 0.95 });
+        }
+      }
+    }
+    // Separación entre pisos.
+    for (let k = 0; k <= n; k++) {
+      const y = -(VESTIBULO + k * PISO);
+      g.rect(x0 - 5, y - 2, TORRE_W + 10, 4).fill({ color: 0x2a1446 });
+      g.rect(x0 - 5, y - 0.5, TORRE_W + 10, 1).fill({ color: NEON_PINK, alpha: 0.75 });
+    }
+    // La entrada: puertas de vidrio.
+    g.rect(-32, -36, 64, 36).fill({ color: 0x0c1830 }).stroke({ color: NEON_CYAN, width: 1, alpha: 0.8 });
+    g.rect(-0.5, -36, 1, 36).fill({ color: NEON_CYAN, alpha: 0.6 });
+    // El techo escalonado y la antena.
+    g.rect(x0 + 10, -alto - 10, TORRE_W - 20, 10).fill({ color: 0x1a0f33 }).stroke({ color: NEON_CYAN, width: 1, alpha: 0.7 });
+    g.rect(x0 + 36, -alto - 20, TORRE_W - 72, 10).fill({ color: 0x1a0f33 }).stroke({ color: NEON_CYAN, width: 1, alpha: 0.7 });
+    g.rect(-1.5, -alto - 64, 3, 44).fill({ color: 0x6a5a8a });
+    // Bordes de neón.
     for (const [w, a] of [[5, 0.12], [2.6, 0.3], [1.1, 1]] as const) {
-      g.poly(pts.flatMap((p) => [p.x, p.y])).stroke({ color: NEON_CYAN, width: w, alpha: a, join: 'round' });
+      g.rect(x0, -alto, TORRE_W, alto).stroke({ color: NEON_CYAN, width: w, alpha: a });
     }
-    const label = (s: string, x: number, y: number, color: number, size = 6): void => {
-      const t = outlinedText(arcade(s), size, color, 0x0a0610, 1);
-      t.anchor.set(0.5);
-      t.position.set(x, y);
-      t.alpha = 0.75;
-      this.ui.addChild(t);
-    };
-    const homeX = mapXY(this.run.home).x;
-    const oceanX = this.run.index > 0 || Math.abs(homeX - VIEW_W / 2) > 80 ? VIEW_W / 2 : homeX < VIEW_W / 2 ? homeX + 110 : homeX - 110;
-    label('OCÉANO PACÍFICO', oceanX, 206, 0x6aa8d8);
-    label('N', 14, 150, 0xffd040, 7);
-    const arrow = new Graphics();
-    arrow.moveTo(20, 158).lineTo(10, 158).moveTo(10, 158).lineTo(14, 155).moveTo(10, 158).lineTo(14, 161).stroke({ color: 0xffd040, width: 1 });
-    this.ui.addChild(arrow);
-    // Sedes: un punto por pelea, con su nombre.
-    this.run.venues.forEach((v, i) => {
-      const at = mapXY(v.lugar);
-      g.circle(at.x, at.y, 2.4).fill({ color: i < this.run.index ? 0x5a4a6a : i === this.run.index ? 0xffd040 : 0xff8ac8 });
+    // El ascensor de vidrio: dos rieles por fuera, a la derecha.
+    const rx = x0 + TORRE_W + 13;
+    g.rect(rx - 10, -alto - 4, 1, alto + 4).fill({ color: 0x8a7aa8, alpha: 0.7 });
+    g.rect(rx + 9, -alto - 4, 1, alto + 4).fill({ color: 0x8a7aa8, alpha: 0.7 });
+    this.torre.addChild(g, this.brillos);
+
+    const entrada = outlinedText('ENTRADA', 5, NEON_CYAN, 0x0a0610, 1);
+    entrada.anchor.set(0.5);
+    entrada.position.set(0, -42);
+    const letrero = outlinedText('EL GRAN TORNEO', 10, 0xffd040, 0x5a0a10, 2);
+    letrero.anchor.set(0.5);
+    letrero.position.set(0, -alto - 32);
+    this.torre.addChild(entrada, letrero);
+
+    // El letrero de cada piso: la cara y el nombre del rival (los vencidos en gris con una X).
+    run.opponents.forEach((o, k) => {
+      const a = roster[o];
+      const cy = centroPiso(k);
+      const w = 132;
+      const h = 44;
+      const px = -w / 2;
+      const hecho = k < run.index;
+      const ahora = k === run.index;
+      const panel = new Graphics();
+      panel.roundRect(px, cy - h / 2, w, h, 4).fill({ color: 0x0b0618, alpha: 0.94 }).stroke({ color: ahora ? NEON_CYAN : hecho ? 0x5a4a6a : 0xc89a3a, width: ahora ? 1.6 : 1 });
+      panel.roundRect(px + 5, cy - 18, 36, 36, 3).fill({ color: 0x140a24 });
+      this.torre.addChild(panel);
+      if (a.face) {
+        const cara = new Sprite(a.face);
+        cara.anchor.set(0.5);
+        cara.width = 34;
+        cara.height = 34;
+        cara.position.set(px + 23, cy);
+        if (hecho) {
+          const gris = new ColorMatrixFilter();
+          gris.desaturate();
+          gris.brightness(0.55, true);
+          cara.filters = [gris];
+        }
+        this.torre.addChild(cara);
+      }
+      if (hecho) {
+        const x = new Graphics();
+        x.moveTo(px + 9, cy - 14).lineTo(px + 37, cy + 14).moveTo(px + 37, cy - 14).lineTo(px + 9, cy + 14).stroke({ color: 0xff3348, width: 2.4 });
+        this.torre.addChild(x);
+      }
+      const nombre = outlinedText(arcade(a.def.name.toUpperCase()), 7, hecho ? 0x8a7fa0 : 0xffffff, 0x0a0610, 2);
+      nombre.anchor.set(0, 0.5);
+      nombre.position.set(px + 48, cy - 6);
+      nombre.scale.set(Math.min(1, 80 / Math.max(1, nombre.width)));
+      const piso = outlinedText(arcade(k === n - 1 && n > 1 ? 'AZOTEA · FINAL' : hecho ? `PISO ${k + 1} · VENCIDO` : `PISO ${k + 1}`), 5, hecho ? 0x8a7fa0 : 0xffd040, 0x0a0610, 1);
+      piso.anchor.set(0, 0.5);
+      piso.position.set(px + 48, cy + 8);
+      this.torre.addChild(nombre, piso);
     });
+
+    // La cabina del ascensor, con la cara del jugador.
+    const cab = new Graphics();
+    cab.roundRect(-11, -14, 22, 28, 3).fill({ color: 0x140a24, alpha: 0.9 }).stroke({ color: NEON_PINK, width: 1.4 });
+    this.cabina.addChild(cab);
+    const mia = roster[run.player].face;
+    if (mia) {
+      const cara = new Sprite(mia);
+      cara.anchor.set(0.5);
+      cara.width = 18;
+      cara.height = 18;
+      cara.position.set(0, -1);
+      this.cabina.addChild(cara);
+    }
+    this.cabina.position.set(rx, centroPiso(run.index - 1));
+    this.torre.addChild(this.cabina);
   }
 
   step(): void {
     this.t++;
+    this.yo.step();
+    this.rival.step();
     const m = this.game.menu;
     if (m.back && this.t > 10) {
       this.game.sfx.play('menuBack');
       this.game.setScene(new MainMenuScene(this.game));
       return;
     }
-    if (this.t === TRAVEL) this.game.sfx.play('menuConfirm');
-    this.arrived.visible = this.t > TRAVEL && Math.floor(this.t / 12) % 2 === 0;
-    if (((m.confirm || m.tap) && this.t > 15) || this.t >= TRAVEL + 70) this.game.setScene(new ArcadeVsScene(this.game, this.run));
-  }
-
-  /** Punto de la curva del vuelo (0..1). */
-  private at(k: number): { x: number; y: number } {
-    const u = 1 - k;
-    const a = u * u * u;
-    const b = 3 * u * u * k;
-    const c = 3 * u * k * k;
-    const d = k * k * k;
-    return {
-      x: a * this.from.x + b * this.c1.x + c * this.c2.x + d * this.to.x,
-      y: a * this.from.y + b * this.c1.y + c * this.c2.y + d * this.to.y,
-    };
+    if (this.t === SUBIDA) {
+      // Llegó: "ding", el rival sale de la sombra.
+      this.game.sfx.play('menuConfirm');
+      this.rival.sprite.filters = this.rivalFiltro ? [this.rivalFiltro] : [];
+      this.abajo.text = '¡A PELEAR!';
+      this.abajo.style.fill = 0xffd040;
+      this.abajo.style.fontSize = Math.round(14 * 1.45);
+    }
+    if (this.t > SUBIDA) this.abajo.visible = Math.floor(this.t / 12) % 2 === 0;
+    if (((m.confirm || m.tap) && this.t > 15) || this.t >= SUBIDA + 80) this.game.setScene(new ArcadeVsScene(this.game, this.run));
   }
 
   override render(): void {
     super.render();
-    const k = Math.min(1, this.t / TRAVEL);
+    const k = Math.min(1, this.t / SUBIDA);
     const e = k * k * (3 - 2 * k);
-    // Estela punteada desde la salida hasta el avión.
-    const r = this.route;
-    r.clear();
-    for (let i = 0; i < 40; i++) {
-      const a = i / 40;
-      if (a > e) break;
-      if (i % 2) continue;
-      const p0 = this.at(a);
-      const p1 = this.at(Math.min(e, a + 1 / 40));
-      r.moveTo(p0.x, p0.y).lineTo(p1.x, p1.y);
-    }
-    r.stroke({ color: 0xffffff, width: 1.2, alpha: 0.75 });
-    // Destino que late y salida.
-    const mk = this.marks;
-    mk.clear();
+    const i = this.run.index;
+    this.torre.y = this.camDesde + (this.camHasta - this.camDesde) * e;
+    this.cabina.y = centroPiso(i - 1) + (centroPiso(i) - centroPiso(i - 1)) * e;
+    // La ciudad baja más lento que la torre (está más lejos).
+    this.ciudad.y = 214 + (this.torre.y - FOCO_Y) * 0.22;
+    // El letrero del piso del rival late; la luz de la antena pestañea; al llegar, un destello.
+    const b = this.brillos;
+    b.clear();
     const pulse = 0.5 + 0.5 * Math.sin(this.t / 6);
-    mk.circle(this.to.x, this.to.y, 5 + pulse * 5).stroke({ color: 0xffd040, width: 1.2, alpha: 0.4 + pulse * 0.5 });
-    mk.circle(this.from.x, this.from.y, 3).fill({ color: 0xffffff, alpha: 0.6 });
-    if (this.t > TRAVEL) mk.circle(this.to.x, this.to.y, 4 + (this.t - TRAVEL) * 0.8).stroke({ color: 0xffffff, width: 1, alpha: Math.max(0, 1 - (this.t - TRAVEL) / 25) });
-    // El avión, mirando hacia donde va.
-    const p = this.at(e);
-    const q = this.at(Math.min(1, e + 0.01));
-    const ang = Math.atan2(q.y - p.y, q.x - p.x) || 0;
-    const pl = this.plane;
-    pl.clear();
-    const rot = (x: number, y: number): [number, number] => [p.x + x * Math.cos(ang) - y * Math.sin(ang), p.y + x * Math.sin(ang) + y * Math.cos(ang)];
-    const shape = (pts: Array<[number, number]>, color: number): void => {
-      pl.poly(pts.flatMap(([x, y]) => rot(x, y))).fill({ color }).stroke({ color: 0x0a0610, width: 0.8 });
-    };
-    shape([[-6, -1.2], [6, -1], [8, 0], [6, 1], [-6, 1.2]], 0xffffff);
-    shape([[0, -1], [-3, -7], [-5, -7], [-3, -1]], 0xe0e8ff);
-    shape([[0, 1], [-3, 7], [-5, 7], [-3, 1]], 0xe0e8ff);
-    shape([[-5, -1], [-7, -3.5], [-8, -3.5], [-7, -1]], 0xff5a7a);
-    shape([[-5, 1], [-7, 3.5], [-8, 3.5], [-7, 1]], 0xff5a7a);
+    const cy = centroPiso(i);
+    b.roundRect(-70, cy - 26, 140, 52, 6).stroke({ color: NEON_CYAN, width: 2, alpha: 0.2 + pulse * 0.45 });
+    if (Math.floor(this.t / 30) % 2 === 0) b.circle(0, -this.alto - 66, 2.6).fill({ color: 0xff3348 });
+    if (this.t > SUBIDA) {
+      const d = this.t - SUBIDA;
+      b.roundRect(-70 - d * 2, cy - 26 - d, 140 + d * 4, 52 + d * 2, 8).stroke({ color: 0xffffff, width: 1.4, alpha: Math.max(0, 1 - d / 22) });
+    }
   }
 }
 
@@ -539,7 +584,7 @@ class ArcadeContinueScene extends ArcadeScreen {
     }
     if ((m.confirm || m.tap) && this.t > 15) {
       this.game.sfx.play('menuConfirm');
-      this.game.setScene(new ArcadeVsScene(this.game, this.run));
+      this.game.setScene(new ArcadeVsScene(this.game, { ...this.run, continues: this.run.continues + 1 }));
       return;
     }
     if (m.back || this.left < 0) {
@@ -553,11 +598,18 @@ class ArcadeContinueScene extends ArcadeScreen {
   }
 }
 
-/** Le ganó a todos: ¡CAMPEÓN! con su pose de victoria. */
+/** 332.4 → "5:32.4". */
+function formatoTiempo(seg: number): string {
+  const m = Math.floor(seg / 60);
+  return `${m}:${(seg - m * 60).toFixed(1).padStart(4, '0')}`;
+}
+
+/** Le ganó a todos: ¡CAMPEÓN! con su pose de victoria, el tiempo total y si quedó en el ranking. */
 class ArcadeEndScene extends ArcadeScreen {
   private fighter: BigFighter;
   private sparks = new Graphics();
   private stars: Array<{ x: number; y: number; v: number; c: number; s: number }> = [];
+  private vivo = true;
 
   constructor(game: Game, run: ArcadeRun) {
     super(game);
@@ -568,10 +620,23 @@ class ArcadeEndScene extends ArcadeScreen {
     this.ui.addChild(this.fighter.sprite);
     this.text('¡CAMPEÓN!', 30, VIEW_W / 2, 34, 0xffd040, 0x5a0a10);
     this.text(arcade(`${a.def.name.toUpperCase()} GANÓ EL GRAN TORNEO DE CELL`), 8, VIEW_W / 2, 60, 0xfff4e0);
-    this.text(arcade(`${run.opponents.length} PELEAS GANADAS`), 7, VIEW_W / 2, 74, 0xd8d0e8);
+    const seg = run.frames / 60;
+    const cont = run.continues ? ` · ${run.continues} ${run.continues === 1 ? 'CONTINUE' : 'CONTINUES'}` : '';
+    this.text(arcade(`TIEMPO ${formatoTiempo(seg)} · ${DIFFICULTY_NAME[run.dificultad]}${cont}`), 7, VIEW_W / 2, 74, 0xffd040);
+    const estado = this.text('GUARDANDO EN EL RANKING…', 6, VIEW_W / 2, 86, 0xd8d0e8);
+    void subirRecordArcade({ dificultad: run.dificultad, luchador: a.def.id, segundos: seg, continues: run.continues }).then((aviso) => {
+      if (!this.vivo) return;
+      estado.text = arcade(aviso ?? '¡QUEDASTE EN EL RANKING DE LA WEB!');
+      estado.style.fill = aviso ? 0xd8d0e8 : 0x8affb0;
+    });
     const own = `${a.def.id}/voz/victoria`;
     if (game.sfx.has(own)) game.sfx.play(own);
     for (let i = 0; i < 70; i++) this.stars.push(this.newStar(true));
+  }
+
+  override exit(): void {
+    this.vivo = false;
+    super.exit();
   }
 
   private newStar(anywhere: boolean): { x: number; y: number; v: number; c: number; s: number } {
