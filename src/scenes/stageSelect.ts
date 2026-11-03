@@ -164,6 +164,13 @@ export class StageSelectScene implements Scene {
     if (m.right) next = (this.sel + 1) % n;
     if (m.up && this.sel >= COLS) next = this.sel - COLS;
     if (m.down && Math.floor(this.sel / COLS) < Math.floor((n - 1) / COLS)) next = Math.min(n - 1, this.sel + COLS);
+    // Toques: una miniatura la marca y tocarla otra vez (o la vista grande) empieza la pelea.
+    if (m.tap) {
+      const i = this.cards.findIndex((c) => m.tapIn(c.root.x - (CARD_W + GAP_X) / 2, c.root.y - (CARD_H + GAP_Y) / 2, CARD_W + GAP_X, CARD_H + GAP_Y));
+      const onPreview = m.tapIn(VIEW_W / 2 - PREVIEW_W / 2, PREVIEW_Y, PREVIEW_W, PREVIEW_H);
+      if ((i >= 0 && i === this.sel) || onPreview) return this.choose();
+      if (i >= 0) next = i;
+    }
     if (next !== this.sel) {
       this.sel = next;
       lastSel = next;

@@ -4,7 +4,8 @@ import type { Game, Scene } from '../app/game';
 import type { FighterAsset } from '../content/loadFighter';
 import { Progreso } from '../content/descargas';
 import { BarraCarga } from '../render/barraCarga';
-import { P1_KEYS } from '../input/devices';
+import { P1_KEYS, type ViewPoint } from '../input/devices';
+import { tactil } from '../input/touch';
 import { FxLayer } from '../render/fx';
 import { textTokens, tokenLine, type Token } from '../render/keycap';
 import { C_HEAD, C_NAME, C_SOFT, C_SUPER, C_TEXT, C_ULTRA, MOTION, buttonTokens, cap, capsOf, joint, txt, type Caps } from '../render/moveListPanel';
@@ -212,6 +213,8 @@ export class CharactersScene implements Scene {
   private loading: Progreso | null = null;
   private bar = new BarraCarga(SHOW_W - 30, 5, 'CARGANDO MOVIMIENTOS');
   private alive = true;
+  /** Centro del nombre del encabezado: tocar a su izquierda o derecha cambia de personaje. */
+  private nameMid = VIEW_W - 60;
 
   constructor(private game: Game, private back: () => Scene) {
     const bg = new Graphics();
@@ -219,7 +222,9 @@ export class CharactersScene implements Scene {
     const title = outlinedText('PERSONAJES', 12, 0xfff4e0, 0x5a0a10, 3);
     title.position.set(14, 10);
     const help = tokenLine(
-      [...textTokens('↑↓ MOVIMIENTO   ←→ PERSONAJE   '), { cap: 'ENTER' }, ...textTokens(' REPETIR   '), { cap: 'ESC' }, ...textTokens(' VOLVER')],
+      tactil()
+        ? textTokens('TOCA UN MOVIMIENTO   TOCA ← → PARA CAMBIAR DE PERSONAJE   ☰ VUELVE')
+        : [...textTokens('↑↓ MOVIMIENTO   ←→ PERSONAJE   '), { cap: 'ENTER' }, ...textTokens(' REPETIR   '), { cap: 'ESC' }, ...textTokens(' VOLVER')],
       6,
       0x8ae8ff,
     );
@@ -300,13 +305,16 @@ export class CharactersScene implements Scene {
     this.header.removeChildren().forEach((ch) => ch.destroy({ children: true }));
     const many = this.fighters.length > 1;
     const name = tokenLine(textTokens(`${many ? '← ' : ''}${this.def.name.toUpperCase()}${many ? ' →' : ''}`, this.def.ui.color), 10);
-    name.position.set(VIEW_W - 14 - name.width, 8);
+    // En el celular, el botón ☰ va en la esquina: el nombre (con sus flechas para tocar) se corre a la izquierda.
+    const right = VIEW_W - 14 - (tactil() ? 36 : 0);
+    name.position.set(right - name.width, 8);
+    this.nameMid = name.x + name.width / 2;
     this.header.addChild(name);
     // Un punto por luchador: el actual, encendido.
     if (many) {
       const dots = new Graphics();
       const n = this.fighters.length;
-      const x0 = VIEW_W - 14 - (n - 1) * 8 - 2;
+      const x0 = right - (n - 1) * 8 - 2;
       this.fighters.forEach((f, i) => {
         const on = i === this.index;
         dots.circle(x0 + i * 8, 27, on ? 2.2 : 1.6).fill({ color: on ? f.def.ui.color : 0x6a5a80 });
@@ -394,10 +402,17 @@ export class CharactersScene implements Scene {
 
   /** Marca la fila elegida y desplaza la lista para que se vea. */
   private updateSelection(): void {
-    const rowsTop = this.listTop + 18;
     const y = this.rowOf[this.sel] * ROW;
     if (y - this.scroll < ROW) this.scroll = Math.max(0, y - ROW);
     if (y - this.scroll > this.listH - ROW * 2) this.scroll = Math.min(this.maxScroll, y - this.listH + ROW * 2);
+    this.paintList();
+    this.buildCaption();
+  }
+
+  /** Dibuja la lista desplazada: la fila marcada (si se ve) y la barra de desplazamiento. */
+  private paintList(): void {
+    const rowsTop = this.listTop + 18;
+    const y = this.rowOf[this.sel] * ROW;
     this.listRows.y = -this.scroll;
     const e = this.items[this.sel];
     const color = CAT[e.cat].color;
@@ -406,7 +421,8 @@ export class CharactersScene implements Scene {
     });
     this.selBar.clear();
     const by = rowsTop + y - this.scroll - 1;
-    if (by >= rowsTop - 2 && by < rowsTop + this.listH) {
+    // Con la lista arrastrada a medias, la barra solo se dibuja si cabe entera en la lista.
+    if (by >= rowsTop - 2 && by + ROW <= rowsTop + this.listH + 2) {
       this.selBar.roundRect(COL_X + 6, by, COL_W - 16, ROW, 2).fill({ color, alpha: 0.16 });
       this.selBar.poly([COL_X + 10, by + 3, COL_X + 14, by + ROW / 2, COL_X + 10, by + ROW - 3]).fill({ color });
     }
@@ -420,7 +436,24 @@ export class CharactersScene implements Scene {
       this.listBar.roundRect(bx, rowsTop, 2, this.listH, 1).fill({ color: 0xffffff, alpha: 0.08 });
       this.listBar.roundRect(bx, bt, 2, bh, 1).fill({ color: C_HEAD, alpha: 0.7 });
     }
-    this.buildCaption();
+  }
+
+  /** Toque en la lista (hace ese movimiento) o en la vitrina (lo repite). */
+  private tapMove(tap: ViewPoint): void {
+    const rowsTop = this.listTop + 18;
+    if (tap.x >= COL_X && tap.x < COL_X + COL_W && tap.y >= rowsTop && tap.y < rowsTop + this.listH) {
+      const i = this.rowOf.indexOf(Math.floor((tap.y - rowsTop + this.scroll + 1) / ROW));
+      // Los títulos de cada grupo (ESPECIALES, SÚPER...) no son movimientos.
+      if (i < 0) return;
+      if (i !== this.sel) {
+        this.sel = i;
+        this.game.sfx.play('menuMove');
+        this.updateSelection();
+      }
+      if (!this.loading) this.startMove(true);
+    } else if (tap.x >= SHOW_X && tap.x < SHOW_X + SHOW_W && tap.y >= SHOW_Y && tap.y < SHOW_Y + SHOW_H && !this.loading) {
+      this.startMove(true);
+    }
   }
 
   /** Cartel de la vitrina: tipo de movimiento arriba; nombre, comando y detalle bajo el luchador. */
@@ -544,10 +577,17 @@ export class CharactersScene implements Scene {
       this.game.setScene(this.back());
       return;
     }
-    if ((m.left || m.right) && this.fighters.length > 1) {
+    // Con el dedo: tocar junto al nombre (← →) cambia de personaje y arrastrar desplaza la lista.
+    const tap = m.tap;
+    const tapDir = tap && tap.y < 34 && tap.x > VIEW_W / 2 ? (tap.x < this.nameMid ? -1 : 1) : 0;
+    if (m.dragY && this.maxScroll > 0) {
+      this.scroll = Math.max(0, Math.min(this.maxScroll, this.scroll - m.dragY));
+      this.paintList();
+    }
+    if ((m.left || m.right || tapDir) && this.fighters.length > 1) {
       const n = this.fighters.length;
       this.game.sfx.silence(this.def.id);
-      this.index = (this.index + (m.right ? 1 : n - 1)) % n;
+      this.index = (this.index + (m.right || (!m.left && tapDir > 0) ? 1 : n - 1)) % n;
       this.game.sfx.play('menuMove');
       this.showFighter();
     } else if (m.up || m.down) {
@@ -558,6 +598,8 @@ export class CharactersScene implements Scene {
       if (!this.loading) this.startMove(true);
     } else if (m.confirm && !this.loading) {
       this.startMove(true);
+    } else if (tap) {
+      this.tapMove(tap);
     }
 
     // Avanza la animación: el movimiento por tramos y, al terminar, la guardia antes de repetir.

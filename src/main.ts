@@ -70,6 +70,8 @@ async function main(): Promise<void> {
   new TouchControls(kb, display);
   const pads = new Gamepads();
   const menu = new MenuInput(kb, pads);
+  // Toques y clics sobre el juego: las opciones de los menús se tocan directo.
+  menu.listenTaps(display.app.canvas, (x, y) => display.toView(x, y));
   const sfx = new Sfx();
   // El sonido queda como lo dejó el jugador (OPCIONES > SONIDO o la tecla M).
   sfx.setMuted(loadMuted());

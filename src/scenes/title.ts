@@ -4,6 +4,7 @@ import { autoFullscreen } from '../app/fullscreen';
 import type { Game, Scene } from '../app/game';
 import type { FighterAsset } from '../content/loadFighter';
 import { attackKeys } from '../input/devices';
+import { tactil } from '../input/touch';
 import { FxLayer } from '../render/fx';
 import type { StageView } from '../render/stage';
 import { outlinedText } from '../render/text';
@@ -95,8 +96,6 @@ export class TitleScene implements Scene {
   /** Cuadros desde que empezó el ciclo de entradas. */
   private cycle = 0;
   private prompt = outlinedText('PRESIONA ENTER', 12, 0xffffff, 0x3a0a18, 3);
-  /** Un clic en el título pone la pantalla completa (y el sonido) sin pasar al menú. */
-  private onPointer = (): void => autoFullscreen();
   private logoBig = outlinedText('DE CELL', 30, 0xffd040, 0x5a0a10, 3);
   /** De fondo, el ring del torneo de artes marciales (si no carga, el show de luces de los menús). */
   private arena: StageView | null = null;
@@ -303,11 +302,9 @@ export class TitleScene implements Scene {
     d.fx.position.set(0, 0);
     d.fx.addChild(this.fx.container);
     d.hud.addChild(this.ui);
-    window.addEventListener('pointerdown', this.onPointer);
   }
 
   exit(): void {
-    window.removeEventListener('pointerdown', this.onPointer);
     const d = this.game.display;
     this.active = false;
     if (this.arena) d.world.removeChild(this.arena.container);
@@ -379,7 +376,8 @@ export class TitleScene implements Scene {
 
     const kb = this.game.kb;
     const attack = attackKeys().some((k) => kb.hit(k));
-    if (this.game.menu.confirm || this.game.menu.start || attack) {
+    // Un toque (o clic) en cualquier parte también entra.
+    if (this.game.menu.confirm || this.game.menu.start || this.game.menu.tap || attack) {
       // Dentro del gesto del jugador: el navegador permite la pantalla completa.
       autoFullscreen();
       this.game.sfx.unlock();
@@ -399,6 +397,8 @@ export class TitleScene implements Scene {
       a.shadow.scale.set(Math.max(0.4, 1 - air / 140));
       a.shadow.alpha = a.sprite.alpha * Math.max(0.25, 1 - air / 120);
     }
+    const prompt = tactil() ? 'TOCA LA PANTALLA' : 'PRESIONA ENTER';
+    if (this.prompt.text !== prompt) this.prompt.text = prompt;
     this.prompt.visible = Math.floor(this.t / 30) % 2 === 0;
     this.logoBig.scale.set(1 + Math.sin(this.t / 20) * 0.025 + this.kick * 0.18);
     this.fx.sync();

@@ -83,6 +83,22 @@ abstract class MenuScene implements Scene {
   protected abstract back(): void;
   /** Izquierda / derecha sobre una opción (ej. cambiar la dificultad). */
   protected side(_id: string, _dir: number): void {}
+  /** ¿La opción cambia con izquierda / derecha? (al tocarla, los costados de la barra son las flechas). */
+  protected sided(_id: string): boolean {
+    return false;
+  }
+
+  /** Opción bajo el toque de este cuadro (toda la fila cuenta, no solo la barra), o -1. */
+  private tappedItem(): number {
+    const m = this.game.menu;
+    if (!m.tap) return -1;
+    const half = this.barW / 2 + 16;
+    for (let i = 0; i < this.options.length; i++) {
+      const y = this.top + i * this.row - (this.row - this.barH) / 2;
+      if (m.tapIn(VIEW_W / 2 - half, y, half * 2, this.row)) return i;
+    }
+    return -1;
+  }
 
   protected go(scene: Scene, sound: 'menuConfirm' | 'menuBack' = 'menuConfirm'): void {
     this.game.sfx.play(sound);
@@ -112,6 +128,17 @@ abstract class MenuScene implements Scene {
     if (m.left || m.right) this.side(id, m.left ? -1 : 1);
     if (m.back) {
       this.back();
+      return;
+    }
+    // Tocar una opción la elige (en las de < >, tocar un costado la cambia hacia ese lado).
+    const hit = this.tappedItem();
+    if (hit >= 0) {
+      this.sel = hit;
+      lastSel.set(this.key, hit);
+      const tid = this.options[hit].id;
+      const dx = m.tap!.x - VIEW_W / 2;
+      if (this.sided(tid) && Math.abs(dx) > this.barW * 0.22) this.side(tid, Math.sign(dx));
+      else this.choose(tid);
       return;
     }
     if (m.confirm) this.choose(id);
@@ -275,6 +302,10 @@ export class OptionsMenuScene extends MenuScene {
     saveDifficulty(this.difficulty);
     this.updateDifficultyLabel();
     this.game.sfx.play('menuMove');
+  }
+
+  protected override sided(id: string): boolean {
+    return id === 'dificultad' || id === 'sonido' || id === 'graficos';
   }
 
   protected override side(id: string, dir: number): void {

@@ -2,6 +2,7 @@ import { Container, Graphics } from 'pixi.js';
 import { STAGE_W, VIEW_H, VIEW_W } from '../config';
 import type { Game, Scene } from '../app/game';
 import type { StageView } from '../render/stage';
+import { tactil } from '../input/touch';
 import { arcade, outlinedText } from '../render/text';
 
 // VER ESCENARIOS: cada escenario a pantalla completa, con su animación y su
@@ -76,6 +77,7 @@ export class StageViewerScene implements Scene {
   }
 
   enter(): void {
+    if (tactil()) this.help.text = 'TOCA LOS COSTADOS PARA CAMBIAR · ☰ VUELVE';
     this.game.display.hud.addChild(this.ui);
     this.show(0);
   }
@@ -90,9 +92,12 @@ export class StageViewerScene implements Scene {
     this.t++;
     this.idle++;
     const m = this.game.menu;
-    if (m.left || m.right) {
+    // Toques: los costados cambian de escenario; al medio, vuelve a mostrar el cartel.
+    const tapDir = !m.tap ? 0 : m.tap.x < VIEW_W * 0.3 ? -1 : m.tap.x > VIEW_W * 0.7 ? 1 : 0;
+    if (m.tap && !tapDir) this.idle = 0;
+    if (m.left || m.right || tapDir) {
       this.game.sfx.play('menuMove');
-      this.show(this.i + (m.left ? -1 : 1));
+      this.show(this.i + (m.left ? -1 : m.right ? 1 : tapDir));
     }
     if (m.back || m.confirm) {
       this.game.sfx.play('menuBack');

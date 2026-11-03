@@ -7,6 +7,7 @@ import { announcerVoice } from '../audio/announcer';
 import { COMBO_BREAKER, ULTRA_COMBO, comboNameFor } from '../render/comboNames';
 import type { FrameInput } from '../input/buffer';
 import { P1_KEYS, P2_KEYS, PlayerInput, type KeyBindings } from '../input/devices';
+import { mandosDePelea } from '../input/touch';
 import { FighterView, ProjectileViews, type WorldLayers } from '../render/fighterView';
 import { DiscoShow } from '../render/disco';
 import { StormShow, bolt } from '../render/elemental';
@@ -293,10 +294,12 @@ export class FightScene implements Scene {
     };
   }
 
-  /** Teclas 1-4 de la práctica (fila de números; el teclado numérico es del jugador 2). */
+  /** Teclas 1-4 de la práctica (fila de números; el teclado numérico es del jugador 2), o tocar la opción. */
   private practiceKeys(): void {
     const kb = this.game.kb;
-    const key = (n: number) => kb.hit(`Digit${n}`);
+    const tap = this.game.menu.tap;
+    const touched = tap ? this.hud.practiceOptionAt(tap.x, tap.y) : 0;
+    const key = (n: number) => kb.hit(`Digit${n}`) || touched === n;
     const dummy = this.dummy!;
     let changed = false;
     if (key(1)) {
@@ -391,9 +394,12 @@ export class FightScene implements Scene {
     d.worldView.filters = [this.zoom, this.negative];
     this.zoom.enabled = false;
     this.negative.enabled = false;
+    // Celular: la cruceta y los botones salen en la pelea (no en la DEMOSTRACIÓN).
+    mandosDePelea(this.mode !== 'demo');
   }
 
   exit(): void {
+    mandosDePelea(false);
     this.closeMoveList();
     this.closeControls();
     const d = this.game.display;
@@ -426,8 +432,8 @@ export class FightScene implements Scene {
       this.stepPause(pausePressed);
       return;
     }
-    // DEMOSTRACIÓN: aceptar o volver sale (no hay pausa).
-    if (this.mode === 'demo' && this.opts.exit && (pausePressed || g.menu.confirm || g.menu.back)) {
+    // DEMOSTRACIÓN: aceptar, volver o un toque sale (no hay pausa).
+    if (this.mode === 'demo' && this.opts.exit && (pausePressed || g.menu.confirm || g.menu.back || g.menu.tap)) {
       g.sfx.play('menuBack');
       g.setScene(this.opts.exit());
       return;
@@ -436,6 +442,8 @@ export class FightScene implements Scene {
       this.paused = true;
       this.pauseSel = 0;
       this.pauseUi.visible = true;
+      // En la pausa las opciones se tocan: la cruceta y los botones no las tapan.
+      mandosDePelea(false);
       g.sfx.play('pause');
       return;
     }
@@ -510,34 +518,42 @@ export class FightScene implements Scene {
       this.pauseSel = (this.pauseSel + (mi.up ? n - 1 : 1)) % n;
       g.sfx.play('menuMove');
     }
-    const resume = pausePressed || (mi.confirm && this.pauseSel === 0);
+    // Tocar una opción la elige.
+    let confirm = mi.confirm;
+    const hit = PAUSE_OPTIONS.findIndex((_, i) => mi.tapIn(P_X, P_Y + P_PAD + i * P_ROW - (P_ROW - P_FONT) / 2, P_W, P_ROW));
+    if (hit >= 0) {
+      this.pauseSel = hit;
+      confirm = true;
+    }
+    const resume = pausePressed || (confirm && this.pauseSel === 0);
     if (resume) {
       this.paused = false;
       this.pauseUi.visible = false;
+      mandosDePelea(true);
       g.sfx.play('pause');
       return;
     }
-    if (mi.confirm && this.pauseSel === 1) {
+    if (confirm && this.pauseSel === 1) {
       // La misma pelea desde el round 1: mismos luchadores, colores, escenario y lo que venga después.
       g.sfx.play('menuConfirm');
       g.setScene(new FightScene(g, this.mode, this.seed, this.opts));
       return;
     }
-    if (mi.confirm && this.pauseSel === 2) {
+    if (confirm && this.pauseSel === 2) {
       g.sfx.play('menuConfirm');
       this.moveList = new MoveListPanel(g.assets, 0);
       g.display.overlay.addChild(this.moveList.container);
       this.pauseUi.visible = false;
       return;
     }
-    if (mi.confirm && this.pauseSel === 3) {
+    if (confirm && this.pauseSel === 3) {
       g.sfx.play('menuConfirm');
       this.controls = new ControlsPanel(g, true);
       g.display.overlay.addChild(this.controls.container);
       this.pauseUi.visible = false;
       return;
     }
-    if (mi.confirm && this.pauseSel === 4) {
+    if (confirm && this.pauseSel === 4) {
       g.sfx.play('menuBack');
       g.setScene(new MainMenuScene(g));
     }

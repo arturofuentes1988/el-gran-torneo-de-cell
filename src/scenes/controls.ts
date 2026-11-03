@@ -19,7 +19,9 @@ import {
   type Action,
   type ControlsState,
   type PadAction,
+  type ViewPoint,
 } from '../input/devices';
+import { tactil } from '../input/touch';
 import { keycap, textTokens, tokenLine } from '../render/keycap';
 import { arcade, outlinedText } from '../render/text';
 import { backdrop } from './backdrop';
@@ -87,7 +89,7 @@ export class ControlsPanel {
       this.modalUi,
     );
     this.rebuild();
-    this.setStatus('ELIGE UNA CASILLA Y APRIETA ENTER PARA CAMBIARLA');
+    this.setStatus(tactil() ? 'TOCA UNA CASILLA Y TÓCALA OTRA VEZ PARA CAMBIARLA (TECLADO O JOYSTICK)' : 'ELIGE UNA CASILLA Y APRIETA ENTER PARA CAMBIARLA');
   }
 
   private get dirty(): boolean {
@@ -244,6 +246,20 @@ export class ControlsPanel {
     this.setStatus(swapped ? `${what} · SE CAMBIÓ CON ${swapped}` : what, 0x9cff8a);
   }
 
+  /** Casilla (fila y columna) o botón de abajo (fila ACTIONS.length, columna = botón) bajo un toque. */
+  private tapTarget(t: ViewPoint): { row: number; col: number } | null {
+    const r = Math.floor((t.y - TABLE_TOP + 1) / ROW);
+    if (r >= 0 && r < ACTIONS.length) {
+      const c = COLS.findIndex((x, i) => Math.abs(t.x - x) <= (i % 2 === 0 ? 32 : 26));
+      return c >= 0 ? { row: r, col: c } : null;
+    }
+    if (t.y >= BUTTONS_Y - 4 && t.y < BUTTONS_Y + 12) {
+      const b = BUTTONS.findIndex((_, i) => Math.abs(t.x - (VIEW_W / 2 + (i - 1) * 96)) <= 44);
+      return b >= 0 ? { row: ACTIONS.length, col: b } : null;
+    }
+    return null;
+  }
+
   /** Un cuadro de lógica. Devuelve false cuando hay que cerrar. */
   step(): boolean {
     this.t++;
@@ -253,7 +269,8 @@ export class ControlsPanel {
       const p = this.col < 2 ? 0 : 1;
       const pad = this.col % 2 === 1;
       const hits = g.kb.frameHits();
-      if (hits.includes('Escape')) {
+      // Esc (☰ en el celular) o un toque cancelan.
+      if (hits.includes('Escape') || m.tap) {
         this.waiting = false;
         this.rebuild();
         this.setStatus('CANCELADO');
@@ -291,10 +308,20 @@ export class ControlsPanel {
         this.paintModal();
         g.sfx.play('menuMove');
       }
-      if (m.back) {
+      // Toques: una opción la elige; fuera del cuadro, es como volver.
+      let ok = m.confirm;
+      let cancel = m.back;
+      if (m.tap) {
+        const i = MODAL.findIndex((_, k) => m.tapIn(VIEW_W / 2 - 90, VIEW_H / 2 - 10 + k * 12, 180, 12));
+        if (i >= 0) {
+          this.modal = i;
+          ok = true;
+        } else if (!m.tapIn(VIEW_W / 2 - 110, VIEW_H / 2 - 36, 220, 72)) cancel = true;
+      }
+      if (cancel) {
         this.closeModal();
         g.sfx.play('menuBack');
-      } else if (m.confirm) {
+      } else if (ok) {
         const choice = MODAL[this.modal];
         this.closeModal();
         if (choice === 'GUARDAR') {
@@ -330,7 +357,18 @@ export class ControlsPanel {
       return false;
     };
     if (m.back) return leave();
-    if (m.confirm) {
+    // Toques: una casilla la marca y tocarla otra vez la cambia; los botones de abajo se activan al tiro.
+    let confirm = m.confirm;
+    const hit = m.tap ? this.tapTarget(m.tap) : null;
+    if (hit) {
+      const same = hit.row === this.row && hit.col === (hit.row < ACTIONS.length ? this.col : this.btn);
+      this.row = hit.row;
+      if (hit.row < ACTIONS.length) this.col = hit.col;
+      else this.btn = hit.col;
+      if (same || hit.row === ACTIONS.length) confirm = true;
+      else g.sfx.play('menuMove');
+    }
+    if (confirm) {
       if (this.row < ACTIONS.length) {
         const a = ACTIONS[this.row];
         const pad = this.col % 2 === 1;
@@ -340,7 +378,8 @@ export class ControlsPanel {
           this.waiting = true;
           this.rebuild();
           const who = `J${this.col < 2 ? 1 : 2}`;
-          this.setStatus(pad ? `APRIETA UN BOTÓN DEL JOYSTICK PARA ${a.label} (${who}) · ESC CANCELA` : `APRIETA UNA TECLA PARA ${a.label} (${who}) · ESC CANCELA`, 0xffd040);
+          const cancel = tactil() ? 'TOCA PARA CANCELAR' : 'ESC CANCELA';
+          this.setStatus(pad ? `APRIETA UN BOTÓN DEL JOYSTICK PARA ${a.label} (${who}) · ${cancel}` : `APRIETA UNA TECLA PARA ${a.label} (${who}) · ${cancel}`, 0xffd040);
           g.sfx.play('menuConfirm');
         }
       } else {

@@ -116,7 +116,9 @@ En el modo 1 jugador y en práctica, el jugador 1 también puede usar las teclas
 del jugador 2.
 
 Menús: flechas (o cruceta) para moverse, Enter, Espacio o A para aceptar, Esc
-o Retroceso para volver. El **MENÚ PRINCIPAL** tiene:
+o Retroceso para volver. También se tocan (o se hace clic) las opciones directo; en
+el celular la cruceta y los botones salen solo en la pelea y ☰ vuelve atrás. El
+**MENÚ PRINCIPAL** tiene:
 
 - **ARCADE**: eliges tu luchador y le ganas a cada uno de los demás contra la
   CPU. Antes de cada pelea, un mapa de Chile (acostado, el norte a la izquierda)

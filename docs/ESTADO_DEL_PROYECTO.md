@@ -205,6 +205,26 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   código (~1.900 líneas), dos brillos sin usar, 7 cuadros de René que no se usaban, las capturas viejas de `docs/` (28 MB) y la fuente
   pixel que ya no se usaba.
 
+## Menús que se tocan (3 de noviembre)
+
+- Todas las opciones de los menús se tocan (o se hacen clic) directo: `MenuInput.tap`
+  (`src/input/devices.ts`) da el punto tocado en unidades de pantalla y cada escena mira qué hay ahí.
+  Un toque es levantar el dedo sin arrastrarlo; si se arrastra, `MenuInput.dragY` desplaza las listas.
+  - Título: "TOCA LA PANTALLA" (en cualquier parte). MENÚ PRINCIPAL, CASUAL, OPCIONES y PAUSA: tocar
+    la opción la elige; en las de `< >` (dificultad, sonido, gráficos) los costados de la barra cambian
+    el valor y el medio acepta.
+  - ELIGE LUCHADOR: tocar una cara la marca y tocarla otra vez la elige; el color, con los costados
+    del luchador grande (◄ ►), y tocarlo al medio lo acepta. ARMA TU EQUIPO: un toque por tarjeta.
+  - ELIGE ESCENARIO: una miniatura la muestra; tocarla otra vez (o la vista grande) empieza la pelea.
+  - ARCADE (mapa, VS, ¿CONTINUAR?, CAMPEÓN), DEMOSTRACIÓN y "NO SE PUDO CARGAR": un toque es aceptar.
+  - PERSONAJES y MOVIMIENTOS: ← → junto al nombre cambian de luchador, se arrastra la lista y en
+    PERSONAJES tocar un movimiento lo hace en la vitrina. ESCENARIOS: los costados cambian.
+  - CONTROLES: tocar una casilla y tocarla otra vez espera la tecla (un toque cancela); los botones de
+    abajo y el aviso de cambios sin guardar se tocan. PRÁCTICA: las opciones 1-4 de abajo se tocan.
+- En el celular, la cruceta y los botones de golpe salen solo en la pelea (no en la pausa ni en los
+  menús, donde tapaban opciones); queda ☰ arriba a la derecha para volver o pausar. Los textos de
+  ayuda dicen "TOCA" y "☰ VUELVE" en vez de ENTER y ESC.
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra

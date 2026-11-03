@@ -13,6 +13,7 @@ import { loadDifficulty } from '../app/settings';
 import { costumeFilter } from '../render/costume';
 import { NEON_CYAN, NEON_PINK } from '../render/live';
 import { arcade, outlinedText } from '../render/text';
+import { tactil } from '../input/touch';
 import type { StagePlace } from '../content/stages';
 import { DIFFICULTIES } from '../sim/difficulty';
 import { FightScene } from './fight';
@@ -235,7 +236,8 @@ class ArcadeVsScene extends ArcadeScreen {
     this.t++;
     this.left.step();
     this.right.step();
-    this.go.text = arcade(this.failed ? 'NO SE PUDO CARGAR · ACEPTAR PARA REINTENTAR' : 'ACEPTAR PARA PELEAR');
+    const verb = tactil() ? 'TOCA' : 'ACEPTAR';
+    this.go.text = arcade(this.failed ? `NO SE PUDO CARGAR · ${verb} PARA REINTENTAR` : `${verb} PARA PELEAR`);
     this.go.visible = (this.loaded || this.failed) && Math.floor(this.t / 20) % 2 === 0;
     this.bar.container.visible = !this.loaded && !this.failed;
     const m = this.game.menu;
@@ -244,8 +246,10 @@ class ArcadeVsScene extends ArcadeScreen {
       this.game.setScene(new MainMenuScene(this.game));
       return;
     }
-    if (this.failed && m.confirm) this.load();
-    if (this.loaded && ((m.confirm && this.t > 20) || this.t >= 210)) this.fight();
+    // Aquí (y en el resto del ARCADE) un toque en cualquier parte es aceptar.
+    const ok = m.confirm || !!m.tap;
+    if (this.failed && ok) this.load();
+    if (this.loaded && ((ok && this.t > 20) || this.t >= 210)) this.fight();
   }
 
   private fight(): void {
@@ -445,7 +449,7 @@ class ArcadeMapScene extends ArcadeScreen {
     }
     if (this.t === TRAVEL) this.game.sfx.play('menuConfirm');
     this.arrived.visible = this.t > TRAVEL && Math.floor(this.t / 12) % 2 === 0;
-    if ((m.confirm && this.t > 15) || this.t >= TRAVEL + 70) this.game.setScene(new ArcadeVsScene(this.game, this.run));
+    if (((m.confirm || m.tap) && this.t > 15) || this.t >= TRAVEL + 70) this.game.setScene(new ArcadeVsScene(this.game, this.run));
   }
 
   /** Punto de la curva del vuelo (0..1). */
@@ -518,14 +522,14 @@ class ArcadeContinueScene extends ArcadeScreen {
     this.ui.addChild(this.fighter.sprite);
     this.text('¿CONTINUAR?', 22, VIEW_W / 2, 46, 0xfff4e0, 0x5a0a10);
     this.count = this.text('9', 40, VIEW_W / 2, 94, 0xffd040, 0x5a0a10);
-    this.sub = this.text(arcade('ACEPTAR PARA SEGUIR · ESC PARA SALIR'), 6, VIEW_W / 2, 128, 0xd8d0e8);
+    this.sub = this.text(arcade(tactil() ? 'TOCA PARA SEGUIR · ☰ PARA SALIR' : 'ACEPTAR PARA SEGUIR · ESC PARA SALIR'), 6, VIEW_W / 2, 128, 0xd8d0e8);
   }
 
   step(): void {
     this.t++;
     const m = this.game.menu;
     if (this.over >= 0) {
-      if (++this.over >= 120 || (m.confirm && this.over > 30)) this.game.setScene(new MainMenuScene(this.game));
+      if (++this.over >= 120 || ((m.confirm || m.tap) && this.over > 30)) this.game.setScene(new MainMenuScene(this.game));
       return;
     }
     if (this.t % 60 === 1) {
@@ -533,7 +537,7 @@ class ArcadeContinueScene extends ArcadeScreen {
       this.count.text = String(this.left);
       if (this.left >= 0) this.game.sfx.play('menuMove');
     }
-    if (m.confirm && this.t > 15) {
+    if ((m.confirm || m.tap) && this.t > 15) {
       this.game.sfx.play('menuConfirm');
       this.game.setScene(new ArcadeVsScene(this.game, this.run));
       return;
@@ -585,7 +589,7 @@ class ArcadeEndScene extends ArcadeScreen {
       if (s.y > VIEW_H + 4) this.stars[i] = this.newStar(false);
     }
     const m = this.game.menu;
-    if (this.t > 90 && (m.confirm || m.back)) {
+    if (this.t > 90 && (m.confirm || m.back || m.tap)) {
       this.game.sfx.play('menuConfirm');
       this.game.setScene(new MainMenuScene(this.game));
     }

@@ -311,6 +311,16 @@ export class TeamSelectScene implements Scene {
       }
       this.refreshSlots();
     }
+    // Un toque elige esa tarjeta al tiro (la tarjeta ya muestra al luchador entero).
+    const m = this.game.menu;
+    const team = this.p1Team();
+    if (m.tap && team !== null && this.ready < 0) {
+      const i = this.cards.findIndex((c) => m.tapIn(c.x - CARD_GAP / 2, CARD_Y - 4, CARD_W + CARD_GAP, CARD_H + 8));
+      if (i >= 0) {
+        this.pos[0] = i;
+        this.pick(team, i);
+      }
+    }
 
     // Jugador 2 (si se unió).
     if (this.joined && this.ready < 0) {

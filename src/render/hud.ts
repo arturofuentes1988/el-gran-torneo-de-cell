@@ -361,6 +361,27 @@ export class Hud {
     return { infinity: inf, label, combo, best, panel, rows, key: '' };
   }
 
+  /**
+   * Opción de la barra de la práctica bajo un toque (1-4, como las teclas), o 0. Si la barra se
+   * había desvanecido, el toque solo la vuelve a mostrar.
+   */
+  practiceOptionAt(x: number, y: number): number {
+    const p = this.practiceHud;
+    const r = Math.floor((y - 213) / 11);
+    if (!p || r < 0 || r > 1) return 0;
+    const row = p.rows[r];
+    const lx = x - row.c.x;
+    const width = row.parts.reduce((w, t) => w + (t.text ? t.width : 0), 0);
+    if (lx < -6 || lx > width + 6) return 0;
+    if (this.practicePanelT < 20) {
+      this.showPracticePanel();
+      return 0;
+    }
+    // Arriba: 1 SÚPER INFINITO y 3 VIDA; abajo: 2 MUÑECO y 4 REINICIAR POSICIÓN.
+    const second = lx >= row.parts[2].x;
+    return r === 0 ? (second ? 3 : 1) : second ? 4 : 2;
+  }
+
   /** Muestra la barra de opciones de la práctica un rato (al cambiar una opción). */
   showPracticePanel(frames = PRACTICE_PANEL_CHANGE): void {
     this.practicePanelT = Math.max(this.practicePanelT, frames);

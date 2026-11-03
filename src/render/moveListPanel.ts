@@ -10,6 +10,7 @@ import { P1_KEYS, P2_KEYS, keyLabel, type Keyboard, type KeyBindings, type MenuI
 import type { Btn, FighterDef, MotionId } from '../sim/types';
 import { VIEW_H, VIEW_W } from '../config';
 import { capHeight, textTokens, tokenLine, type Token } from './keycap';
+import { tactil } from '../input/touch';
 import { outlinedText } from './text';
 
 const SIZE = 7;
@@ -223,6 +224,8 @@ export class MoveListPanel {
   private maxScroll = 0;
   private index: number;
   private player: 0 | 1 = 0;
+  /** Centro del nombre del encabezado: tocar a su izquierda o derecha cambia de luchador. */
+  private nameMid = VIEW_W - 60;
 
   constructor(private assets: Assets, start = 0) {
     this.index = start;
@@ -237,7 +240,9 @@ export class MoveListPanel {
     const mask = new Graphics().rect(AREA_X - 2, AREA_TOP, AREA_W + 8, AREA_BOTTOM - AREA_TOP).fill(0xffffff);
     this.body.mask = mask;
     const help = tokenLine(
-      [...textTokens('↑↓ DESPLAZAR   ←→ LUCHADOR   '), { cap: 'TAB' }, ...textTokens(' J1 / J2   '), { cap: 'ESC' }, ...textTokens(' VOLVER')],
+      tactil()
+        ? textTokens('ARRASTRA PARA DESPLAZAR   TOCA ← → PARA CAMBIAR DE LUCHADOR   ☰ VUELVE')
+        : [...textTokens('↑↓ DESPLAZAR   ←→ LUCHADOR   '), { cap: 'TAB' }, ...textTokens(' J1 / J2   '), { cap: 'ESC' }, ...textTokens(' VOLVER')],
       6,
       0x8ae8ff,
     );
@@ -261,9 +266,12 @@ export class MoveListPanel {
     this.header.removeChildren().forEach((ch) => ch.destroy({ children: true }));
     const many = this.fighters.length > 1;
     const name = tokenLine(textTokens(`${many ? '← ' : ''}${f.def.name.toUpperCase()}${many ? ' →' : ''}`, 0xffd040), 10);
-    name.position.set(VIEW_W - 14 - name.width, 8);
+    // En el celular, el botón ☰ va en la esquina: el nombre (con sus flechas para tocar) se corre a la izquierda.
+    const right = VIEW_W - 14 - (tactil() ? 36 : 0);
+    name.position.set(right - name.width, 8);
+    this.nameMid = name.x + name.width / 2;
     const who = tokenLine(textTokens(`TECLAS DE J${this.player + 1} · SE CAMBIAN EN CONTROLES`, 0x8ae8ff), 6);
-    who.position.set(VIEW_W - 14 - who.width, 24);
+    who.position.set(right - who.width, 24);
     this.header.addChild(name, who);
 
     // Lista.
@@ -357,14 +365,18 @@ export class MoveListPanel {
 
   /** Entrada del menú: desplazar, cambiar de luchador y (con TAB) de jugador. */
   step(menu: MenuInput, kb?: Keyboard): void {
-    if (menu.up || menu.down) {
-      this.scroll = Math.max(0, Math.min(this.maxScroll, this.scroll + (menu.down ? ROW * 2 : -ROW * 2)));
+    // Con el dedo: arrastrar desplaza la lista y tocar junto al nombre (← →) cambia de luchador.
+    const drag = -menu.dragY;
+    if (menu.up || menu.down || drag) {
+      this.scroll = Math.max(0, Math.min(this.maxScroll, this.scroll + (menu.down ? ROW * 2 : menu.up ? -ROW * 2 : drag)));
       this.body.y = -this.scroll;
       this.drawBar();
     }
-    if ((menu.left || menu.right) && this.fighters.length > 1) {
+    const tap = menu.tap;
+    const tapDir = tap && tap.y < 36 && tap.x > VIEW_W / 2 ? (tap.x < this.nameMid ? -1 : 1) : 0;
+    if ((menu.left || menu.right || tapDir) && this.fighters.length > 1) {
       const n = this.fighters.length;
-      this.index = (this.index + (menu.right ? 1 : n - 1)) % n;
+      this.index = (this.index + (menu.right || (!menu.left && tapDir > 0) ? 1 : n - 1)) % n;
       this.scroll = 0;
       this.show();
     }

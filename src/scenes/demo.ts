@@ -88,7 +88,7 @@ export class DemoScene implements Scene {
   step(): void {
     this.t++;
     const m = this.game.menu;
-    if (m.back || m.confirm) {
+    if (m.back || m.confirm || m.tap) {
       this.game.sfx.play('menuBack');
       this.game.setScene(this.exitTo());
       return;

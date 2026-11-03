@@ -8,6 +8,7 @@ import { VIEW_H, VIEW_W } from '../config';
 import type { FightNeeds } from '../content/contenido';
 import { Progreso } from '../content/descargas';
 import { BarraCarga } from '../render/barraCarga';
+import { tactil } from '../input/touch';
 import { outlinedText } from '../render/text';
 
 export class LoadingScene implements Scene {
@@ -47,7 +48,7 @@ export class LoadingScene implements Scene {
       (err: unknown) => {
         console.warn('No se pudo cargar la pelea.', err);
         this.failed = true;
-        this.hint.text = 'NO SE PUDO CARGAR · ACEPTAR PARA REINTENTAR';
+        this.hint.text = tactil() ? 'NO SE PUDO CARGAR · TOCA PARA REINTENTAR' : 'NO SE PUDO CARGAR · ACEPTAR PARA REINTENTAR';
       },
     );
   }
@@ -63,7 +64,7 @@ export class LoadingScene implements Scene {
 
   step(): void {
     if (this.done) this.game.setScene(this.next());
-    else if (this.failed && this.game.menu.confirm) this.load();
+    else if (this.failed && (this.game.menu.confirm || this.game.menu.tap)) this.load();
   }
 
   render(): void {

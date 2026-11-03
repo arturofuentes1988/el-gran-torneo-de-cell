@@ -1,7 +1,8 @@
 // Controles táctiles para celulares y tablets: cruceta a la izquierda y botones a la
 // derecha, en HTML encima del juego (semitransparentes, así se ve la pelea por debajo). Aprietan
-// teclas virtuales del jugador 1 (Keyboard.press/release), así funcionan igual en la pelea, en los
-// menús (el golpe débil acepta, ☰ vuelve o pausa) y en la pantalla de título.
+// teclas virtuales del jugador 1 (Keyboard.press/release), así funcionan igual que el teclado.
+// La cruceta y los botones de golpe salen solo en la pelea (mandosDePelea): en los menús las
+// opciones se tocan directo (MenuInput.tap) y queda solo ☰, que vuelve atrás o pausa.
 //
 // Se muestran en pantallas táctiles (puntero "grueso") o al primer toque; ?tactil=1 los fuerza
 // (pruebas en el computador). Con el celular vertical el juego se sube arriba y los controles
@@ -11,6 +12,20 @@ import type { Display } from '../app/display';
 import { P1_KEYS, type Keyboard } from './devices';
 
 type Dir = 'up' | 'down' | 'left' | 'right';
+
+let activo = false;
+let instancia: TouchControls | null = null;
+
+/** ¿Se están usando los controles táctiles? (los textos de ayuda dicen "TOCA" en vez de ENTER o ESC). */
+export function tactil(): boolean {
+  return activo;
+}
+
+/** Muestra la cruceta y los botones de golpe (en la pelea) o los esconde (menús y pausa: no tapan las opciones). */
+export function mandosDePelea(on: boolean): void {
+  if (!on) instancia?.soltar();
+  document.body.classList.toggle('tactil-pelea', on);
+}
 
 interface ButtonDef {
   id: string;
@@ -48,6 +63,7 @@ const CSS = `
   font-family: Oswald, 'Arial Narrow', sans-serif; -webkit-user-select: none; user-select: none;
   -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 body.tactil-on #tactil { display: block; }
+body:not(.tactil-pelea) #tactil .zona, body:not(.tactil-pelea) #tactil .botones, body:not(.tactil-pelea) #tactil .chicos { display: none; }
 #tactil .zona { position: absolute; left: calc(env(safe-area-inset-left) + var(--m) - var(--pad) * 0.25);
   bottom: calc(env(safe-area-inset-bottom) + var(--m) - var(--pad) * 0.25); width: calc(var(--pad) * 1.5); height: calc(var(--pad) * 1.5);
   pointer-events: auto; touch-action: none; }
@@ -100,11 +116,14 @@ export class TouchControls {
   private padId: number | null = null;
   private held = new Map<Dir, string[]>();
   private on = false;
+  /** Sueltan cada botón (al esconder los mandos con un dedo encima). */
+  private releases: Array<() => void> = [];
 
   constructor(
     private kb: Keyboard,
     private display: Display,
   ) {
+    instancia = this;
     const style = document.createElement('style');
     style.textContent = CSS;
     document.head.appendChild(style);
@@ -128,6 +147,7 @@ export class TouchControls {
   private enable(): void {
     if (this.on) return;
     this.on = true;
+    activo = true;
     document.body.classList.add('tactil-on');
     this.layout();
   }
@@ -189,12 +209,21 @@ export class TouchControls {
       codes = [];
       el.classList.remove('on');
     };
+    this.releases.push(up);
     el.addEventListener('pointerdown', down);
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
     el.addEventListener('lostpointercapture', up);
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     return el;
+  }
+
+  /** Suelta todo lo que esté apretado (se esconden los mandos). */
+  soltar(): void {
+    for (const up of this.releases) up();
+    this.padId = null;
+    this.pad.classList.remove('activa');
+    this.setDirs({ up: false, down: false, left: false, right: false });
   }
 
   // --- Cruceta fija: 4 direcciones y las diagonales (apretando entre dos brazos) ---

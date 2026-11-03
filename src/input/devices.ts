@@ -359,7 +359,19 @@ export class PlayerInput {
   }
 }
 
-/** Entrada de menús: flechas (o cruceta), Enter/Espacio o el golpe débil de J1 para aceptar, Esc/Retroceso para volver. */
+/** Punto en unidades de pantalla (480x270). */
+export interface ViewPoint {
+  x: number;
+  y: number;
+}
+
+/** Un dedo que se mueve más que esto (pixeles CSS) ya no es un toque sino un arrastre. */
+const TAP_SLOP = 12;
+
+/**
+ * Entrada de menús: flechas (o cruceta), Enter/Espacio o el golpe débil de J1 para aceptar, Esc/Retroceso para volver.
+ * También los toques (y clics) sobre el juego: cada escena mira dónde cayó `tap` y qué opción hay ahí.
+ */
 export class MenuInput {
   up = false;
   down = false;
@@ -368,11 +380,48 @@ export class MenuInput {
   confirm = false;
   back = false;
   start = false;
+  /** Toque o clic de este cuadro (al levantar el dedo sin arrastrar), en unidades de pantalla; null si no hubo. */
+  tap: ViewPoint | null = null;
+  /** Arrastre vertical del dedo en este cuadro (unidades de pantalla; positivo = hacia abajo), para desplazar listas. */
+  dragY = 0;
   private prevDirs = [false, false, false, false];
+  private taps: ViewPoint[] = [];
+  private pendingDrag = 0;
 
   constructor(private kb: Keyboard, private pads: Gamepads) {}
 
+  /** Escucha los toques y clics sobre el lienzo; toView pasa de pixeles de la ventana a unidades de pantalla. */
+  listenTaps(el: HTMLElement, toView: (clientX: number, clientY: number) => ViewPoint): void {
+    let down: { id: number; x: number; y: number; lastY: number; moved: boolean } | null = null;
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || down) return;
+      down = { id: e.pointerId, x: e.clientX, y: e.clientY, lastY: e.clientY, moved: false };
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!down || e.pointerId !== down.id) return;
+      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > TAP_SLOP) down.moved = true;
+      if (!down.moved) return;
+      this.pendingDrag += toView(0, e.clientY).y - toView(0, down.lastY).y;
+      down.lastY = e.clientY;
+    });
+    el.addEventListener('pointerup', (e) => {
+      if (!down || e.pointerId !== down.id) return;
+      if (!down.moved) this.taps.push(toView(e.clientX, e.clientY));
+      down = null;
+    });
+    el.addEventListener('pointercancel', () => (down = null));
+  }
+
+  /** ¿El toque de este cuadro cayó dentro del rectángulo? */
+  tapIn(x: number, y: number, w: number, h: number): boolean {
+    const t = this.tap;
+    return !!t && t.x >= x && t.x < x + w && t.y >= y && t.y < y + h;
+  }
+
   sample(): void {
+    this.tap = this.taps.shift() ?? null;
+    this.dragY = this.pendingDrag;
+    this.pendingDrag = 0;
     const k = this.kb;
     // Las flechas siempre navegan; también las direcciones que J1 tenga configuradas.
     let up = k.held('ArrowUp') || k.anyHeld(P1_KEYS.up);

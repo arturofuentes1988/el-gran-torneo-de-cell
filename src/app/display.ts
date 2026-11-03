@@ -90,6 +90,12 @@ export class Display {
     for (const fn of this.listeners) fn();
   }
 
+  /** Punto de la ventana (clientX/Y de un toque o clic) en unidades de pantalla (480x270). */
+  toView(clientX: number, clientY: number): { x: number; y: number } {
+    const r = this.app.canvas.getBoundingClientRect();
+    return { x: (clientX - r.left - this.root.x) / this.scale, y: (clientY - r.top - this.root.y) / this.scale };
+  }
+
   /** Resolución para que el texto del HUD quede nítido. */
   get textResolution(): number {
     return Math.max(1, this.scale * this.dpr);

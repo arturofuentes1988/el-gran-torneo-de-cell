@@ -12,6 +12,7 @@ import { VIEW_H, VIEW_W } from '../config';
 import type { FightMode, Game, Scene } from '../app/game';
 import type { FighterAsset } from '../content/loadFighter';
 import { P1_KEYS, P2_KEYS } from '../input/devices';
+import { tactil } from '../input/touch';
 import { COSTUME_COUNT, costumeFilter } from '../render/costume';
 import { NEON_CYAN, NEON_PINK } from '../render/live';
 import { arcade, outlinedText } from '../render/text';
@@ -199,7 +200,8 @@ export class CharacterSelectScene implements Scene {
       // Quién elige este lado, en la esquina de arriba.
       const label = outlinedText(side === 0 ? 'J1' : rival, 10, color, 0x0a0610, 2);
       label.anchor.set(side === 0 ? 0 : 1, 0.5);
-      label.position.set(side === 0 ? 14 : VIEW_W - 14, 18);
+      // (En el celular, el botón ☰ va en la esquina derecha: la etiqueta se corre.)
+      label.position.set(side === 0 ? 14 : VIEW_W - 14 - (tactil() ? 36 : 0), 18);
       this.ui.addChild(glow, sprite, question, plate, name, colorText, label);
       if (side === 1 && mode === 'arcade') {
         // En ARCADE el lado derecho muestra los rivales que vienen.
@@ -303,14 +305,20 @@ export class CharacterSelectScene implements Scene {
     const side = this.p1Side();
     const rival = this.mode === 'practica' ? 'EL MUÑECO' : 'TU RIVAL';
     const colorStep = (side !== null && this.stages[side] === 'color') || (this.mode === '2p' && this.stages.includes('color'));
+    const touch = tactil();
+    const back = touch ? '☰ VUELVE' : 'ESC VUELVE';
     this.hint.text = arcade(
       colorStep
-        ? '◄ ► CAMBIA EL COLOR · ACEPTAR'
+        ? touch
+          ? 'TOCA ◄ ► PARA EL COLOR · TOCA AL LUCHADOR PARA ACEPTAR'
+          : '◄ ► CAMBIA EL COLOR · ACEPTAR'
         : this.mode === '2p'
-          ? 'CADA JUGADOR ELIGE CON SU CURSOR · ESC VUELVE'
+          ? `CADA JUGADOR ELIGE CON SU CURSOR · ${back}`
           : side === 1
-            ? `AHORA ELIGE A ${rival} · ESC VUELVE`
-            : 'ELIGE TU LUCHADOR · ESC VUELVE',
+            ? `AHORA ELIGE A ${rival}${touch ? ': TOCA SU CARA DOS VECES' : ''} · ${back}`
+            : touch
+              ? `TOCA UNA CARA Y TÓCALA OTRA VEZ PARA ELEGIR · ${back}`
+              : `ELIGE TU LUCHADOR · ${back}`,
     );
   }
 
@@ -389,6 +397,40 @@ export class CharacterSelectScene implements Scene {
     }
     this.refreshHint();
     return true;
+  }
+
+  /** ¿El toque de este cuadro cayó en la casilla (con un margen alrededor)? */
+  private tapCell(c: Cell): boolean {
+    return this.game.menu.tapIn(c.x - GAP / 2, c.y - GAP / 2, c.w + GAP, c.h + GAP);
+  }
+
+  /**
+   * Toques del jugador 1 en su lado: tocar una casilla la marca y tocarla otra vez la elige.
+   * Eligiendo el color: los costados del luchador grande (◄ ►) lo cambian; el luchador o su casilla lo aceptan.
+   */
+  private handleTap(side: 0 | 1): void {
+    const m = this.game.menu;
+    if (!m.tap) return;
+    if (this.stages[side] === 'choose') {
+      const i = this.cells.findIndex((c, k) => this.selectable(k) && this.tapCell(c));
+      if (i < 0) return;
+      if (this.pos[side] === i) this.pick(side);
+      else {
+        this.pos[side] = i;
+        this.game.sfx.play('menuMove');
+      }
+    } else if (this.stages[side] === 'color') {
+      const asset = this.game.assets.roster[this.picks[side]];
+      const cell = this.cells.find((c) => c.asset === asset);
+      if (cell && this.tapCell(cell)) return this.confirmColor(side);
+      const cx = side === 0 ? BIG_X : VIEW_W - BIG_X;
+      if (!m.tapIn(cx - 64, 40, 128, VIEW_H - 40)) return;
+      const dx = m.tap.x - cx;
+      if (Math.abs(dx) < 20) return this.confirmColor(side);
+      const dir = Math.sign(dx);
+      this.colors[side] = this.freeColor(side, this.colors[side] + dir, dir);
+      this.game.sfx.play('menuMove');
+    }
   }
 
   /** Lo que hace la mano de un lado según su etapa (elegir o cambiar el color). */
@@ -480,6 +522,7 @@ export class CharacterSelectScene implements Scene {
     // Jugador 1 (y, sin jugador 2, también el rival).
     const s1 = this.p1Side();
     if (s1 !== null && !this.handle(s1, h1)) return;
+    if (s1 !== null && this.ready < 0) this.handleTap(s1);
     if (s1 === null && h1.back && !this.undo(0)) return;
     // Jugador 2 (1 VS 1).
     if (this.mode === '2p' && this.ready < 0 && this.stages[1] !== 'done') this.handle(1, h2);
