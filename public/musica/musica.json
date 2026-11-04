@@ -33,5 +33,17 @@
     "loopStart": 18.6,
     "loopEnd": 79.6116,
     "liviano": "liviano/lena-valparaiso.mp3"
+  },
+  "micky-set": {
+    "archivo": "micky-set.mp3",
+    "bpm": 131.84,
+    "loopStart": 20.8,
+    "loopEnd": 105.3058
+  },
+  "carlitos-costanera": {
+    "archivo": "carlitos-costanera.mp3",
+    "bpm": 121.9,
+    "loopStart": 2.05,
+    "loopEnd": 108.4174
   }
 }

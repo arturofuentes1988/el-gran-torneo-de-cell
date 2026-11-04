@@ -17,7 +17,7 @@
     "nombre": "LA CANCHA",
     "json": "rene-plaza/escenario.json",
     "miniatura": "rene-plaza/miniatura.webp",
-    "luchador": "rene",
+    "luchador": "flaitiano",
     "orden": 2,
     "lugar": {
       "nombre": "SANTIAGO",
@@ -61,6 +61,32 @@
       "nombre": "SANTIAGO",
       "lat": -33.42,
       "lon": -70.65
+    }
+  },
+  {
+    "id": "carlitos-costanera",
+    "nombre": "LA COSTANERA DE VALDIVIA",
+    "json": "carlitos-costanera/escenario.json",
+    "miniatura": "carlitos-costanera/miniatura.webp",
+    "luchador": "carlitos",
+    "orden": 5,
+    "lugar": {
+      "nombre": "VALDIVIA",
+      "lat": -39.814,
+      "lon": -73.247
+    }
+  },
+  {
+    "id": "micky-set",
+    "nombre": "EL SET DE LLEGÓ LA HORA",
+    "json": "micky-set/escenario.json",
+    "miniatura": "micky-set/miniatura.webp",
+    "luchador": "micky",
+    "orden": 7,
+    "lugar": {
+      "nombre": "SANTIAGO",
+      "lat": -33.45,
+      "lon": -70.66
     }
   }
 ]

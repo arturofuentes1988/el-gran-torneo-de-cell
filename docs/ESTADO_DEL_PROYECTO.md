@@ -28,12 +28,12 @@ Ocho luchadores elegidos por el usuario más Carlitos Run (agregado el 30 de oct
 
 | Luchador | Estado | Ciudad (mapa del ARCADE) | Escenario propio |
 |---|---|---|---|
-| Tío René | jugable | Santiago | LA CABAÑA DEL LAGO, LA CANCHA |
+| Tío René | jugable | Santiago | LA CABAÑA DEL LAGO |
 | Pablito Neuquén | jugable | Valdivia | LA CALLE DEL PABLITO |
-| Flaitiano | jugable | Santiago | (ninguno todavía; idea: feria libre) |
+| Flaitiano | jugable | Santiago | LA CANCHA (era de René) |
 | Vendedor de Leña | jugable | Valparaíso | LOS CERROS DE VALPARAÍSO |
-| Carlitos Run | jugable | Valdivia | (ninguno todavía) |
-| Papi Micky (Miguel Devia) | pendiente | | idea: set de TV juvenil con neón (guiño a Yingo) |
+| Carlitos Run | jugable | Valdivia | LA COSTANERA DE VALDIVIA |
+| Papi Micky (Miguel Devia) | jugable | (sin confirmar) | EL SET DE LLEGÓ LA HORA |
 | Guatón Ñackson | pendiente | | idea: picada de completos |
 | Doctor Maki Gero | pendiente | | idea: laboratorio en la cordillera |
 | Diego González | pendiente | | por decidir |
@@ -382,6 +382,34 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   en los menús vuelve atrás. El bloqueo de Esc (Chrome y Edge) se le pide a la página de más arriba, porque
   dentro de la web el juego va en un iframe y ahí el navegador lo rechazaba. Firefox y Safari no dejan
   bloquear Esc: ahí siempre sale.
+
+## Papi Micky y dos escenarios nuevos (4 de noviembre)
+
+- **Papi Micky** (id `micky`, sexto del plantel): look de la Gala Épica 2025 (camisa blanca, chaleco azul de
+  cachemira, humita azul, lentes blancos bajados, pelo rubio en puntas; sin cadena). Cara y cuerpo con GPT
+  Image 2.5 (5,5 créditos de Higgsfield). 25 clips de Kling `pro` por kie.ai más 3 repetidos: Kling rechazó
+  "salto", "intro" y "paaa" por "información sensible" (palabras como gritar o clímax); se pidieron con
+  textos más simples. La patada agachada salió con la pierna de atrás otra vez y se pidió de nuevo
+  (`patada_baja`, describiendo la pierna por el lado de la pantalla: salió bien).
+  - Especiales: ¡PAAA! (↓↘→ + golpe: onda de neón alrededor suyo), Todo es gratis, papito (→ → + golpe: lluvia
+    de monedas de oro sobre el rival), Paso de C4 (→ → + patada: saltitos de boy band y tres patadas).
+  - Súper ¡DIOS ES EL DUEÑO DEL ORO! (↓↓ + golpe: se abre el cielo, columna dorada, lingotes, monedas y
+    estrellas) y súper ¡EL MORTAL DEL PAPI! (← ← + patada, pedido del usuario: el mortal de Eddy Gordo; el
+    clip salió como mortal hacia adelante y se usa al revés).
+  - Ultra ¡LLEGÓ LA HORA! (↓↓ + patada): su baile, luces de fiesta, el escenario cambia a su set y suena el
+    coro de su canción y "soy el real del género".
+  - Efectos en código (`src/render/neon.ts`: `paaa`, `monedas`, `oro`), `comboFx: "neon"` (estrellas de
+    colores, aura, estallidos), estrellas `FxLayer.starPop`.
+  - Voces: "¡PAAA!" (tomas 1 y 5), "¡PAAA! ¿Qué pasa, guatones?", "Si yo soy de Dios, todo es gratis, papito",
+    "Dios es el dueño del oro", "soy el real del género" y el coro de "Llegó la hora" (`arte/papi-micky/voces/`).
+- **EL SET DE LLEGÓ LA HORA** (`micky-set`): set de TV juvenil estilo Yingo con público, bailarinas, DJ y
+  neón; loop MiniMax (14 créditos de Higgsfield). Partículas nuevas `confeti` (`src/render/stage.ts`).
+  Música eurodance de los 90 con Suno (`micky-set`).
+- **LA COSTANERA DE VALDIVIA** (`carlitos-costanera`): el río Calle-Calle con lobos marinos en un muelle,
+  lanchas, la feria fluvial y el puente; se borraron dos personas que nadaban; loop MiniMax (14 créditos de
+  Higgsfield). Música synth funk de los 80/90 con Suno (`carlitos-costanera`).
+- **LA CANCHA** pasa al Flaitiano (pedido del usuario); René queda con la cabaña.
+- Gasto: 1.518 créditos de kie (1.494 en clips y 24 en música; quedan 9.771) y 33,5 de Higgsfield.
 
 ## Pendiente y decisiones abiertas
 

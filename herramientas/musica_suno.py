@@ -67,6 +67,23 @@ TEMAS = {
                   '112 bpm, E minor, instrumental, seamless loop'),
         'negativo': 'cumbia, accordion, guiro, latin percussion, tropical',
     },
+    # Papi Micky (4 nov 2026): set de TV juvenil estilo Yingo; el usuario pidió música de los 80 y 90.
+    'micky-set': {
+        'title': 'El Set de Llego la Hora',
+        'style': ('90s arcade fighting game stage theme, Capcom CPS2 style, live 2000s Latin youth TV show party '
+                  'with neon lights and a cheering teen crowd, energetic 90s eurodance and 80s synth pop, '
+                  'four-on-the-floor beat, bouncy synth bass, bright catchy FM synth lead hook, piano stabs, '
+                  'orchestra hits, crowd claps, joyful, hype, 128 bpm, A minor, instrumental, seamless loop'),
+    },
+    # Carlitos Run (4 nov 2026): la costanera de Valdivia junto al río Calle-Calle, con lobos marinos.
+    'carlitos-costanera': {
+        'title': 'La Costanera de Valdivia',
+        'style': ('90s arcade fighting game stage theme, Neo Geo style, sunny riverside boardwalk in southern Chile '
+                  'with sea lions and boats, upbeat 80s synth funk and arcade rock, catchy heroic FM synth lead, '
+                  'electric guitar riffs, slap bass, driving drums with claps, fresh and playful, '
+                  '120 bpm, D major, instrumental, seamless loop'),
+        'negativo': 'cumbia, accordion, reggaeton',
+    },
     'lena-valparaiso-v2': {
         'title': 'Los Cerros de Valparaiso (Arcade)',
         'style': ('90s arcade fighting game stage theme, Capcom CPS2 style, sunset over the hills and harbor of '

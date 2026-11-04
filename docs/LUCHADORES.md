@@ -169,7 +169,7 @@ cortan la frase que está diciendo. Fuera: los chistes de la placa dental del Pa
   pantalón de camuflaje gris, zapatillas negras con suela roja. Bajo y macizo. La cara se hizo
   primero en grande con GPT Image 2.5 desde una foto suya (Nano Banana Pro no lograba el
   parecido) y después el cuerpo con esa cara de guía.
-- **Escenario**: todavía no tiene propio; en el ARCADE pelea en Valdivia (LA CALLE DEL PABLITO).
+- **Escenario**: LA COSTANERA DE VALDIVIA (río Calle-Calle con lobos marinos, música synth funk de los 80/90).
 - **Colores**: tono rojo de la polera, `face` 0.3, ropa de visita (polera blanca).
 - **Combos de bebida** (`comboFx: "cola"`): burbujas desde 3 golpes, espuma desde 5, estallidos
   desde 8, géiser desde 12.
@@ -195,3 +195,38 @@ beat (zccKCqeXZxs). Otras frases cortadas para revisar están en
 
 **Efectos** (código, `src/render/cola.ts`): proyectiles `cola`, `cajon` y `letras`;
 `FxLayer.fizz`; luces `neon` (DiscoShow con paleta roja).
+
+## Papi Micky
+
+- **id**: `micky` · **carpeta**: `arte/papi-micky/` · **ciudad**: sin confirmar (no se inventa)
+- **Quién es**: Miguel Devia, ex cantante de C4, conocido por "Llegó la hora" y su "¡PAAA!".
+- **Cuidado especial**: nada sobre su detención, drogas (tampoco en las letras), la placa dental, su familia
+  ni los documentales de su decadencia; no se usa el video en que lo engañan con un falso directo.
+- **Diseño**: el de la Gala Épica 2025 (camisa blanca, chaleco azul de cachemira, humita azul), lentes blancos
+  bajados en la nariz, pelo rubio decolorado en puntas, pantalón y zapatos negros, reloj; sin cadena (René ya
+  la tiene). Cara y cuerpo con GPT Image 2.5. La guardia quedó casi de frente (el usuario la aprobó así).
+- **Escenario**: EL SET DE LLEGÓ LA HORA (set de TV juvenil estilo Yingo, eurodance de los 90).
+- **Colores**: tono azul del chaleco, `face` 0.3, ropa de visita (chaleco blanco).
+- **Combos de neón** (`comboFx: "neon"`): estrellas de colores desde 3 golpes, aura desde 5, estallidos desde
+  8 y una lluvia de estallidos de colores desde 12.
+
+| Movimiento | Comando |
+|---|---|
+| ¡PAAA! (onda de neón alrededor suyo; el fuerte pega dos veces y lanza) | ↓ ↘ → + golpe |
+| Todo es gratis, papito (lluvia de monedas de oro sobre el rival) | → → + golpe |
+| Paso de C4 (saltitos de boy band y tres patadas) | → → + patada |
+| Súper ¡DIOS ES EL DUEÑO DEL ORO! (columna dorada, lingotes, monedas y estrellas; 1 barra) | ↓ ↓ + golpe |
+| Súper ¡EL MORTAL DEL PAPI! (mortal con las piernas estiradas como Eddy Gordo; lanza; 1 barra) | ← ← + patada |
+| Ultra ¡LLEGÓ LA HORA! (su baile en su set, luces de fiesta, su canción; 2 barras, rival en peligro) | ↓ ↓ + patada |
+
+- **Entrada**: "¡PAAA! ¿Qué pasa, guatones? ¿Cómo están?".
+- **Victoria**: pose de cantante ("Si yo soy de Dios, todo es gratis, papito").
+- **Burla**: se baja los lentes, apunta y "¡PAAA!".
+
+**Voces** (links del usuario y su video oficial): ¡PAAA! (xhaBjGSpJ-E y VMLh1INSK-Y; de este último solo el
+¡PAAA!), "Si yo soy de Dios, todo es gratis, papito" y "Dios es el dueño del oro" (svgBzb4KCMI), "soy el real
+del género" y el coro de "Llegó la hora" (wmNkTDQQQIo, sin las partes de alcohol ni las frases sobre mujeres).
+
+**Efectos** (código, `src/render/neon.ts`): proyectiles `paaa`, `monedas`, `oro`; estrellas `starPop`; luces
+`neon` en el mortal y `fiesta` en el ultra.
+

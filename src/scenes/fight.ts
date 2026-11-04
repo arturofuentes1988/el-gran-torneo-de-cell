@@ -969,6 +969,22 @@ export class FightScene implements Scene {
         this.impact = Math.max(this.impact, 2);
       }
     }
+    // Combo de neón (Papi Micky): estrellas de colores desde 3 golpes, aura de focos desde 5, estallidos
+    // desde 8, y desde 12 una lluvia de confeti con destello de pantalla, como el final de un show.
+    if (att.def.comboFx === 'neon' && e.combo >= 3) {
+      const neon = [0xff3fa4, 0x3fe0ff, 0xffe14a, 0xb46bff];
+      this.fx.electric(e.x, e.y, 3 + Math.min(e.combo, 12), neon[e.combo % 4]);
+      for (let i = 0; i < Math.min(4, e.combo - 2); i++) this.fx.starPop(e.x + (Math.random() - 0.5) * 40, e.y - Math.random() * 30, neon[(e.combo + i) % 4]);
+      if (e.combo >= 5) for (let i = 0; i < 2; i++) this.fx.aura(att.x, att.y - 70, neon[(this.t + i) % 4]);
+      if (e.combo >= 8) {
+        this.fx.explosion(e.x, e.y, neon[e.combo % 4], false);
+        this.addShake(2);
+      }
+      if (e.combo >= 12) {
+        for (let i = 0; i < 4; i++) this.fx.explosion(vic.x + (i - 1.5) * 30, -120 - Math.random() * 60, neon[i], true);
+        this.impact = Math.max(this.impact, 2);
+      }
+    }
     // Combo eléctrico: chispas desde 3 golpes, brillo de las rastas desde 5, agua desde 8, rayos desde 12.
     if (att.def.comboFx === 'electrico' && e.combo >= 3) {
       this.fx.electric(e.x, e.y, 3 + Math.min(e.combo, 12));
@@ -1049,7 +1065,8 @@ export class FightScene implements Scene {
     }
     // Troncos que caen al suelo: golpe seco, polvo y chispas de fuego.
     for (const l of this.projViews.landings) {
-      const id = `${l.owner.def.id}/${l.owner.def.id === 'carlitos' ? 'letraCae' : 'troncoCae'}`;
+      const cae: Record<string, string> = { carlitos: 'letraCae', micky: 'monedaCae' };
+      const id = `${l.owner.def.id}/${cae[l.owner.def.id] ?? 'troncoCae'}`;
       if (this.game.sfx.has(id)) this.game.sfx.play(id);
       this.fx.dust(l.x, 0, 6, true);
       this.fx.electric(l.x, -6, 5, 0xffa040);
@@ -1103,7 +1120,35 @@ export class FightScene implements Scene {
       } else if (id.startsWith('run')) {
         if (f.stateFrame % 2 === 0) this.fx.dust(f.x - dir * 20, f.y, 1, false);
         if (Math.abs(f.vx) > 1) this.fx.speedLines(f.x, f.y - 60, dir);
+      } else if (f.def.id === 'micky') {
+        this.mickyMoveFx(f, id, dir);
       }
+    }
+  }
+
+  /**
+   * Papi Micky: el Paso de C4 deja notas y estrellas de neón y polvo en cada saltito; el mortal, una
+   * estela de luz rosada y celeste y un estallido al despegar; el ¡PAAA! enciende un aura de colores.
+   */
+  private mickyMoveFx(f: Fighter, id: string, dir: number): void {
+    const neon = [0xff3fa4, 0x3fe0ff, 0xffe14a, 0xb46bff];
+    if (id.startsWith('c4')) {
+      if (f.stateFrame % 3 === 0) this.fx.starPop(f.x - dir * 10 + (Math.random() - 0.5) * 30, f.y - 90 - Math.random() * 40, neon[f.stateFrame % 4]);
+      if (f.stateFrame % 6 === 0) this.fx.dust(f.x, f.y, 3, false);
+      if (Math.abs(f.vx) > 1) this.fx.speedLines(f.x, f.y - 60, dir, neon[(f.stateFrame >> 1) % 4]);
+    } else if (id === 'mortal') {
+      if (f.stateFrame === 9) {
+        this.fx.superBurst(f.x, f.y - 40, 0xff3fa4);
+        this.fx.dust(f.x, f.y, 12, true);
+      }
+      if (f.stateFrame > 8 && f.stateFrame < 44) {
+        this.fx.aura(f.x, f.y - 70, neon[(f.stateFrame >> 2) % 4]);
+        if (f.stateFrame % 2 === 0) this.fx.trail(f.x + dir * 20, f.y - 120 + Math.sin(f.stateFrame * 0.3) * 50, neon[f.stateFrame % 4], 18);
+      }
+    } else if (id.startsWith('paaa')) {
+      if (f.stateFrame < 30) this.fx.aura(f.x, f.y - 70, neon[(f.stateFrame >> 2) % 4]);
+    } else if (id === 'super' || id.startsWith('gratis')) {
+      if (f.stateFrame % 3 === 0) this.fx.ember(f.x + (Math.random() - 0.5) * 50, f.y - Math.random() * 140);
     }
   }
 

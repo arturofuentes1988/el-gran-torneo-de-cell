@@ -480,6 +480,13 @@ def main() -> None:
             fr = {"tex": tex, "dur": dur, "hurt": cajas_dano(m, ax, ay, k)}
             if j in activos:
                 hb = caja_golpe(m, np.pad(guardia, b) if b else guardia, dx, dy, spec.get("golpe", "frente"), ax, ay, alto, k)
+                # "hasta_suelo": la caja baja hasta el piso y parte desde el cuerpo (un golpe que pasa
+                # alto, como el mortal de Papi Micky, igual le pega al agachado y al que está pegado).
+                if spec.get("hasta_suelo"):
+                    hb["h"] = max(hb["h"], -hb["y"])
+                    x1 = hb["x"] + hb["w"]
+                    hb["x"] = min(hb["x"], 6)
+                    hb["w"] = x1 - hb["x"]
                 grupos = spec.get("grupos", {})
                 hb["group"] = grupos.get(str(j), 0)
                 # "props_grupo": {"4": {...}} cambia las propiedades de un golpe (ej. el último lanza).

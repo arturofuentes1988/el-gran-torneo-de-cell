@@ -4,8 +4,10 @@ Juego de pelea 2D para el navegador, estilo arcade (SNK / Marvel vs Capcom)
 con pixel art y efectos modernos.
 
 **Estado: en desarrollo.** Se puede jugar con Tío René, Pablito Neuquén, el
-Flaitiano, el Vendedor de Leña y Carlitos Run (sprites, voces y poderes definitivos) en los escenarios de René, en
-la calle del Pablito (Valdivia, con lluvia), en los cerros de Valparaíso y en Santiago de noche. Los demás luchadores del plantel vienen después.
+Flaitiano, el Vendedor de Leña, Carlitos Run y Papi Micky (sprites, voces y poderes definitivos) en la cabaña del
+lago (René), la cancha (el Flaitiano), la calle del Pablito (Valdivia, con lluvia), los cerros de Valparaíso, la
+costanera de Valdivia (Carlitos, con lobos marinos), el set de "Llegó la hora" (Papi Micky) y Santiago de noche.
+Los demás luchadores del plantel vienen después.
 
 La web (`index.html`) tiene dos pestañas: **JUGAR**, con el juego (`juego.html`) dentro, y
 **RANKING**: puntos de liga, victorias y mejor racha en línea, y los campeones del ARCADE
@@ -228,6 +230,19 @@ Carlitos Run (bebida con gas, velocidad y su BMX; también dos toques y un botó
 Sus combos se llenan de bebida: burbujas, espuma, estallidos y, desde 12 golpes,
 un géiser. Su ropa de visita es la polera blanca.
 
+Papi Micky (neón de set de TV, oro y su "¡PAAA!"):
+
+| Movimiento | Comando |
+|---|---|
+| ¡PAAA! (revienta una onda de neón alrededor suyo; el fuerte pega 2 veces y lanza) | abajo, abajo-adelante, adelante + golpe |
+| Todo es gratis, papito (chasquea los dedos y llueven monedas de oro sobre el rival) | adelante, adelante + golpe |
+| Paso de C4 (saltitos de boy band y tres patadas; el fuerte derriba) | adelante, adelante + patada |
+| Súper ¡DIOS ES EL DUEÑO DEL ORO! (se abre el cielo: columna dorada, lingotes, monedas y estrellas; 1 barra) | abajo, abajo + golpe |
+| Súper ¡EL MORTAL DEL PAPI! (mortal hacia atrás con las piernas estiradas que hace volar al rival; 1 barra) | atrás, atrás + patada |
+| Ultra ¡LLEGÓ LA HORA! (su baile en su set con luces de fiesta y su canción; 2 barras, rival en peligro) | abajo, abajo + patada |
+
+Sus combos se llenan de estrellas de neón y estallidos de colores. Su ropa de visita es el chaleco blanco.
+
 - **Agarre:** pegado al rival, aprieta un golpe y una patada juntos (cualquiera
   de cada uno, hasta ~0,1 s de diferencia entre los dos; con atrás lo tira hacia atrás). También sale con adelante o
   atrás + golpe fuerte. Se escapa apretando golpe justo al ser agarrado. Los
@@ -328,7 +343,7 @@ al mismo luchador, el segundo sale con otra ropa (solo cambia la que dice su
 definición, `costume`; la cara, el pelo y las zapatillas quedan igual). En 1 VS CPU
 y práctica el jugador 1 elige el suyo y después el rival (CPU o sparring). Esc / Retroceso
 vuelve un paso atrás o al menú. Las caras salen de `herramientas/caras.py`. El plantel son los luchadores de
-`public/luchadores/` (René, Pablito, el Flaitiano, el Vendedor de Leña y Carlitos Run).
+`public/luchadores/` (René, Pablito, el Flaitiano, el Vendedor de Leña, Carlitos Run y Papi Micky).
 
 Antes de cada pelea se elige el escenario (**ELIGE ESCENARIO**, o ALEATORIO).
 Mientras no se elija uno, los menús y las peleas de prueba usan el primero de

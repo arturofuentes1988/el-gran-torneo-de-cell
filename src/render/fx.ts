@@ -567,6 +567,17 @@ export class FxLayer {
   }
 
   /** Chispas flotantes para el título. */
+  /** Estrella de neón que sube girando y se apaga (los shows de Papi Micky). */
+  starPop(x: number, y: number, color: number): void {
+    const l = Math.round(rand(34, 50));
+    const motion = {
+      x, y, vx: rand(-0.8, 0.8), vy: rand(-2.2, -1.2), life: l, max: l, drag: 0.97, grav: 0.02,
+      stretch: 0, spin: rand(-0.25, 0.25), hold: 0.4,
+    };
+    this.spawn(this.tex.star, true, { ...motion, s0: 0.35, s1: 0.75, a0: 1, a1: 0 }, color, rand(0, Math.PI));
+    this.spawn(this.tex.dot, true, { ...motion, s0: 0.3, s1: 0.5, a0: 0.6, a1: 0 }, color);
+  }
+
   ember(x: number, y: number): void {
     const l = Math.round(rand(60, 120));
     this.spawn(this.tex.dot, true, {

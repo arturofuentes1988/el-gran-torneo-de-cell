@@ -1,0 +1,24 @@
+{
+  "voz/intro": "que-pasa-guatones.mp3",
+  "voz/paaa": [
+    "paaa-1.mp3",
+    "paaa-5.mp3"
+  ],
+  "voz/gratis": "todo-es-gratis.mp3",
+  "voz/c4": "paaa-1.mp3",
+  "voz/poder": "paaa-5.mp3",
+  "voz/super": "dios-dueno-del-oro.mp3",
+  "voz/mortal": "paaa-5.mp3",
+  "voz/super-remate": "paaa-1.mp3",
+  "voz/ultra": "paaa-5.mp3",
+  "voz/ultra-1": "llego-la-hora.mp3",
+  "voz/ultra-2": "real-del-genero.mp3",
+  "voz/remate": "paaa-1.mp3",
+  "voz/victoria": "todo-es-gratis.mp3",
+  "voz/burla": "paaa-5.mp3",
+  "voz/combo-corto": "paaa-1.mp3",
+  "voz/combo-medio": "paaa-5.mp3",
+  "voz/combo-largo": "dios-dueno-del-oro.mp3",
+  "voz/combo-viral": "real-del-genero.mp3",
+  "voz/combo-ultra": "paaa-5.mp3"
+}

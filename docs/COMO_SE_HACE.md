@@ -123,6 +123,13 @@ clip bueno alcanza para la patada baja (tramo corto) y la barrida (la pierna est
 estilo Mortal Kombat (`gancho_mk`: agachado hondo, el puño junto al tobillo, sube recto sobre la cabeza)
 salió bien en los cinco; con la guardia achicada para que el puño no se salga por arriba.
 
+**Kling rechaza textos** ("Generation failed as the content includes sensitive information"): con
+Papi Micky pasó con "shout", "climax", "mouth wide open". Se arregla con un texto más simple y sin esas
+palabras; los rechazos no se cobran. Con una guardia casi de frente, describir las piernas por el lado de
+la pantalla ("his leg on the RIGHT side of the image kicks out toward the right") en vez de
+adelante/atrás. Un clip que sale al revés de lo pedido (un mortal hacia adelante) puede servir dado vuelta:
+basta poner los cuadros en orden inverso en el `armado.json`.
+
 **Golpes fluidos**: el video va a 24 cuadros por segundo y el juego a 60. Un golpe armado con un
 cuadro del video cada 2 o 3, que dura 2 a 4 cuadros del juego, se ve a saltos. `herramientas/fluidez.py
 arte/<luchador>/armado.json --max 2` reparte la duración de cada cuadro elegido entre él y el cuadro del
@@ -224,8 +231,9 @@ Claves que usa el motor: `voz/intro`, `voz/poder`, `voz/victoria`, `voz/remate`,
 `extra.sfx` o `taunts`). Las claves sin `voz/` (ej. `silbido/largo`) suenan como efecto y no
 cortan la voz del luchador.
 
-yt-dlp, Demucs y faster-whisper se instalaron en un entorno de Python temporal; para
-reinstalarlos: `python -m venv venv-audio` y `venv-audio/Scripts/pip install yt-dlp demucs
+yt-dlp, Demucs y faster-whisper están en `C:/Users/fuent/venv-audio` (fuera del proyecto). Con esta
+versión de PyAV, faster-whisper no lee archivos: se le pasa el audio como arreglo (ffmpeg a f32le, 16 kHz).
+Para reinstalarlos: `python -m venv venv-audio` y `venv-audio/Scripts/pip install yt-dlp demucs
 faster-whisper`.
 
 ---

@@ -60,7 +60,8 @@ export interface StagePulseDef {
 
 /** Partículas decorativas del escenario (detrás de los luchadores). */
 export interface StageParticlesDef {
-  type: 'polvo' | 'lluvia' | 'nieve' | 'brasas';
+  /** 'confeti': papelitos de colores que caen girando (el color de cada uno sale de una paleta, no de `color`). */
+  type: 'polvo' | 'lluvia' | 'nieve' | 'brasas' | 'confeti';
   count: number;
   color: number;
   alpha?: number;
@@ -168,6 +169,9 @@ interface Particle {
   seed: number;
 }
 
+/** Colores del confeti. */
+const CONFETI = [0xff3fa4, 0x3fe0ff, 0xffe14a, 0xb46bff, 0x5dff8a, 0xff8a3d];
+
 /** Partículas decorativas: avanzan con el reloj (no con la simulación). */
 class ParticleField {
   readonly container = new Container();
@@ -181,8 +185,8 @@ class ParticleField {
     for (let i = 0; i < def.count; i++) {
       const view = new Sprite(tex);
       view.anchor.set(0.5, def.type === 'lluvia' ? 1 : 0.5);
-      view.tint = def.color;
-      view.blendMode = 'add';
+      view.tint = def.type === 'confeti' ? CONFETI[i % CONFETI.length] : def.color;
+      view.blendMode = def.type === 'confeti' ? 'normal' : 'add';
       this.container.addChild(view);
       const p: Particle = { view, x: 0, y: 0, vx: 0, vy: 0, age: 0, life: 1, seed: Math.random() * 1000 };
       this.spawn(p, true);
@@ -203,6 +207,7 @@ class ParticleField {
         p.life = 9999;
         p.view.scale.set(size * 0.12, (10 + Math.random() * 8) / 64);
         break;
+      case 'confeti':
       case 'nieve':
         p.y = anywhere ? top + Math.random() * (bottom - top) : top - Math.random() * 30;
         p.vx = -0.15 + Math.random() * 0.3;
@@ -235,7 +240,9 @@ class ParticleField {
       p.age += dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      if (this.def.type === 'nieve') p.x += Math.sin((p.age + p.seed) / 40) * 0.12 * dt;
+      if (this.def.type === 'nieve' || this.def.type === 'confeti') p.x += Math.sin((p.age + p.seed) / 40) * 0.12 * dt;
+      // El papelito gira: se angosta y se ensancha.
+      if (this.def.type === 'confeti') p.view.scale.x = p.view.scale.y * (0.25 + 0.75 * Math.abs(Math.sin((p.age + p.seed) / 7)));
       const out = p.age > p.life || p.y > bottom + 4 || p.y < top - 60;
       if (out) this.spawn(p, false);
       let a = base;

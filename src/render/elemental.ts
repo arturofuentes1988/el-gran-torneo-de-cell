@@ -13,6 +13,7 @@ import { vfxFrames } from '../content/vfx';
 import type { Projectile } from '../sim/match';
 import { drawSilbido, drawSonico, drawTronco, drawTroncos } from './fuego';
 import { drawCajon, drawCola, drawLetras } from './cola';
+import { drawMonedas, drawOro, drawPaaa } from './neon';
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 
@@ -136,7 +137,7 @@ export class ProjectileLook {
 
   /** Cuadros que se sigue viendo después de que el proyectil desaparece (el rayo se apaga, el remolino se deshace). */
   get linger(): number {
-    const linger: Record<string, number> = { rayo: 26, tornado: 18, troncos: 16, sonico: 20, letras: 16 };
+    const linger: Record<string, number> = { rayo: 26, tornado: 18, troncos: 16, sonico: 20, letras: 16, paaa: 16, monedas: 14, oro: 18 };
     return linger[this.kind] ?? 0;
   }
 
@@ -155,6 +156,9 @@ export class ProjectileLook {
     else if (this.kind === 'cola') drawCola(this.base, this.g, p, this.spr);
     else if (this.kind === 'cajon') drawCajon(this.base, this.g, p, this.spr);
     else if (this.kind === 'letras') drawLetras(this.base, this.g, p, after, this.spr);
+    else if (this.kind === 'paaa') drawPaaa(this.base, this.g, p, after);
+    else if (this.kind === 'monedas') drawMonedas(this.base, this.g, p, after);
+    else if (this.kind === 'oro') drawOro(this.base, this.g, p, after);
     this.spr.end();
   }
 

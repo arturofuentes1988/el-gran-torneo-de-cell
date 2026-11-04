@@ -259,7 +259,8 @@ export interface ProjectileDef {
   delay?: number;
   /**
    * Dibujo propio en vez de (o además de) sus cuadros: 'rayo', 'tornado', 'rastas', 'geiser' (el Flaitiano);
-   * 'silbido', 'tronco', 'troncos', 'sonico' (el Vendedor de Leña); 'cola', 'cajon', 'letras' (Carlitos).
+   * 'silbido', 'tronco', 'troncos', 'sonico' (el Vendedor de Leña); 'cola', 'cajon', 'letras' (Carlitos);
+   * 'paaa', 'monedas', 'oro' (Papi Micky).
    * Usa los efectos pintados compartidos (public/efectos/) si están cargados.
    */
   look?: string;
@@ -344,7 +345,7 @@ export interface FighterDef {
    * Efectos que crecen con el largo de sus combos: 'electrico' = chispas, brillo, agua y rayos;
    * 'fuego' = brasas, aura de llamas, estallidos y un pilar de fuego.
    */
-  comboFx?: 'electrico' | 'fuego' | 'cola';
+  comboFx?: 'electrico' | 'fuego' | 'cola' | 'neon';
   /** Cuál es su ropa, para los colores alternativos (ver render/costume.ts). */
   costume?: CostumeDef;
   /** De dónde es (para el mapa del ARCADE): nombre de la ciudad, latitud y longitud. */
