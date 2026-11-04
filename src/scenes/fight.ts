@@ -14,6 +14,7 @@ import { StormShow, bolt } from '../render/elemental';
 import { Grieta, PartyShow, UltraShow, drawMareo, drawRemolino } from '../render/fuego';
 import { FxLayer } from '../render/fx';
 import { Hud, type PracticeHudInfo } from '../render/hud';
+import { drawCambiaFrente } from '../render/lab';
 import { LiveShow } from '../render/live';
 import { Smears } from '../render/smear';
 import { MoveListPanel } from '../render/moveListPanel';
@@ -142,6 +143,8 @@ export class FightScene implements Scene {
   private bigBoltX = 0;
   /** Letras de cómic de los golpes (¡TOC!), en el mundo. */
   private comics: Array<{ text: Text; life: number }> = [];
+  /** Sellos dorados de "¡EL AUTÉNTICO!" (Maki Gero): caen como un timbrazo y se apagan. */
+  private sellos: Array<{ view: Container; life: number }> = [];
   /** Golpes que lleva conectados cada luchador en su movimiento actual (para las letras de cómic). */
   private moveHits = new Map<Fighter, { move: string; n: number }>();
   /** Lo que se dibuja sobre la cabeza del rival durante un movimiento (el tarro). */
@@ -922,6 +925,36 @@ export class FightScene implements Scene {
       this.views.get(vic)?.burn(14);
       this.fx.explosion(e.x, e.y, 0xff2a2a, !!e.last);
       this.addShake(e.last ? 7 : 4);
+    } else if (e.look === 'color' || e.look === 'colorRayo') {
+      // "¡Dale color!": revienta en pintura de todos los colores.
+      const arco = [0xff3b3b, 0xffe14a, 0x4dff6a, 0x3fc8ff, 0xff4fd8];
+      this.fx.explosion(e.x, e.y, arco[Math.floor(Math.random() * arco.length)], !!e.last);
+      for (let i = 0; i < 4; i++) this.fx.starPop(e.x + (Math.random() - 0.5) * 40, e.y - Math.random() * 30, arco[i]);
+      this.addShake(e.last ? 5 : 2);
+    } else if (e.look === 'androides') {
+      // El androide embiste: chispas rojas de metal.
+      this.fx.electric(e.x, e.y, 8, 0xff5a4a);
+      this.fx.dust(e.x, 0, 3, false);
+      if (e.last) this.fx.explosion(e.x, e.y, 0xff3a2a, true);
+      this.addShake(e.last ? 5 : 2);
+    } else if (e.look === 'cambia') {
+      // La máquina lo reprograma: descargas verdes y, al final, revienta.
+      this.views.get(vic)?.electrify(30);
+      this.fx.electric(e.x, e.y, 7, 0x3fffa0);
+      if (e.last) {
+        this.fx.explosion(vic.x, -150, 0x3fffa0, true);
+        this.fx.superBurst(vic.x, -100, 0x3fffa0);
+        this.impact = Math.max(this.impact, 3);
+      }
+      this.addShake(e.last ? 8 : 3);
+    } else if (e.look === 'robo') {
+      // Puñetazo cohete o rayo de los ojos del Tío René robot.
+      this.fx.explosion(e.x, e.y, e.last ? 0xff3a2a : 0x3fd8ff, true);
+      if (e.last) {
+        this.views.get(vic)?.burn(18);
+        this.fx.superBurst(e.x, e.y, 0xff5a4a);
+      }
+      this.addShake(e.last ? 9 : 6);
     } else if (e.move?.startsWith('bici')) {
       // La bicicleta atropella: estallido de fuego, polvo y sacudón.
       this.views.get(vic)?.burn(10);
@@ -982,6 +1015,21 @@ export class FightScene implements Scene {
       }
       if (e.combo >= 12) {
         for (let i = 0; i < 4; i++) this.fx.explosion(vic.x + (i - 1.5) * 30, -120 - Math.random() * 60, neon[i], true);
+        this.impact = Math.max(this.impact, 2);
+      }
+    }
+    // Combo del laboratorio (Maki Gero): chispas de colores desde 3 golpes, aura verde desde 5, estallidos
+    // desde 8 y desde 12 el rival queda electrificado, como si lo estuvieran reprogramando.
+    if (att.def.comboFx === 'laboratorio' && e.combo >= 3) {
+      const lab = [0x3fffa0, 0x7ff6ff, 0xb46bff, 0xff4fd8];
+      this.fx.electric(e.x, e.y, 3 + Math.min(e.combo, 12), lab[e.combo % 4]);
+      if (e.combo >= 5) for (let i = 0; i < 2; i++) this.fx.aura(att.x, att.y - 70, lab[(this.t + i) % 4]);
+      if (e.combo >= 8) {
+        this.fx.explosion(e.x, e.y, lab[e.combo % 4], false);
+        this.addShake(2);
+      }
+      if (e.combo >= 12) {
+        this.views.get(vic)?.electrify(20);
         this.impact = Math.max(this.impact, 2);
       }
     }
@@ -1072,6 +1120,28 @@ export class FightScene implements Scene {
       this.fx.electric(l.x, -6, 5, 0xffa040);
       this.addShake(2);
     }
+    for (let i = this.sellos.length - 1; i >= 0; i--) {
+      const s = this.sellos[i];
+      s.life--;
+      // Cae grande (timbrazo), rebota un poco y se apaga al final.
+      const age = 46 - s.life;
+      const k = age < 6 ? 2.2 - (age / 6) * 1.3 : age < 10 ? 0.9 + ((age - 6) / 4) * 0.1 : 1;
+      s.view.scale.set(k);
+      s.view.alpha = Math.min(1, s.life / 10);
+      if (s.life <= 0) {
+        s.view.destroy({ children: true });
+        this.sellos.splice(i, 1);
+      }
+    }
+    for (const p of this.match.projectiles) {
+      if (p.dead) continue;
+      // El Tío René robot aterriza; la máquina de reprogramar encaja en la cabeza.
+      if (p.def.look === 'robo' && p.frame === 12) {
+        this.addShake(9);
+        this.fx.dust(p.x, 0, 14, true);
+      }
+      if (p.def.look === 'cambia' && p.frame === (p.def.delay ?? 0)) this.addShake(4);
+    }
     this.grieta.step();
     for (const [f, n] of this.dizzy) {
       if (n <= 1) this.dizzy.delete(f);
@@ -1122,6 +1192,8 @@ export class FightScene implements Scene {
         if (Math.abs(f.vx) > 1) this.fx.speedLines(f.x, f.y - 60, dir);
       } else if (f.def.id === 'micky') {
         this.mickyMoveFx(f, id, dir);
+      } else if (f.def.id === 'maki') {
+        this.makiMoveFx(f, id, dir);
       }
     }
   }
@@ -1150,6 +1222,50 @@ export class FightScene implements Scene {
     } else if (id === 'super' || id.startsWith('gratis')) {
       if (f.stateFrame % 3 === 0) this.fx.ember(f.x + (Math.random() - 0.5) * 50, f.y - Math.random() * 140);
     }
+  }
+
+  /**
+   * Dr. Maki Gero: "¡El auténtico!" sube envuelto en rayos y estampa su sello dorado; "¡Dale color!"
+   * carga un aura arcoíris; los súper chisporrotean verde y celeste en sus manos.
+   */
+  private makiMoveFx(f: Fighter, id: string, dir: number): void {
+    const arco = [0xff3b3b, 0xff9a2e, 0xffe14a, 0x4dff6a, 0x3fc8ff, 0x8a5bff, 0xff4fd8];
+    if (id.startsWith('autentico')) {
+      if (f.stateFrame === 5) this.fx.uppercut(f.x + dir * 20, f.y - 60, 0x9fe8ff, f.x);
+      if (f.stateFrame > 4 && f.stateFrame < 30) {
+        if (f.stateFrame % 2 === 0) this.fx.electric(f.x + dir * 16, f.y - 70 - Math.random() * 60, 4, 0x9fe8ff);
+        this.fx.aura(f.x, f.y - 70, f.stateFrame % 4 < 2 ? 0x9fe8ff : 0xffe14a);
+      }
+      if (f.stateFrame === 10 && id !== 'autenticoU') this.sello(f.x + dir * 40, f.y - 170);
+    } else if (id.startsWith('color')) {
+      if (f.stateFrame < 18) this.fx.aura(f.x + dir * 20, f.y - 80, arco[(f.stateFrame >> 1) % arco.length]);
+    } else if (id === 'super' || id === 'robot') {
+      if (f.stateFrame % 3 === 0) this.fx.electric(f.x + dir * 24, f.y - 90 - Math.random() * 40, 3, id === 'super' ? 0x3fffa0 : 0x7ff6ff);
+    }
+  }
+
+  /** Sello dorado "¡EL AUTÉNTICO!": un timbrazo que cae grande, rebota y se apaga. */
+  private sello(x: number, y: number): void {
+    const c = new Container();
+    const g = new Graphics();
+    // Insignia: estrella de 16 puntas dorada con anillo.
+    const pts: number[] = [];
+    for (let i = 0; i < 32; i++) {
+      const r = i % 2 ? 30 : 38;
+      const a = (i / 32) * Math.PI * 2;
+      pts.push(Math.cos(a) * r * 1.9, Math.sin(a) * r);
+    }
+    g.poly(pts).fill({ color: 0xb07a10 });
+    g.ellipse(0, 0, 64, 30).fill({ color: 0xffcf3a });
+    g.ellipse(0, 0, 58, 25).stroke({ width: 2, color: 0xfff2a8 });
+    c.addChild(g);
+    const t = outlinedText('¡EL AUTÉNTICO!', 13, 0xfff8d0, 0x5a3200, 3);
+    t.anchor.set(0.5);
+    c.addChild(t);
+    c.position.set(x, y);
+    c.rotation = -0.12;
+    this.world.addChild(c);
+    this.sellos.push({ view: c, life: 46 });
   }
 
   /** Escenario de reemplazo del ultra que corre (si tiene uno y ya cargó). */
@@ -1204,6 +1320,7 @@ export class FightScene implements Scene {
       const head = boxes.reduce((a, b) => (b.y0 < a.y0 ? b : a));
       drawMareo(this.overlayG, (head.x0 + head.x1) / 2, head.y0 - 6, this.t);
     }
+    for (const p of m.projectiles) if (!p.dead && p.def.look === 'cambia') drawCambiaFrente(this.fireG, p);
     this.grieta.render();
   }
 

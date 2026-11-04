@@ -35,7 +35,7 @@ Ocho luchadores elegidos por el usuario más Carlitos Run (agregado el 30 de oct
 | Carlitos Run | jugable | Valdivia | LA COSTANERA DE VALDIVIA |
 | Papi Micky (Miguel Devia) | jugable | (sin confirmar) | EL SET DE LLEGÓ LA HORA |
 | Guatón Ñackson | pendiente | | idea: picada de completos |
-| Doctor Maki Gero | pendiente | | idea: laboratorio en la cordillera |
+| Dr. Maki Gero | jugable (falta la patada baja y su música) | (sin confirmar) | EL LABORATORIO DEL DR. MAKI GERO |
 | Diego González | pendiente | | por decidir |
 
 Cada luchador completo cuesta unos 130 créditos de Higgsfield (ver COMO_SE_HACE.md).
@@ -410,6 +410,33 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   Higgsfield). Música synth funk de los 80/90 con Suno (`carlitos-costanera`).
 - **LA CANCHA** pasa al Flaitiano (pedido del usuario); René queda con la cabaña.
 - Gasto: 1.518 créditos de kie (1.494 en clips y 24 en música; quedan 9.771) y 33,5 de Higgsfield.
+
+## Dr. Maki Gero (4 de noviembre)
+
+- **Dr. Maki Gero** (id `maki`, séptimo del plantel): mánager de Tío René; su nombre viene del Dr. Gero de Dragon
+  Ball. Look elegido por el usuario: jockey negro con emblema dorado, polera negra, bata blanca de laboratorio con
+  las mangas arremangadas y los brazos tatuados. Cara y cuerpo con GPT Image 2.5 desde fotos del usuario
+  (5,5 créditos de Higgsfield).
+- 23 clips de Kling `pro` por kie.ai y 2 de ayudantes (el Tío René robot gigante y un androide, diseñados con
+  GPT Image 2.5). Revisión cuadro por cuadro: en ¡Dale color! se saltan unos cuadros con un destello que dibujó
+  Kling; la patada en el aire de ¡El auténtico! salió hacia atrás y se usa volteada (`el_autentico_mix.mp4`).
+  La patada baja salió tres veces hacia atrás: por ahora `cLK`/`cHK` usan el puño agachado (pendiente).
+  - Especiales: ¡Dale color! (↓↑ + golpe), ¡El auténtico! (↓↑ + patada), ¡Son todos androides! (→ → + patada).
+  - Súper ¡Cambia, cambia, es por tu bien! (↓↓ + golpe; solo el audio de esa frase, convertido en una máquina de
+    reprogramar) y súper ¡Aquí estamos nuevamente con mi androide! (← ← + patada; el Tío René robot).
+  - Ultra ¡El laboratorio del Dr. Maki Gero! (↓↓ + patada), con su laboratorio de fondo.
+  - Movimiento nuevo ↓↑ (`du`): `src/input/buffer.ts`, `types.ts`, `ai.ts`, `moveListPanel.ts`; en el
+    pre-salto, el botón gana y sale el especial (`Fighter.tryUpSpecial`).
+  - Efectos en código (`src/render/lab.ts`: `color`, `colorRayo`, `androides`, `cambia`, `robo`); los ayudantes
+    son cuadros pintados que el dibujo propio toma de `ProjectileDef.sprites`. Sello dorado "¡EL AUTÉNTICO!" y
+    `comboFx: "laboratorio"` en `fight.ts`.
+  - Voces: sus cinco frases reales ("aquí estamos nuevamente con mi androide", "¡cambia, cambia, es por tu
+    bien!", "¡dale color!", "¡el auténtico!", "son todos androides, pues, cachái"; `arte/maki-gero/voces/`).
+- **EL LABORATORIO DEL DR. MAKI GERO** (`maki-lab`): laboratorio secreto en la cordillera con cápsulas de
+  androides, bobinas Tesla y la ventana a los Andes; loop MiniMax (14 créditos de Higgsfield). Sin música todavía.
+- `herramientas/kie_video.py` guarda cada tarea apenas la pide, retoma las que siguen en proceso y no reintenta
+  un pedido sin respuesta (un pedido cortado por tiempo de espera igual se creó y se cobró).
+- Gasto: 1.602 créditos de kie (quedan 8.169) y 19,5 de Higgsfield (quedan 60,1).
 
 ## Pendiente y decisiones abiertas
 

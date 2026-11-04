@@ -3,7 +3,8 @@
 // y, si no están cargados, se dibujan con vectores:
 // - bolt(): un rayo quebrado con ramas, núcleo blanco y halo celeste.
 // - ProjectileLook: el dibujo propio de un proyectil con `look` ('rayo', 'rastas',
-//   'tornado'; y los del Vendedor de Leña, en render/fuego.ts), cuadro a cuadro según su edad.
+//   'tornado'; y los del Vendedor de Leña, en render/fuego.ts; los del Maki Gero, en render/lab.ts),
+//   cuadro a cuadro según su edad.
 // - StormShow: la tormenta del súper (cinematic.lights = 'tormenta'): cielo oscuro,
 //   lluvia y relámpagos, detrás de los luchadores, en unidades de pantalla (480x270).
 
@@ -14,6 +15,7 @@ import type { Projectile } from '../sim/match';
 import { drawSilbido, drawSonico, drawTronco, drawTroncos } from './fuego';
 import { drawCajon, drawCola, drawLetras } from './cola';
 import { drawMonedas, drawOro, drawPaaa } from './neon';
+import { drawAndroides, drawCambia, drawColor, drawColorRayo, drawRobo } from './lab';
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 
@@ -82,6 +84,11 @@ export class LookSprites {
     return vfxFrames(this.textures, name);
   }
 
+  /** Una textura cualquiera por su nombre (los cuadros de `sprites` de un proyectil) o undefined. */
+  tex(name: string): Texture | undefined {
+    return this.textures[name];
+  }
+
   /** Un objeto pintado (obj/<nombre>) o undefined. */
   obj(name: string): Texture | undefined {
     return this.textures[`obj/${name}`];
@@ -137,7 +144,7 @@ export class ProjectileLook {
 
   /** Cuadros que se sigue viendo después de que el proyectil desaparece (el rayo se apaga, el remolino se deshace). */
   get linger(): number {
-    const linger: Record<string, number> = { rayo: 26, tornado: 18, troncos: 16, sonico: 20, letras: 16, paaa: 16, monedas: 14, oro: 18 };
+    const linger: Record<string, number> = { rayo: 26, tornado: 18, troncos: 16, sonico: 20, letras: 16, paaa: 16, monedas: 14, oro: 18, color: 14, colorRayo: 12, androides: 12, cambia: 20 };
     return linger[this.kind] ?? 0;
   }
 
@@ -159,6 +166,11 @@ export class ProjectileLook {
     else if (this.kind === 'paaa') drawPaaa(this.base, this.g, p, after);
     else if (this.kind === 'monedas') drawMonedas(this.base, this.g, p, after);
     else if (this.kind === 'oro') drawOro(this.base, this.g, p, after);
+    else if (this.kind === 'color') drawColor(this.base, this.g, p, after);
+    else if (this.kind === 'colorRayo') drawColorRayo(this.base, this.g, p, after);
+    else if (this.kind === 'androides') drawAndroides(this.base, this.g, p, after, this.spr);
+    else if (this.kind === 'cambia') drawCambia(this.base, this.g, p, after);
+    else if (this.kind === 'robo') drawRobo(this.base, this.g, p, after, this.spr);
     this.spr.end();
   }
 

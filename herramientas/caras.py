@@ -22,6 +22,7 @@ LUCHADORES = {
     "lena": "arte/vendedor-de-lena/diseno-final.png",
     "carlitos": "arte/carlitos-run/diseno-final.png",
     "micky": "arte/papi-micky/diseno-final.png",
+    "maki": "arte/maki-gero/diseno-final.png",
 }
 LADO = 160
 

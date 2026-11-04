@@ -1,0 +1,81 @@
+{
+  "id": "maki-lab",
+  "name": "EL LABORATORIO DEL DR. MAKI GERO",
+  "layers": [
+    {
+      "src": "fondo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -315.895,
+      "left": -5.6,
+      "liviano": {
+        "src": "liviano/fondo.webp",
+        "scale": 0.403906
+      }
+    },
+    {
+      "video": "fondo.mp4",
+      "scale": 0.374637,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -315.895,
+      "left": -5.6,
+      "liviano": {
+        "video": "liviano/fondo.mp4",
+        "scale": 0.561956
+      }
+    },
+    {
+      "src": "niebla.webp",
+      "scale": 0.3125,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -86.613,
+      "repeatX": true,
+      "scrollX": 0.04,
+      "additive": true,
+      "alpha": 0.08,
+      "liviano": {
+        "src": "liviano/niebla.webp",
+        "scale": 0.625
+      }
+    },
+    {
+      "src": "suelo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -38.613,
+      "floor": {
+        "strips": 64
+      },
+      "liviano": {
+        "src": "liviano/suelo.webp",
+        "scale": 0.403906
+      }
+    }
+  ],
+  "particles": [
+    {
+      "type": "polvo",
+      "count": 40,
+      "color": 6291455,
+      "alpha": 0.7,
+      "size": 1.2,
+      "band": [
+        -230,
+        -20
+      ],
+      "parallax": 0.85
+    }
+  ]
+}

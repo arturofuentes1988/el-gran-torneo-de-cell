@@ -35,7 +35,7 @@ def llamar(metodo: str, ruta: str, cuerpo: dict | None = None) -> dict:
     req = urllib.request.Request(f'{API}{ruta}', method=metodo, headers={
         'Authorization': f"Bearer {os.environ['KIE_API_KEY']}", 'Content-Type': 'application/json',
     }, data=json.dumps(cuerpo).encode() if cuerpo is not None else None)
-    with urllib.request.urlopen(req, timeout=60) as r:
+    with urllib.request.urlopen(req, timeout=120) as r:
         return json.loads(r.read().decode('utf-8'))
 
 
@@ -54,6 +54,20 @@ def main(ruta: str, claves: list[str]) -> None:
     antes = creditos()
     print(f'créditos de kie.ai: {antes}')
     pendientes = {}
+    # Sin claves, un clip que ya tiene tarea en curso (o terminada sin bajar) se sigue esperando
+    # en vez de pedirlo de nuevo: así una corrida cortada no cobra dos veces.
+    if not claves:
+        for clave in list(pedir):
+            if clave not in tareas:
+                continue
+            try:
+                estado = (llamar('GET', f'/jobs/recordInfo?taskId={tareas[clave]}').get('data') or {}).get('state')
+            except Exception:  # noqa: BLE001
+                estado = None
+            if estado != 'fail':
+                pendientes[clave] = tareas[clave]
+                pedir.remove(clave)
+                print(f'{clave}: sigue la tarea {tareas[clave]} ({estado})')
     for clave in pedir:
         c = cfg['clips'][clave]
         texto, dur, cierre = (c, cfg['duracion'], True) if isinstance(c, str) else (c['texto'], c.get('duracion', cfg['duracion']), not c.get('sin_cierre'))
@@ -69,11 +83,17 @@ def main(ruta: str, claves: list[str]) -> None:
         if guardia:
             entrada['image_urls'] = [guardia, guardia]
         # kie.ai corta con 429 si se piden muchos seguidos: se espera y se reintenta.
-        for intento in range(12):
-            res = llamar('POST', '/jobs/createTask', {'model': 'kling-3.0/video', 'input': entrada})
-            if res.get('code') != 429:
-                break
-            time.sleep(20 + 10 * intento)
+        try:
+            for intento in range(12):
+                res = llamar('POST', '/jobs/createTask', {'model': 'kling-3.0/video', 'input': entrada})
+                if res.get('code') != 429:
+                    break
+                time.sleep(20 + 10 * intento)
+        except Exception as e:  # noqa: BLE001
+            # Sin respuesta no se sabe si quedó pedido: no se reintenta (podría cobrar dos veces).
+            print(f'{clave}: sin respuesta al pedir ({e}); revisar los créditos antes de pedirlo otra vez')
+            time.sleep(10)
+            continue
         time.sleep(3)
         if res.get('code') != 200:
             print(f'{clave}: no se pudo pedir ({res})')
@@ -82,7 +102,8 @@ def main(ruta: str, claves: list[str]) -> None:
         tareas[clave] = tid
         pendientes[clave] = tid
         print(f'{clave}: pedido {tid}')
-    tareas_path.write_text(json.dumps(tareas, indent=2) + '\n', encoding='utf-8')
+        # Se guarda al tiro: si la corrida se corta, la próxima retoma esta tarea.
+        tareas_path.write_text(json.dumps(tareas, indent=2) + '\n', encoding='utf-8')
     inicio = time.time()
     while pendientes and time.time() - inicio < 2400:
         time.sleep(15)

@@ -88,5 +88,18 @@
       "lat": -33.45,
       "lon": -70.66
     }
+  },
+  {
+    "id": "maki-lab",
+    "nombre": "EL LABORATORIO DEL DR. MAKI GERO",
+    "json": "maki-lab/escenario.json",
+    "miniatura": "maki-lab/miniatura.webp",
+    "luchador": "maki",
+    "orden": 8,
+    "lugar": {
+      "nombre": "CORDILLERA DE LOS ANDES",
+      "lat": -33.35,
+      "lon": -70.25
+    }
   }
 ]

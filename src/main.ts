@@ -27,7 +27,7 @@ import { MainMenuScene } from './scenes/modeSelect';
 import { TitleScene, loadTitleArena } from './scenes/title';
 
 /** Luchadores del plantel (carpetas de public/luchadores/), en este orden. */
-const FIGHTERS = ['rene', 'pablito', 'flaitiano', 'lena', 'carlitos', 'micky'];
+const FIGHTERS = ['rene', 'pablito', 'flaitiano', 'lena', 'carlitos', 'micky', 'maki'];
 
 /** "0,1" → [0, 1] (índices del plantel del jugador 1 y del 2); null si no viene o no sirve. */
 function parsePair(raw: string | null, n: number): [number, number] | null {

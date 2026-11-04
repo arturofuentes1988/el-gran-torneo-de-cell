@@ -4,9 +4,10 @@ Juego de pelea 2D para el navegador, estilo arcade (SNK / Marvel vs Capcom)
 con pixel art y efectos modernos.
 
 **Estado: en desarrollo.** Se puede jugar con Tío René, Pablito Neuquén, el
-Flaitiano, el Vendedor de Leña, Carlitos Run y Papi Micky (sprites, voces y poderes definitivos) en la cabaña del
-lago (René), la cancha (el Flaitiano), la calle del Pablito (Valdivia, con lluvia), los cerros de Valparaíso, la
-costanera de Valdivia (Carlitos, con lobos marinos), el set de "Llegó la hora" (Papi Micky) y Santiago de noche.
+Flaitiano, el Vendedor de Leña, Carlitos Run, Papi Micky y el Dr. Maki Gero (sprites, voces y poderes definitivos)
+en la cabaña del lago (René), la cancha (el Flaitiano), la calle del Pablito (Valdivia, con lluvia), los cerros de
+Valparaíso, la costanera de Valdivia (Carlitos, con lobos marinos), el set de "Llegó la hora" (Papi Micky), el
+laboratorio en la cordillera (Maki Gero) y Santiago de noche.
 Los demás luchadores del plantel vienen después.
 
 La web (`index.html`) tiene dos pestañas: **JUGAR**, con el juego (`juego.html`) dentro, y
@@ -243,6 +244,20 @@ Papi Micky (neón de set de TV, oro y su "¡PAAA!"):
 
 Sus combos se llenan de estrellas de neón y estallidos de colores. Su ropa de visita es el chaleco blanco.
 
+Dr. Maki Gero (el científico loco que crea androides; arcoíris, rayos y su Tío René robot):
+
+| Movimiento | Comando |
+|---|---|
+| ¡Dale color! (el débil tira una bola de plasma arcoíris; el fuerte, un rayo arcoíris que cruza la pantalla) | abajo, arriba + golpe |
+| ¡El auténtico! (patada voladora hacia arriba envuelta en rayos, con su sello dorado; lanza) | abajo, arriba + patada |
+| ¡Son todos androides! (sale de una cápsula una fila de androides cromados que embisten: 2 o 4) | adelante, adelante + patada |
+| Súper ¡CAMBIA, CAMBIA, ES POR TU BIEN! (baja la máquina de reprogramar, le encaja el casco al rival y lo electrifica; 1 barra) | abajo, abajo + golpe |
+| Súper ¡AQUÍ ESTAMOS NUEVAMENTE CON MI ANDROIDE! (cae el Tío René robot gigante: dos puñetazos cohete y rayo de los ojos; 1 barra) | atrás, atrás + patada |
+| Ultra ¡EL LABORATORIO DEL DR. MAKI GERO! (sus golpes, los androides, el rayo arcoíris, su risa y ¡el auténtico!; 2 barras, rival en peligro) | abajo, abajo + patada |
+
+En "abajo, arriba + botón" el botón le gana al salto: si se aprieta antes de despegar, sale el poder.
+Sus combos se llenan de chispas de colores y, desde 12 golpes, el rival queda electrificado.
+
 - **Agarre:** pegado al rival, aprieta un golpe y una patada juntos (cualquiera
   de cada uno, hasta ~0,1 s de diferencia entre los dos; con atrás lo tira hacia atrás). También sale con adelante o
   atrás + golpe fuerte. Se escapa apretando golpe justo al ser agarrado. Los
@@ -343,7 +358,7 @@ al mismo luchador, el segundo sale con otra ropa (solo cambia la que dice su
 definición, `costume`; la cara, el pelo y las zapatillas quedan igual). En 1 VS CPU
 y práctica el jugador 1 elige el suyo y después el rival (CPU o sparring). Esc / Retroceso
 vuelve un paso atrás o al menú. Las caras salen de `herramientas/caras.py`. El plantel son los luchadores de
-`public/luchadores/` (René, Pablito, el Flaitiano, el Vendedor de Leña, Carlitos Run y Papi Micky).
+`public/luchadores/` (René, Pablito, el Flaitiano, el Vendedor de Leña, Carlitos Run, Papi Micky y el Dr. Maki Gero).
 
 Antes de cada pelea se elige el escenario (**ELIGE ESCENARIO**, o ALEATORIO).
 Mientras no se elija uno, los menús y las peleas de prueba usan el primero de

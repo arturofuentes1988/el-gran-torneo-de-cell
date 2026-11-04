@@ -1,0 +1,20 @@
+{
+  "voz/intro": "el-autentico.mp3",
+  "voz/color": "dale-color.mp3",
+  "voz/autentico": "el-autentico.mp3",
+  "voz/androides": "son-todos.mp3",
+  "voz/poder": "dale-color.mp3",
+  "voz/super": "cambia.mp3",
+  "voz/robot": "aqui-estamos.mp3",
+  "voz/ultra": "son-todos.mp3",
+  "voz/ultra-1": "dale-color.mp3",
+  "voz/ultra-2": "el-autentico.mp3",
+  "voz/remate": "el-autentico.mp3",
+  "voz/victoria": "son-todos.mp3",
+  "voz/burla": "aqui-estamos.mp3",
+  "voz/combo-corto": "dale-color.mp3",
+  "voz/combo-medio": "el-autentico.mp3",
+  "voz/combo-largo": "son-todos.mp3",
+  "voz/combo-viral": "aqui-estamos.mp3",
+  "voz/combo-ultra": "cambia.mp3"
+}

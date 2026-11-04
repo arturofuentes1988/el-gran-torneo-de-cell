@@ -142,13 +142,14 @@ export interface SuperCinematic {
  * ff: adelante, adelante (→ →). bf: atrás, adelante (← →, sin cargar). fbf: → ← → (sin cargar).
  * hcf: media vuelta hacia adelante, una U (← ↙ ↓ ↘ →). hcb: media vuelta hacia atrás (→ ↘ ↓ ↙ ←).
  * mash: machacar el botón (varias veces seguidas). hold: mantener el botón apretado medio
- * segundo y soltarlo. chargeSuper: cargar atrás y luego → ← →.
+ * segundo y soltarlo. chargeSuper: cargar atrás y luego → ← →. du: abajo y arriba (↓ ↑); el botón le gana
+ * al salto que empieza con el ↑.
  */
 /** Show de luces de un súper (ver CinematicDef.lights). */
 export type LightsKind = 'disco' | 'tormenta' | 'ultrainstinto' | 'fiesta' | 'neon';
 
 export type MotionId =
-  | 'qcf' | 'qcb' | 'dp' | 'qcf2' | 'hcf' | 'hcb' | 'charge' | 'ff' | 'bb' | 'dd' | 'bf' | 'fbf' | 'mash' | 'hold' | 'chargeSuper';
+  | 'qcf' | 'qcb' | 'dp' | 'qcf2' | 'hcf' | 'hcb' | 'charge' | 'ff' | 'bb' | 'dd' | 'du' | 'bf' | 'fbf' | 'mash' | 'hold' | 'chargeSuper';
 export type MoveKind = 'normal' | 'special' | 'super' | 'ultra' | 'throw';
 
 /** Un tramo de la secuencia automática del ultra: una animación del luchador y cuántos golpes da. */
@@ -260,7 +261,7 @@ export interface ProjectileDef {
   /**
    * Dibujo propio en vez de (o además de) sus cuadros: 'rayo', 'tornado', 'rastas', 'geiser' (el Flaitiano);
    * 'silbido', 'tronco', 'troncos', 'sonico' (el Vendedor de Leña); 'cola', 'cajon', 'letras' (Carlitos);
-   * 'paaa', 'monedas', 'oro' (Papi Micky).
+   * 'paaa', 'monedas', 'oro' (Papi Micky); 'color', 'colorRayo', 'androides', 'cambia', 'robo' (Dr. Maki Gero).
    * Usa los efectos pintados compartidos (public/efectos/) si están cargados.
    */
   look?: string;
@@ -268,6 +269,11 @@ export interface ProjectileDef {
   blend?: 'add';
   /** Sus cuadros miran al revés (la onda de René: la cola de ondas queda detrás). */
   flip?: boolean;
+  /**
+   * Cuadros que usa el dibujo propio (`look`) y que no se dibujan solos: los androides que corren y el
+   * Tío René robot del Maki Gero. Nombrarlos acá también los guarda en los atlas.
+   */
+  sprites?: string[];
 }
 
 /** Filtrado de las texturas: 'linear' para arte HD, 'nearest' para pixel art a escala de mundo. */
@@ -343,9 +349,10 @@ export interface FighterDef {
   mechanics?: MechanicsDef;
   /**
    * Efectos que crecen con el largo de sus combos: 'electrico' = chispas, brillo, agua y rayos;
-   * 'fuego' = brasas, aura de llamas, estallidos y un pilar de fuego.
+   * 'fuego' = brasas, aura de llamas, estallidos y un pilar de fuego; 'laboratorio' = chispas de
+   * colores, código verde y descargas sobre el rival.
    */
-  comboFx?: 'electrico' | 'fuego' | 'cola' | 'neon';
+  comboFx?: 'electrico' | 'fuego' | 'cola' | 'neon' | 'laboratorio';
   /** Cuál es su ropa, para los colores alternativos (ver render/costume.ts). */
   costume?: CostumeDef;
   /** De dónde es (para el mapa del ARCADE): nombre de la ciudad, latitud y longitud. */

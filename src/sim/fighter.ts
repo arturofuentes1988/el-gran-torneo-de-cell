@@ -443,6 +443,8 @@ export class Fighter {
     const s = this.state;
     if (ACTIONABLE.has(s)) {
       this.neutral(m);
+    } else if (s === 'preJump') {
+      this.tryUpSpecial(m);
     } else if (s === 'jump') {
       if (!this.airAttackUsed) this.tryAirNormal(m);
     } else if (s === 'attack') {
@@ -543,6 +545,22 @@ export class Fighter {
     this.input.consume(press);
     this.startNormal(m, isDown(d) ? 'crouch' : 'stand', btn);
     this.karaPress = { frame: m.frame - press.age, bits: press.bits };
+    return true;
+  }
+
+  /**
+   * ↓ ↑ + botón: el ↑ ya empezó el salto, pero si el botón llega antes de despegar (pre-salto),
+   * gana el especial y no hay salto.
+   */
+  private tryUpSpecial(m: Match): boolean {
+    const press = this.input.findPress(B_ATTACK, BUFFER);
+    if (!press) return false;
+    const special = this.findSpecial(m, press, ['special', 'super'], null, 'du');
+    if (!special) return false;
+    this.superJumpQueued = false;
+    this.input.consume(press);
+    this.startMove(m, special);
+    this.moveStrong = this.pressStrong(press, special);
     return true;
   }
 

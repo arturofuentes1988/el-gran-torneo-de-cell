@@ -230,3 +230,35 @@ del género" y el coro de "Llegó la hora" (wmNkTDQQQIo, sin las partes de alcoh
 **Efectos** (código, `src/render/neon.ts`): proyectiles `paaa`, `monedas`, `oro`; estrellas `starPop`; luces
 `neon` en el mortal y `fiesta` en el ultra.
 
+## Dr. Maki Gero
+
+- **id**: `maki` · **carpeta**: `arte/maki-gero/` · **ciudad**: sin confirmar (no se inventa)
+- **Quién es**: mánager de Tío René; le dice "mi androide". Su apodo viene del Dr. Gero de Dragon Ball.
+- **Cuidado especial**: nunca la escena de los cachetazos del short X1lq6CXrd6Y ni su texto del CESFAM (solo el
+  audio de "cambia, es por tu bien", como poder de reprogramar); nada de drogas ni recaídas, la balacera de
+  Concepción, la denuncia de Chilevisión, la estafa, ni amenazas o insultos al Papi Micky.
+- **Diseño**: jockey negro con emblema dorado, polera negra, bata blanca de laboratorio arremangada, brazos
+  tatuados, pantalón oscuro y zapatillas negras; sin lentes, cadenas ni reloj (son de René).
+- **Escenario**: EL LABORATORIO DEL DR. MAKI GERO (cápsulas con androides, bobinas Tesla, la cordillera).
+- **Colores**: la ropa oscura (`dark`).
+- **Combos del laboratorio** (`comboFx: "laboratorio"`): chispas de colores desde 3 golpes, aura desde 5,
+  estallidos desde 8 y el rival electrificado desde 12.
+
+| Movimiento | Comando |
+|---|---|
+| ¡Dale color! (bola de plasma arcoíris; el fuerte es un rayo arcoíris que pega tres veces) | ↓ ↑ + golpe |
+| ¡El auténtico! (patada voladora hacia arriba con rayos y sello dorado; lanza) | ↓ ↑ + patada |
+| ¡Son todos androides! (androides cromados que salen de una cápsula y embisten; 2 o 4) | → → + patada |
+| Súper ¡CAMBIA, CAMBIA, ES POR TU BIEN! (la máquina de reprogramar; 1 barra) | ↓ ↓ + golpe |
+| Súper ¡AQUÍ ESTAMOS NUEVAMENTE CON MI ANDROIDE! (Tío René robot gigante; 1 barra) | ← ← + patada |
+| Ultra ¡EL LABORATORIO DEL DR. MAKI GERO! (2 barras, rival en peligro) | ↓ ↓ + patada |
+
+- **Entrada**: se acomoda la bata ("¡El auténtico!").
+- **Victoria**: abre los brazos como inventor orgulloso ("Son todos androides, pues, cachái").
+- **Burla**: su risa de científico loco ("Aquí estamos nuevamente con mi androide").
+- **Pendiente**: la patada baja (por ahora el puño agachado) y la música del laboratorio.
+
+**Voces** (videos 7i1TMb7CxE4 y TNkvmNHj2J4, y el audio del short X1lq6CXrd6Y; voz separada con Demucs).
+
+**Efectos** (código, `src/render/lab.ts`): proyectiles `color`, `colorRayo`, `androides`, `cambia` (con su parte
+delantera `drawCambiaFrente`) y `robo`; ayudantes pintados en `ProjectileDef.sprites`.

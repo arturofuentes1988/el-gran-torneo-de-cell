@@ -111,6 +111,7 @@ function motionSteps(motion: MotionId | undefined, press: number): Step[] {
     case 'ff': return [s(6), s(6), s(5), s(5), s(6, press)];
     case 'bb': return [s(4), s(4), s(5), s(5), s(4, press)];
     case 'dd': return [s(2), s(2), s(5), s(5), s(2, press)];
+    case 'du': return [s(2), s(2), s(2), s(8, press)];
     case 'bf': return [s(4), s(4), s(6, press)];
     case 'fbf': return [s(6), s(6), s(4), s(4), s(6, press)];
     case 'charge': return [...repeat(s(4), CHARGE_FRAMES + 2), s(6, press)];
