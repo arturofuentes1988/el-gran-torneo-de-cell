@@ -39,6 +39,10 @@ const BUSY: ReadonlySet<StateName> = new Set<StateName>(['hitstun', 'airHit', 'k
 const LINE_GAP = 72;
 /** Cuadros que espera una frase de combo si el anunciador acaba de hablar (K.O., etc.). */
 const AFTER_ANNOUNCER = 54;
+/** Cuadros mínimos entre dos gritos o quejidos automáticos del mismo luchador (~0,8 s). */
+const GRUNT_GAP = 48;
+/** Segundos que la frase del combo espera a que el luchador termine la frase de su poder. */
+const COMBO_WAIT = 3;
 /** Cuadros de calma antes de que la vida se recupere en práctica (~1 segundo). */
 const REFILL_DELAY = 60;
 
@@ -196,6 +200,8 @@ export class FightScene implements Scene {
   private t = 0;
   /** Cuándo dijo cada luchador su frase de REMATE o de ULTRA (para no apilar la del combo encima). */
   private lineAt = new Map<string, number>();
+  /** Cuándo gritó o se quejó por última vez cada luchador (para no repetirlo en cada golpe). */
+  private gruntAt = new Map<string, number>();
   /** Cuándo habló por última vez el anunciador. */
   private announcerAt = -999;
   /** Voces que esperan su turno (la frase del combo después del "K.O."). */
@@ -644,6 +650,7 @@ export class FightScene implements Scene {
           sfx.play(e.spark === 'light' ? 'hitLight' : e.spark === 'heavy' ? 'hitHeavy' : 'hitSuper', { pan: pan(e.x) });
           this.addShake(e.spark === 'light' ? 1.4 : e.spark === 'heavy' ? 3.2 : 4.6);
           this.elementalHit(e);
+          if (e.spark !== 'light') this.grunt(m.fighters[e.side === 0 ? 1 : 0], 'voz/dolor', 0.7);
           break;
         }
         case 'block':
@@ -652,7 +659,10 @@ export class FightScene implements Scene {
           this.addShake(0.8);
           break;
         case 'attack':
-          if (!e.special) sfx.play(e.heavy ? 'whooshH' : 'whooshL', { vol: 0.7 });
+          if (!e.special) {
+            sfx.play(e.heavy ? 'whooshH' : 'whooshL', { vol: 0.7 });
+            this.grunt(m.fighters[e.side], 'voz/golpe', e.heavy ? 0.6 : 0.2);
+          }
           break;
         case 'jump':
           sfx.play(e.kind === 'super' ? 'superJump' : 'jump');
@@ -726,6 +736,7 @@ export class FightScene implements Scene {
         case 'ko':
           this.fx.ko(e.x, e.y);
           this.addShake(7);
+          this.grunt(m.fighters[e.side], 'voz/dolor', 1, true);
           break;
         case 'grab':
           sfx.play('grab');
@@ -830,9 +841,25 @@ export class FightScene implements Scene {
   }
 
   /**
+   * Grito al tirar un golpe normal (`voz/golpe`) o quejido al recibir uno fuerte (`voz/dolor`), con las voces
+   * reales del luchador: sale con probabilidad `chance`, no se repite antes de GRUNT_GAP y no corta otra frase
+   * suya. En el K.O. (`force`) siempre suena y corta lo que estaba diciendo.
+   */
+  private grunt(f: Fighter, line: 'voz/golpe' | 'voz/dolor', chance: number, force = false): void {
+    const who = f.def.id;
+    const name = `${who}/${line}`;
+    if (!this.game.sfx.has(name)) return;
+    const last = this.gruntAt.get(who);
+    if (!force && ((last !== undefined && this.t - last < GRUNT_GAP) || Math.random() >= chance)) return;
+    this.gruntAt.set(who, this.t);
+    this.game.sfx.play(name, { channel: who, mode: force ? 'cut' : 'ifFree' });
+  }
+
+  /**
    * Voz al terminar un combo de 3 golpes o más: la frase propia de quien lo hizo
    * según el tramo (corto, medio, largo, viral; el ultra la suya o la viral). Si
-   * acaba de decir su frase de REMATE o de ULTRA, no se apila otra. Si el
+   * acaba de decir su frase de REMATE o de ULTRA, no se apila otra. Si el combo
+   * terminó con un poder, espera a que acabe su frase (hasta COMBO_WAIT). Si el
    * luchador no tiene frase, la del anunciador (si existe).
    */
   private comboVoice(who: string, hits: number, ultra: boolean): void {
@@ -844,8 +871,8 @@ export class FightScene implements Scene {
     if (own) {
       const last = this.lineAt.get(who);
       if (last !== undefined && this.t - last < LINE_GAP) return;
-      // Por el canal del luchador: no corta otra frase suya (solo suena si está callado; en el ultra va al final de la fila).
-      this.queueVoice(own, AFTER_ANNOUNCER, who, ultra ? 1.5 : 0);
+      // Por el canal del luchador: no corta otra frase suya, espera su turno (en el ultra va al final de la fila).
+      this.queueVoice(own, AFTER_ANNOUNCER, who, ultra ? 1.5 : COMBO_WAIT);
       return;
     }
     const fallback = ultra ? ULTRA_COMBO.voice : tier!.voice;

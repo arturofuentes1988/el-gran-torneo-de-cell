@@ -16,9 +16,16 @@
   "voz/remate": "run.mp3",
   "voz/victoria": "gracias-bicicleta.mp3",
   "voz/burla": "run.mp3",
-  "voz/combo-corto": "run.mp3",
-  "voz/combo-medio": "run.mp3",
+  "voz/combo-corto": [
+    "y-vamos.mp3",
+    "run.mp3"
+  ],
+  "voz/combo-medio": "y-mas-run.mp3",
   "voz/combo-largo": "quiero-coca-colita-run.mp3",
-  "voz/combo-viral": "run.mp3",
-  "voz/combo-ultra": "run.mp3"
+  "voz/combo-viral": "en-breve-bicicleta.mp3",
+  "voz/combo-ultra": "quiero-coca-colita-run-2.mp3",
+  "voz/golpe": [
+    "run.mp3",
+    "y-vamos.mp3"
+  ]
 }

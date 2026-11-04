@@ -15,9 +15,23 @@
   "voz/burla-fratello": "imaginate-fratello.mp3",
   "voz/burla-pibes": "que-haces-pibes.mp3",
   "voz/burla-neuquen": "naci-y-criado.mp3",
-  "voz/combo-corto": "que-haces-pibes.mp3",
-  "voz/combo-medio": "sacate-boludo.mp3",
-  "voz/combo-largo": "le-pego-chachazo.mp3",
-  "voz/combo-viral": "porque-yo-soy.mp3",
-  "voz/combo-ultra": "yo-soy-pablito.mp3"
+  "voz/combo-corto": [
+    "imaginate-fratello.mp3",
+    "que-haces-pibes.mp3"
+  ],
+  "voz/combo-medio": [
+    "sacate-boludo.mp3",
+    "con-este-chaqueton.mp3"
+  ],
+  "voz/combo-largo": "chachazo-completo.mp3",
+  "voz/combo-viral": [
+    "porque-yo-soy.mp3",
+    "naci-y-criado.mp3"
+  ],
+  "voz/combo-ultra": "yo-soy-pablito.mp3",
+  "voz/golpe": [
+    "le-pego-chachazo.mp3",
+    "que-haces-pibes.mp3"
+  ],
+  "voz/dolor": "sacate-al-tiro.mp3"
 }

@@ -13,8 +13,21 @@
   "voz/victoria": "son-todos.mp3",
   "voz/burla": "aqui-estamos.mp3",
   "voz/combo-corto": "dale-color.mp3",
-  "voz/combo-medio": "el-autentico.mp3",
-  "voz/combo-largo": "son-todos.mp3",
-  "voz/combo-viral": "aqui-estamos.mp3",
-  "voz/combo-ultra": "cambia.mp3"
+  "voz/combo-medio": [
+    "el-autentico.mp3",
+    "ahi-viene.mp3"
+  ],
+  "voz/combo-largo": [
+    "son-todos.mp3",
+    "rene-numero-uno.mp3"
+  ],
+  "voz/combo-viral": [
+    "aqui-estamos.mp3",
+    "cell-perfecto.mp3"
+  ],
+  "voz/combo-ultra": "cambia.mp3",
+  "voz/golpe": [
+    "eso.mp3",
+    "eso-2.mp3"
+  ]
 }

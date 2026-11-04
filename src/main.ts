@@ -124,6 +124,9 @@ async function main(): Promise<void> {
   }
   // Voces del anunciador (public/voces/voces.json), sin frenar el inicio.
   void sfx.loadManifest('voces/voces.json');
+  // Golpes y bloqueos grabados (public/sonidos/sonidos.json, herramientas/sonidos_golpes.py): reemplazan
+  // a los sintetizados del mismo nombre ("hitHeavy", "block"…), una variante al azar en cada golpe.
+  void sfx.loadManifest('sonidos/sonidos.json');
 
   const params = new URLSearchParams(location.search);
   // Pareja por defecto (pruebas con ?escena=pelea): los dos primeros. ?luchadores=i,j la cambia (índices del plantel).

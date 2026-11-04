@@ -593,6 +593,8 @@ export class Sfx {
     const vs = this.variants.get(name);
     if (!vs) return name;
     const ready = vs.filter((v) => this.buffers.has(v));
+    // Grabaciones que reemplazan a un sonido sintetizado (los golpes): mientras no llegan, suena el sintetizado.
+    if (!ready.length && this.buffers.has(name)) return name;
     const pool = ready.length ? ready : vs;
     return pool[Math.floor(Math.random() * pool.length)];
   }
@@ -624,7 +626,7 @@ export class Sfx {
    * `mode` dice qué pasa si el canal está ocupado:
    * - 'cut' (por defecto): la nueva corta a la anterior (el último poder es el que se oye).
    * - 'queue': la nueva espera su turno hasta `maxWait` segundos; si no alcanza, no suena (frases del ultra).
-   * - 'ifFree': solo suena si el canal está libre (frases automáticas, como la del final de un combo).
+   * - 'ifFree': solo suena si el canal está libre (gritos y quejidos automáticos).
    */
   play(
     name: string,

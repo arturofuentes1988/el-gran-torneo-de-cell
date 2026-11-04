@@ -26,8 +26,23 @@
     "cabeza-de-tarro-1.mp3",
     "cabeza-de-tarro-2.mp3"
   ],
-  "voz/combo-medio": "callate-cotorra.mp3",
-  "voz/combo-largo": "bolsa-de-basura-corto.mp3",
-  "voz/combo-viral": "bolsa-de-basura.mp3",
-  "voz/combo-ultra": "guacho-pesao.mp3"
+  "voz/combo-medio": [
+    "callate-cotorra.mp3",
+    "mira-lo-que-pasa.mp3"
+  ],
+  "voz/combo-largo": [
+    "bolsa-de-basura-corto.mp3",
+    "junten-agua-corto.mp3"
+  ],
+  "voz/combo-viral": [
+    "bolsa-de-basura.mp3",
+    "hasta-cuando.mp3"
+  ],
+  "voz/combo-ultra": "guacho-pesao.mp3",
+  "voz/golpe": [
+    "callate-cotorra.mp3",
+    "no-hay-luz.mp3",
+    "cabeza-de-tarro-1.mp3"
+  ],
+  "voz/dolor": "hasta-cuando-corto.mp3"
 }

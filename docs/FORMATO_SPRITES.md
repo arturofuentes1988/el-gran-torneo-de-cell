@@ -494,5 +494,9 @@ REMATE), `voz/ultra` (al activar el ultra), las voces de las frases de la pelá
 BREAKER equivocado), las de los tramos del ultra (`voice`) y la canción del súper
 (`cinematic.song`) y, al terminar un combo de 3 golpes o más, `voz/combo-corto`
 (3–4), `voz/combo-medio` (5–7), `voz/combo-largo` (8–11), `voz/combo-viral` (12 o
-más) y `voz/combo-ultra` (ultra). Un cuadro de animación también puede pedir una
-voz con `"sfx": "voz/<clave>"`.
+más) y `voz/combo-ultra` (ultra). Si el combo terminó con un poder, su frase espera
+a que acabe la del poder (hasta 3 s). Gritos y quejidos automáticos (no cortan otra
+frase del luchador y no se repiten antes de ~0,8 s): `voz/golpe` al tirar un golpe
+normal (60 % de las veces los fuertes, 20 % los débiles) y `voz/dolor` al recibir un
+golpe fuerte (70 %) y siempre en el K.O. Un cuadro de animación también puede pedir
+una voz con `"sfx": "voz/<clave>"`.

@@ -16,9 +16,18 @@
   "voz/remate": "paaa-1.mp3",
   "voz/victoria": "todo-es-gratis.mp3",
   "voz/burla": "paaa-5.mp3",
-  "voz/combo-corto": "paaa-1.mp3",
-  "voz/combo-medio": "paaa-5.mp3",
-  "voz/combo-largo": "dios-dueno-del-oro.mp3",
+  "voz/combo-corto": [
+    "tres-dos-uno.mp3",
+    "que-pasa-guatones.mp3"
+  ],
+  "voz/combo-medio": "dios-dueno-del-oro.mp3",
+  "voz/combo-largo": "todo-es-gratis.mp3",
   "voz/combo-viral": "real-del-genero.mp3",
-  "voz/combo-ultra": "paaa-5.mp3"
+  "voz/combo-ultra": "estoy-de-vuelta.mp3",
+  "voz/golpe": [
+    "paaa-1.mp3",
+    "paaa-5.mp3",
+    "paaa-2.mp3"
+  ],
+  "voz/dolor": "oye-oye.mp3"
 }

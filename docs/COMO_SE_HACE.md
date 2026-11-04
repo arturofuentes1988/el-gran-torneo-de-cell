@@ -326,6 +326,7 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 | `voltear_piernas.py` | Voltea solo las piernas de unos cuadros de un clip (la patada que Kling tiró hacia atrás sale hacia adelante), con una costura que va por donde no se nota. |
 | `fluidez.py` | Mete cuadros intermedios del video en los golpes normales de un `armado.json` sin cambiar sus tiempos (después, `armar_luchador.py`). |
 | `caras.py` | Caras de ELIGE LUCHADOR desde cada diseño aprobado. |
+| `sonidos_golpes.py` | Golpes (débil, fuerte, súper) y bloqueo grabados, desde Impact Sounds de Kenney (CC0) con capas para exagerarlos: `public/sonidos/`. |
 | `voces_luchador.py` | Cortes de voz de un luchador desde `voces.json`. |
 | `preparar_voces.py` | Voces del anunciador (`arte/voces/originales/` a `public/voces/`). |
 | `armar_escenario.py` | Arma un escenario HD (fondo, piso, video, bruma, partículas). |

@@ -451,7 +451,7 @@ public/
   titulo/             escenario Santiago de noche (escenario.json, también arena de pelea)
   luchadores/<id>/    sprites, definición y voces (voces/voces.json)
   voces/              voces del anunciador
-  sonidos/            jingle de consola (ya no se usa)
+  sonidos/            golpes y bloqueos grabados (sonidos.json) y el jingle de consola (ya no se usa)
 herramientas/         scripts en Python para armar luchadores, escenarios y sonidos
 supabase/migraciones/ tablas y reglas de seguridad de la base de datos (ya aplicadas)
 docs/

@@ -29,14 +29,28 @@
     "te-paseo.mp3",
     "te-paseamos.mp3"
   ],
-  "voz/combo-medio": "ni-un-brillo.mp3",
-  "voz/combo-largo": "numero-uno-del-party.mp3",
-  "voz/combo-viral": "yo-soy-tu-taita.mp3",
+  "voz/combo-medio": [
+    "ni-un-brillo.mp3",
+    "aqui-estamos-ola.mp3"
+  ],
+  "voz/combo-largo": [
+    "numero-uno-del-party.mp3",
+    "un-silbidito.mp3"
+  ],
+  "voz/combo-viral": [
+    "yo-soy-tu-taita.mp3",
+    "dia-del-legendario.mp3"
+  ],
   "voz/combo-ultra": "esferas-del-dragon.mp3",
   "silbido/corto": "silbido-corto.mp3",
   "silbido/largo": [
     "silbido-pebre-1.mp3",
     "silbido-pebre-2.mp3"
   ],
-  "silbido/ultra": "silbido-ultra.mp3"
+  "silbido/ultra": "silbido-ultra.mp3",
+  "voz/golpe": [
+    "ahora.mp3",
+    "aqui-estamos.mp3",
+    "silbido-corto.mp3"
+  ]
 }

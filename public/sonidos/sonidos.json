@@ -1,0 +1,30 @@
+{
+  "hitLight": [
+    "golpes/debil-1.mp3",
+    "golpes/debil-2.mp3",
+    "golpes/debil-3.mp3",
+    "golpes/debil-4.mp3",
+    "golpes/debil-5.mp3"
+  ],
+  "hitHeavy": [
+    "golpes/fuerte-1.mp3",
+    "golpes/fuerte-2.mp3",
+    "golpes/fuerte-3.mp3",
+    "golpes/fuerte-4.mp3",
+    "golpes/fuerte-5.mp3"
+  ],
+  "hitSuper": [
+    "golpes/super-1.mp3",
+    "golpes/super-2.mp3",
+    "golpes/super-3.mp3",
+    "golpes/super-4.mp3",
+    "golpes/super-5.mp3"
+  ],
+  "block": [
+    "golpes/bloqueo-1.mp3",
+    "golpes/bloqueo-2.mp3",
+    "golpes/bloqueo-3.mp3",
+    "golpes/bloqueo-4.mp3",
+    "golpes/bloqueo-5.mp3"
+  ]
+}

@@ -445,6 +445,35 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
 - Gasto: 1.614 créditos de kie (1.602 del luchador y el escenario, 12 de la música; quedan 8.157) y 19,5 de
   Higgsfield (quedan 60,1).
 
+## Voces al pegar, quejidos, frases de combo y golpes grabados (4 de noviembre, noche)
+
+- **Gritos al pegar** (`voz/golpe`) y **quejidos al recibir** (`voz/dolor`), con la voz real de cada uno
+  (`fight.ts`, `grunt`): el grito sale en el 60 % de los golpes normales fuertes y el 20 % de los débiles; el
+  quejido en el 70 % de los golpes fuertes que recibe y siempre en el K.O. No cortan otra frase del luchador y no
+  se repiten antes de ~0,8 s.
+  - Tío René: "¡To yo!", su risa y "¿Querí too?"; se queja con "¡Cabréate de grabar!".
+  - Pablito: "Le pego un charchazo" y "¿Qué hacés, pibes?"; se queja con "¡Sácate al tiro!".
+  - El Flaitiano: "¡Cállate, cotorra!", "No hay luz" y "¡Cabeza de tarro!"; se queja con "¿Hasta cuándo?".
+  - El Vendedor de Leña: "¡Ahora!", "¡Aquí estamos!" y su silbido corto (sin quejido: el "¡Basta!" de su video
+    no se entiende cortado).
+  - Carlitos Run: "¡Run!" y "¡Y vamos!" (sin quejido).
+  - Papi Micky: tres "¡PAAA!"; se queja con "¡Oye, oye!" (de "Llegó la hora").
+  - Dr. Maki Gero: dos "¡Eso!" de su narración (sin quejido).
+- **Más frases de combo**: dos por tramo donde se repetían (Carlitos ya no dice "¡Run!" en todos; Papi Micky
+  deja el "¡PAAA!" para los golpes y usa "Tres, dos, uno", "Dios es el dueño del oro", "Todo es gratis, papito",
+  "el real del género" y "Estoy de vuelta"; el Maki suma "¡Ahí viene, viene!", "Pero el René es el número uno" y
+  "Cell perfecto, dueño del torneo Cell").
+- **La frase del combo siempre habla**: si el combo terminó con un poder, espera a que acabe su frase (hasta
+  3 s) en vez de perderse.
+- Cortes nuevos verificados con Whisper (large-v3) uno por uno; los que no se entendían quedaron fuera. Del video
+  XF-IYe2uLxo del Maki no se usa nada. Carlitos suma la voz separada de su short 7FlELiL1PRs ("¡Y vamos!",
+  "¡Y más run!").
+- **Golpes y bloqueos grabados**: `herramientas/sonidos_golpes.py` arma 5 variantes de golpe débil, fuerte,
+  súper y bloqueo desde grabaciones reales (Impact Sounds de Kenney, CC0) con capas de retumbe grave, chasquido y
+  eco corto para exagerarlos (`public/sonidos/`). Reemplazan a los sintetizados del mismo nombre; en cada golpe
+  suena una al azar. El bloqueo viejo tenía un tono puro de 2.929 Hz (por eso sonaba a metal hueco); el nuevo es un
+  golpe sordo contra los antebrazos con el roce de la ropa.
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra
@@ -468,6 +497,7 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
 - **kie.ai** (Suno y Kling): 6.911 créditos al 30 de octubre de 2026 (1 crédito ≈ US$0,005). La clave de la API nunca se guarda en el proyecto;
   se pasa en la variable de entorno `KIE_API_KEY` y el usuario la entrega cada vez.
 - ACE-Step, Demucs y Whisper corren gratis en la tarjeta de video del usuario.
+- Sonidos de golpe: Impact Sounds de Kenney (CC0), en `arte/sonidos/kenney-impact/`.
 
 ## Reglas acordadas con el usuario
 
@@ -477,7 +507,8 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
 - **Voces**: solo la voz real de cada persona, cortada de los videos que manda el usuario
   (yt-dlp, Demucs, Whisper). Nunca voces generadas ni clonadas. La única voz generada es la
   del anunciador. Antes de poner una frase en pantalla, confirmar el texto con el usuario.
-  Una voz nueva corta a la anterior del mismo luchador; solo las del ultra hacen fila.
+  Una voz nueva corta a la anterior del mismo luchador; las del ultra y la frase del combo hacen fila; los gritos
+  y quejidos solo suenan si el luchador está callado.
 - **Cómo se muestra a cada persona**: luchadores poderosos; el humor sale de sus frases y su
   estilo, nunca de su salud, pobreza, adicciones, violencia real ni tragedias personales.
   Nada de chistes sobre el color de piel ("Me veo negro" del Flaitiano va como frase suelta,
