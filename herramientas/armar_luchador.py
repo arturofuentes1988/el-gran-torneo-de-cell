@@ -193,6 +193,16 @@ def caja_golpe(m: np.ndarray, guardia: np.ndarray, dx: float, dy: float, direcci
         sel = ys < gy0 + 12
     elif direccion == "cuerpo":
         sel = xs > (gx0 + gx1) / 2
+    elif direccion == "gancho":
+        # Gancho hacia arriba (estilo Mortal Kombat): el brazo sube recto por delante de la cara y no
+        # sale hacia adelante. La caja va desde el puño hasta la altura del pecho, delante del cuerpo:
+        # le pega al que está de pie y al que salta encima.
+        sel = (xs > (gx0 + gx1) / 2) & (ys < ay - alto * 0.55)
+        if sel.sum() >= 40:
+            x0 = min(np.percentile(xs[sel], 2), gx1 - 10)
+            x1 = max(np.percentile(xs[sel], 99.5), gx1 + alto * 0.1)
+            y0 = np.percentile(ys[sel], 1)
+            return a_mundo((x0, y0, x1 + 4, ay - alto * 0.55), ax, ay, k)
     if sel.sum() >= 40:
         x0, x1 = np.percentile(xs[sel], 2), np.percentile(xs[sel], 99.5)
         y0, y1 = np.percentile(ys[sel], 1), np.percentile(ys[sel], 99)

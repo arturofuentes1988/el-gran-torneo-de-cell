@@ -116,6 +116,13 @@ errores de continuidad: objetos que aparecen o quedan flotando (el agarre del Fl
 personaje que se achica al alejarse de la cámara (la caída de Pablito) o accesorios que se sacan y
 vuelven a aparecer (las zapatillas del súper de Pablito).
 
+**Patadas agachadas y ganchos con Kling**: pedirle una "sweep" o "low kick" suele dar una estocada con la
+pierna de ATRÁS estirada (sale como patada hacia atrás). De 10 pedidos con el texto de `agachado_patada` y
+`barrida` (ver `kie.json`: pierna de ADELANTE, pie a la derecha, "never behind him"), salieron bien 4. Con un
+clip bueno alcanza para la patada baja (tramo corto) y la barrida (la pierna estirada más rato). El gancho
+estilo Mortal Kombat (`gancho_mk`: agachado hondo, el puño junto al tobillo, sube recto sobre la cabeza)
+salió bien en los cinco; con la guardia achicada para que el puño no se salga por arriba.
+
 **Golpes fluidos**: el video va a 24 cuadros por segundo y el juego a 60. Un golpe armado con un
 cuadro del video cada 2 o 3, que dura 2 a 4 cuadros del juego, se ve a saltos. `herramientas/fluidez.py
 arte/<luchador>/armado.json --max 2` reparte la duración de cada cuadro elegido entre él y el cuadro del

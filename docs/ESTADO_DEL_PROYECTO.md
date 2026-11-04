@@ -352,11 +352,24 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   en sfx.ts). Además salen una columna de luz con chispas hacia arriba, polvo, un tirón de zoom con
   destello y dos cuadros en negativo. El rival sale volando de espaldas, inclinado, y se endereza al
   perder impulso.
-- **Pendiente, con créditos**: los videos de las patadas agachadas de René, el Vendedor y Carlitos
-  estiran la pierna de atrás, sin patear hacia adelante. El golpe bajo de René y el del Flaitiano
-  salen de pie, y los ganchos de cuatro de ellos van en diagonal. Los 15 clips nuevos ya están escritos en
-  cada `kie.json` (`agachado_golpe`, `agachado_patada`, `barrida`, `gancho_mk`), con unos 60 créditos de
-  kie cada uno. Esperan la aprobación del usuario y su clave de kie.ai.
+- **Golpes agachados y gancho nuevos** (15 clips de Kling 3.0 `pro` por kie.ai, 54 créditos de kie cada uno,
+  810 en total; quedan unos 1.289). Los videos de "barrida" de René, el Vendedor y Carlitos estiraban la
+  pierna de atrás, sin patear hacia adelante. El golpe bajo de René y el del Flaitiano salían de pie, y
+  cuatro ganchos iban en diagonal. Los clips nuevos (`agachado_golpe`, `agachado_patada`, `barrida`,
+  `gancho_mk` en cada `kie.json`) salieron así:
+  - **Ganchos estilo Mortal Kombat**: buenos los cinco (se agachan hondo y suben con el puño recto arriba).
+    Hechos con la guardia achicada (`reescalar` 0,75), menos el de Pablito.
+  - **René**: sirven el golpe agachado y la barrida (la pierna de adelante estirada hacia el rival). Con la
+    barrida salen la patada baja (corta) y la barrida (larga). Su agachado de siempre ahora sale del golpe
+    agachado nuevo: el de antes tenía el brazo estirado.
+  - **El Vendedor y Carlitos**: sirve la patada baja (la pierna de adelante hacia el rival). De ella salen
+    la patada baja y la barrida (la pierna estirada más rato).
+  - **El Flaitiano**: sirven el golpe agachado y la patada baja. Su barrida de break no cambia (ya iba hacia
+    adelante).
+  - **No sirvieron**: la patada baja de René y de Pablito (otra vez estocada o golpe) y la barrida del
+    Vendedor y de Carlitos (otra vez la pierna de atrás). Kling insiste en esa pose; no se repitieron porque
+    los otros clips alcanzan.
+  - Los tiempos (arranque, cuadros activos, total) son los mismos de antes. Respaldo: `armado-antes-agachados.json`.
 
 ## Pendiente y decisiones abiertas
 
