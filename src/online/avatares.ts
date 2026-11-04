@@ -2,7 +2,7 @@
 // usan la web (arriba a la derecha, junto al apodo) y el juego (EN LÍNEA > CAMBIAR AVATAR).
 
 export const AVATARES: ReadonlyArray<{ id: string; nombre: string }> = [
-  { id: 'rene', nombre: 'Loco René' },
+  { id: 'rene', nombre: 'Tío René' },
   { id: 'pablito', nombre: 'Pablito Neuquén' },
   { id: 'flaitiano', nombre: 'Flaitiano' },
   { id: 'lena', nombre: 'Vendedor de Leña' },

@@ -4,7 +4,10 @@
 // inferior derecha (en la pelea con controles táctiles sube junto a ☰ para no
 // tapar los botones de ataque). En el celular, al entrar se queda horizontal.
 // Mientras dura, se bloquea Esc (Chrome y Edge) para que siga sirviendo de
-// pausa; para salir se mantiene Esc apretado, Alt+Enter o el botón.
+// pausa en la pelea y de volver en los menús; solo en la pantalla de título Esc
+// sale de la pantalla completa. También se sale manteniendo Esc apretado (lo
+// pone el navegador), con Alt+Enter o con el botón. Firefox y Safari no dejan
+// bloquear Esc: ahí siempre sale.
 
 interface KeyboardLock {
   lock?: (codes?: string[]) => Promise<void>;
@@ -36,9 +39,27 @@ export function autoFullscreen(): void {
   if (auto) void enterFullscreen();
 }
 
-export function toggleFullscreen(): void {
+export function exitFullscreen(): void {
   if (isFullscreen()) void document.exitFullscreen().catch(() => undefined);
+}
+
+export function toggleFullscreen(): void {
+  if (isFullscreen()) exitFullscreen();
   else void enterFullscreen();
+}
+
+/**
+ * El bloqueo de teclas solo lo acepta la página de más arriba. Dentro de la web el juego va en
+ * un iframe del mismo sitio, así que se le pide a la página de la web (que también queda en
+ * pantalla completa, con el iframe adentro).
+ */
+function teclado(): KeyboardLock | undefined {
+  try {
+    return (window.top as (Window & { navigator: Navigator & { keyboard?: KeyboardLock } }) | null)?.navigator.keyboard;
+  } catch {
+    // Dentro de otro sitio: solo se puede pedir a esta página (y el navegador lo rechaza).
+    return (navigator as Navigator & { keyboard?: KeyboardLock }).keyboard;
+  }
 }
 
 const ICON_EXPAND =
@@ -138,7 +159,7 @@ function installButton(): void {
 /** Alt+Enter, el botón de pantalla completa y el bloqueo de Esc. Llamar una vez al iniciar. */
 export function installFullscreen(): void {
   document.addEventListener('fullscreenchange', () => {
-    const kb = (navigator as Navigator & { keyboard?: KeyboardLock }).keyboard;
+    const kb = teclado();
     if (isFullscreen()) {
       wasFull = true;
       void kb?.lock?.(['Escape']).catch(() => undefined);

@@ -3,7 +3,7 @@
 Juego de pelea 2D para el navegador, estilo arcade (SNK / Marvel vs Capcom)
 con pixel art y efectos modernos.
 
-**Estado: en desarrollo.** Se puede jugar con Loco René, Pablito Neuquén, el
+**Estado: en desarrollo.** Se puede jugar con Tío René, Pablito Neuquén, el
 Flaitiano, el Vendedor de Leña y Carlitos Run (sprites, voces y poderes definitivos) en los escenarios de René, en
 la calle del Pablito (Valdivia, con lluvia), en los cerros de Valparaíso y en Santiago de noche. Los demás luchadores del plantel vienen después.
 
@@ -158,7 +158,7 @@ y daño, **F2** muestra datos de depuración.
 
 ### Especiales
 
-Loco René (también en MOVIMIENTOS, con las teclas que tengas configuradas):
+Tío René (también en MOVIMIENTOS, con las teclas que tengas configuradas):
 
 | Movimiento | Comando |
 |---|---|

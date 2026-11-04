@@ -43,7 +43,7 @@ interface FilaArcade {
 
 /** Nombre de cada luchador (las caras están en luchadores/<id>/cara.webp). */
 const LUCHADORES: Record<string, string> = {
-  rene: 'Loco René',
+  rene: 'Tío René',
   pablito: 'Pablito Neuquén',
   flaitiano: 'Flaitiano',
   lena: 'Vendedor de Leña',

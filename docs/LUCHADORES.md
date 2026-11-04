@@ -22,7 +22,7 @@ de `src/main.ts`: `rene`, `pablito`, `flaitiano`, `lena`, `carlitos`.
 
 ---
 
-## Loco René
+## Tío René
 
 - **id**: `rene` · **carpeta**: `arte/loco-rene/` · **ciudad**: Santiago
 - **Quién es**: René Puente, "Duro como tuna", rapero; su canción "2 Shipitia" (ImpactMusic, 2022).

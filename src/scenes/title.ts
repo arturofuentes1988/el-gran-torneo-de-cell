@@ -1,6 +1,6 @@
 import { BlurFilter, Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import { STAGE_W, VIEW_H, VIEW_W } from '../config';
-import { autoFullscreen } from '../app/fullscreen';
+import { autoFullscreen, exitFullscreen } from '../app/fullscreen';
 import type { Game, Scene } from '../app/game';
 import type { FighterAsset } from '../content/loadFighter';
 import { attackKeys } from '../input/devices';
@@ -375,6 +375,11 @@ export class TitleScene implements Scene {
     this.kick *= 0.86;
 
     const kb = this.game.kb;
+    // Esc en el título no entra: sale de la pantalla completa (en el resto del juego es pausa o volver).
+    if (kb.hit('Escape')) {
+      exitFullscreen();
+      return;
+    }
     const attack = attackKeys().some((k) => kb.hit(k));
     // Un toque (o clic) en cualquier parte también entra.
     if (this.game.menu.confirm || this.game.menu.start || this.game.menu.tap || attack) {

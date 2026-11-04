@@ -1,5 +1,5 @@
 // Luces de disco para los súpers con `cinematic.lights = 'disco'` (el "2 SHIPITIA"
-// de Loco René): una bola de espejos que baja y gira, focos de colores que barren
+// de Tío René): una bola de espejos que baja y gira, focos de colores que barren
 // el escenario y cruzan sus haces, manchas de color en el piso, los reflejos de la
 // bola recorriendo las paredes y un baño de color que late al ritmo de la canción.
 // Todo va detrás de los luchadores, en unidades de pantalla (480x270).

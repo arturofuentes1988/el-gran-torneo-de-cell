@@ -28,7 +28,7 @@ Ocho luchadores elegidos por el usuario más Carlitos Run (agregado el 30 de oct
 
 | Luchador | Estado | Ciudad (mapa del ARCADE) | Escenario propio |
 |---|---|---|---|
-| Loco René | jugable | Santiago | LA CABAÑA DEL LAGO, LA CANCHA |
+| Tío René | jugable | Santiago | LA CABAÑA DEL LAGO, LA CANCHA |
 | Pablito Neuquén | jugable | Valdivia | LA CALLE DEL PABLITO |
 | Flaitiano | jugable | Santiago | (ninguno todavía; idea: feria libre) |
 | Vendedor de Leña | jugable | Valparaíso | LOS CERROS DE VALPARAÍSO |
@@ -371,6 +371,18 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
     los otros clips alcanzan.
   - Los tiempos (arranque, cuadros activos, total) son los mismos de antes. Respaldo: `armado-antes-agachados.json`.
 
+## Tío René y la tecla Esc (4 de noviembre)
+
+- **Loco René pasa a llamarse Tío René** en todo el juego (el id interno sigue siendo `rene` y la carpeta
+  `arte/loco-rene`).
+- **Su cara al agacharse**: los cuadros de la bajada y el agachado del clip nuevo tenían la cara borrosa y
+  doble (Kling la dibujó en pleno movimiento). Ahora usa solo cuadros nítidos: bajada 5 y 7, agachado 11
+  (casi a la altura de antes). El golpe agachado, el gancho y la barrida también dejaron los cuadros borrosos.
+- **Esc en pantalla completa**: solo en la pantalla de título achica la pantalla; en la pelea abre la pausa y
+  en los menús vuelve atrás. El bloqueo de Esc (Chrome y Edge) se le pide a la página de más arriba, porque
+  dentro de la web el juego va en un iframe y ahí el navegador lo rechazaba. Firefox y Safari no dejan
+  bloquear Esc: ahí siempre sale.
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra
@@ -378,7 +390,7 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   ("Yo soy tu taita") cuesta 4,5 créditos.
 - **Comandos fáciles para los demás**: se ofreció dejar a René, Pablito y el Flaitiano con el
   mismo sistema de dos toques + botón; falta la respuesta del usuario.
-- **Loco René**: "El parlante" usa la frase "¡Toy de campeón!" hasta que el usuario mande un
+- **Tío René**: "El parlante" usa la frase "¡Toy de campeón!" hasta que el usuario mande un
   video donde René diga "el más viral de Chile". El clip original de "Me río toa la noche"
   (short vlG8WK4Onm8) no se pudo bajar; usa sus risas de otro video.
 - **Escenario del Flaitiano** (idea: feria libre) y de Diego González: sin hacer.

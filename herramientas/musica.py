@@ -1915,7 +1915,7 @@ TITULO = {
     },
 }
 
-# ── «La cabaña del lago» (escenario de Loco René, de día) ───────────────
+# ── «La cabaña del lago» (escenario de Tío René, de día) ───────────────
 # Sol mayor a 112, groove liviano de pelea: guitarra de nylon en arpegios, marimba con
 # figura de tresillo, bajo funky, palmas y shaker. La quena canta la melodía con la célula
 # del huayno (corchea y dos semicorcheas) y en la sección andina el charango rasguea en
@@ -2085,7 +2085,7 @@ CABANA = {
     },
 }
 
-# ── «La plaza de la pobla» (escenario de Loco René, de noche) ───────────
+# ── «La plaza de la pobla» (escenario de Tío René, de noche) ───────────
 # La menor a 100: batalla de freestyle. 808 con deslizamientos, boom bap con swing, una
 # sección con dembow y otra en medio tiempo de trap con hi-hats en redoble. El gancho es un
 # pluck con ritmo 3+3+2; scratch de vinilo y '¡hey!' de público hechos con síntesis.
