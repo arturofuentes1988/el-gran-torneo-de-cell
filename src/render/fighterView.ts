@@ -7,6 +7,10 @@ import { logLandFrame } from './fuego';
 import type { FxLayer } from './fx';
 import { snap } from './scale';
 
+/** Inclinación máxima (radianes) del que sale volando hacia arriba, y altura de su cintura. */
+const TILT = 0.5;
+const WAIST = 72;
+
 interface Ghost {
   sprite: Sprite;
   life: number;
@@ -95,6 +99,7 @@ export class FighterView {
       const g = new Sprite(this.sprite.texture);
       g.anchor.copyFrom(this.sprite.anchor);
       g.position.copyFrom(this.sprite.position);
+      g.rotation = this.sprite.rotation;
       g.scale.copyFrom(this.sprite.scale);
       g.tint = f.def.ui.fx;
       g.blendMode = 'add';
@@ -125,7 +130,15 @@ export class FighterView {
     if (f.hitstop > 0 && (f.state === 'hitstun' || f.state === 'airHit' || f.state === 'blockstun')) {
       x += f.hitstop % 2 === 0 ? 1 : -1;
     }
-    this.sprite.position.set(x, snap(f.y));
+    // Volando hacia arriba tras un golpe que lanza (el gancho): el cuerpo se va de espaldas,
+    // girando en torno a la cintura, y se endereza a medida que pierde impulso.
+    const tilt = f.state === 'airHit' && f.vy < 0 ? -f.facing * TILT * Math.min(1, -f.vy / 9.6) : 0;
+    if (tilt) {
+      this.sprite.position.set(x - WAIST * Math.sin(tilt), snap(f.y) - WAIST + WAIST * Math.cos(tilt));
+    } else {
+      this.sprite.position.set(x, snap(f.y));
+    }
+    this.sprite.rotation = tilt;
     this.sprite.scale.set(f.facing * k, k);
     const zapOn = this.zap > 0 && Math.floor(this.zap / 2) % 2 === 0;
     this.sprite.tint = zapOn ? this.zapTint : this.baseTint;
@@ -134,6 +147,7 @@ export class FighterView {
       this.zapGlow.texture = tex;
       this.zapGlow.anchor.copyFrom(this.sprite.anchor);
       this.zapGlow.position.copyFrom(this.sprite.position);
+      this.zapGlow.rotation = this.sprite.rotation;
       this.zapGlow.scale.copyFrom(this.sprite.scale);
       this.zapGlow.zIndex = this.sprite.zIndex + 0.5;
       this.zapGlow.alpha = 0.55 + Math.random() * 0.3;

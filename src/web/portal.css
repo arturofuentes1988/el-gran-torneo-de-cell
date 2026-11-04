@@ -265,9 +265,138 @@ td.luchador img {
   margin-top: 12px;
 }
 
+/* Cuenta: avatar y apodo arriba a la derecha, con su menú. */
+.derecha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#cuenta {
+  position: relative;
+}
+
+#cuenta .chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px 3px 3px;
+  transform: none;
+  border-radius: 999px;
+  background: #1a0c2e;
+  border-color: rgba(255, 215, 106, 0.6);
+}
+
+#cuenta .avatar,
+.jugador .avatar {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #b02a90;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  border: 1.5px solid var(--oro-suave);
+}
+
+#cuenta .avatar img,
+.jugador .avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#cuenta .apodo {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff4e0;
+}
+
+.menu-cuenta {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  min-width: 170px;
+  border-radius: 8px;
+  background: linear-gradient(#2a0f3e, #14061f);
+  border: 1.5px solid var(--oro-suave);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.menu-cuenta[hidden] {
+  display: none;
+}
+
+.menu-cuenta button {
+  transform: none;
+  text-align: left;
+}
+
+/* En el ranking: el avatar al lado del apodo. */
+.jugador {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jugador .avatar {
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+}
+
+/* Abajo: donar (con Mercado Pago) y la firma. */
 .pie {
-  margin: 18px 0 8px;
+  margin: 22px auto 10px;
+  max-width: 860px;
   text-align: center;
+}
+
+.donar p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: #ffe6a0;
+}
+
+.botones-donar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.boton-donar {
+  display: inline-block;
+  padding: 9px 20px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 1px;
+  text-decoration: none;
+  color: #fff;
+  background: #009ee3;
+  border: 1.5px solid #8fdcff;
+  box-shadow: 0 0 16px rgba(0, 158, 227, 0.35);
+}
+
+.boton-donar:hover {
+  filter: brightness(1.15);
+}
+
+.firma {
+  margin-top: 14px;
   font-size: 12px;
   letter-spacing: 1.5px;
   color: #8a7fa0;
@@ -302,6 +431,23 @@ td.luchador img {
 
   .ayuda {
     display: none;
+  }
+
+  .derecha {
+    gap: 8px;
+  }
+
+  /* En el celular, solo el avatar (el apodo no cabe junto a las pestañas). */
+  #cuenta .apodo {
+    display: none;
+  }
+
+  #cuenta .chip {
+    padding: 2px;
+  }
+
+  .pie {
+    padding: 0 12px;
   }
 
   #ranking {

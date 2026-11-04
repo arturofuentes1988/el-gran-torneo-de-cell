@@ -4,6 +4,7 @@ import type { Texture } from 'pixi.js';
 import { Display } from './app/display';
 import { contextoDeErrores, reportarError, vigilarErrores, vigilarPantalla } from './app/errores';
 import { autoFullscreen, installFullscreen } from './app/fullscreen';
+import { instalarMusica } from './app/musica';
 import { installQaBridge } from './app/qa';
 import { Game, type FightMode } from './app/game';
 import { loadMuted } from './app/settings';
@@ -82,6 +83,8 @@ async function main(): Promise<void> {
   const sfx = new Sfx();
   // El sonido queda como lo dejó el jugador (OPCIONES > SONIDO o la tecla M).
   sfx.setMuted(loadMuted());
+  // Música: el botón de la esquina y el volumen guardado (OPCIONES > MÚSICA).
+  instalarMusica(sfx);
   // El navegador solo permite audio y pantalla completa después de un gesto del usuario:
   // la primera tecla (o clic) desbloquea el sonido (y con él la música del título) y pide
   // la pantalla completa, esté donde esté el jugador.

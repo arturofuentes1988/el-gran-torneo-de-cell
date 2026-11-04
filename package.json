@@ -2,7 +2,7 @@
   "name": "el-gran-torneo-de-cell",
   "private": true,
   "version": "0.1.0",
-  "description": "El Gran Torneo de Cell: juego de pelea 2D web, parodia sin fines de lucro",
+  "description": "El Gran Torneo de Cell: juego de pelea 2D para el navegador",
   "type": "module",
   "scripts": {
     "predev": "node herramientas/tamanos.mjs",

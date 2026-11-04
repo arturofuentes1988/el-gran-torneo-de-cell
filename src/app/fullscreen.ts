@@ -50,21 +50,24 @@ const ICON_SHRINK =
 const TOUCH_SIZE = 'calc(clamp(33px, 11.2vmin, 58px) + 4px)';
 
 const CSS = `
-#pantalla-completa { position: fixed; z-index: 11; right: calc(env(safe-area-inset-right) + 8px);
-  bottom: calc(env(safe-area-inset-bottom) + 8px); width: 30px; height: 30px; padding: 0; margin: 0;
+#esquina { position: fixed; z-index: 11; right: calc(env(safe-area-inset-right) + 8px);
+  bottom: calc(env(safe-area-inset-bottom) + 8px); display: flex; gap: 6px; opacity: 0.5; transition: opacity 0.25s; }
+#esquina:hover { opacity: 0.95; }
+#esquina button { width: 30px; height: 30px; padding: 0; margin: 0;
   display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff4e0;
   background: rgba(30, 10, 40, 0.6); border: 1.5px solid rgba(255, 255, 255, 0.45); border-radius: 8px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5); opacity: 0.5; transition: opacity 0.25s;
-  -webkit-tap-highlight-color: transparent; touch-action: manipulation; outline: none; }
-#pantalla-completa:hover { opacity: 0.95; }
-#pantalla-completa svg { width: 64%; height: 64%; fill: none; stroke: currentColor; stroke-width: 2.6;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5); -webkit-tap-highlight-color: transparent; touch-action: manipulation; outline: none; }
+#esquina svg { width: 64%; height: 64%; fill: none; stroke: currentColor; stroke-width: 2.6;
   stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 1px #000); }
-body:has(#loading) #pantalla-completa { display: none; }
-body.tactil-on #pantalla-completa { width: ${TOUCH_SIZE}; height: ${TOUCH_SIZE}; border-radius: 12px; border-width: 2px;
-  background: rgba(30, 10, 40, 0.7); border-color: rgba(255, 255, 255, 0.55); opacity: 0.62; }
-body.tactil-on.tactil-pelea #pantalla-completa { bottom: auto; top: calc(env(safe-area-inset-top) + 6px);
+body:has(#loading) #esquina { display: none; }
+body.tactil-on #esquina { opacity: 0.62; gap: 8px; }
+body.tactil-on #esquina button { width: ${TOUCH_SIZE}; height: ${TOUCH_SIZE}; border-radius: 12px; border-width: 2px;
+  background: rgba(30, 10, 40, 0.7); border-color: rgba(255, 255, 255, 0.55); }
+body.tactil-on.tactil-pelea #esquina { bottom: auto; top: calc(env(safe-area-inset-top) + 6px);
   right: calc(env(safe-area-inset-right) + 16px + ${TOUCH_SIZE}); }
-body.puntero-quieto:not(.tactil-on) #pantalla-completa { opacity: 0; pointer-events: none; }
+/* En la pelea con controles táctiles, solo pantalla completa (la música se cambia en los menús): no tapa la vida del rival. */
+body.tactil-on.tactil-pelea #esquina .solo-menus { display: none; }
+body.puntero-quieto:not(.tactil-on) #esquina { opacity: 0; pointer-events: none; }
 `;
 
 /** Bloquea el celular en horizontal al entrar a pantalla completa y lo suelta al salir (Android). */
@@ -72,19 +75,35 @@ function orientation(): (ScreenOrientation & { lock?: (o: string) => Promise<voi
   return screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void>; unlock?: () => void };
 }
 
+const esquina = document.createElement('div');
+esquina.id = 'esquina';
+
+/**
+ * Agrega un botón al grupo de la esquina (el de música va a la izquierda del de pantalla
+ * completa). El toque es solo del botón: no llega al juego ni al "primer gesto"; y no toma el
+ * foco, así Espacio o Enter siguen siendo del juego.
+ */
+export function botonDeEsquina(b: HTMLButtonElement, primero = false): void {
+  b.type = 'button';
+  b.tabIndex = -1;
+  b.addEventListener('pointerdown', (e) => e.stopPropagation());
+  b.addEventListener('mousedown', (e) => e.preventDefault());
+  if (primero) esquina.prepend(b);
+  else esquina.appendChild(b);
+}
+
 /**
  * Botón de pantalla completa: un toque entra (y en el celular se pone horizontal), otro sale.
  * No se crea donde no hay pantalla completa (iPhone, o un iframe sin allow="fullscreen").
  */
 function installButton(): void {
-  if (!document.fullscreenEnabled) return;
   const style = document.createElement('style');
   style.textContent = CSS;
   document.head.appendChild(style);
+  document.body.appendChild(esquina);
+  if (!document.fullscreenEnabled) return;
   const b = document.createElement('button');
   b.id = 'pantalla-completa';
-  b.type = 'button';
-  b.tabIndex = -1;
   const refresh = (): void => {
     const full = isFullscreen();
     b.innerHTML = full ? ICON_SHRINK : ICON_EXPAND;
@@ -93,10 +112,6 @@ function installButton(): void {
   };
   refresh();
   document.addEventListener('fullscreenchange', refresh);
-  // El toque es solo del botón: no llega al juego (ni al "primer gesto" que pide pantalla completa sola).
-  b.addEventListener('pointerdown', (e) => e.stopPropagation());
-  // Sin foco: así Espacio o Enter siguen siendo del juego y no vuelven a apretar el botón.
-  b.addEventListener('mousedown', (e) => e.preventDefault());
   b.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -108,8 +123,8 @@ function installButton(): void {
       });
     }
   });
-  document.body.appendChild(b);
-  // Con mouse, el botón se esconde si el puntero se queda quieto (no tapa la pelea).
+  botonDeEsquina(b);
+  // Con mouse, los botones se esconden si el puntero se queda quieto (no tapa la pelea).
   let idle = 0;
   const wake = (): void => {
     document.body.classList.remove('puntero-quieto');

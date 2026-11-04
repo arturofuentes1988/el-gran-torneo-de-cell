@@ -15,7 +15,6 @@ Documentos relacionados:
 
 Juego de pelea 2D para el navegador (Vite 6, TypeScript estricto, PixiJS v8), estilo SNK y
 Marvel vs Capcom, con los personajes del fenómeno de TikTok chileno "Torneo de Cell".
-Parodia sin fines de lucro.
 
 - Repositorio público: https://github.com/arturofuentes1988/el-gran-torneo-de-cell
 - Juego en línea: https://arturofuentes1988.github.io/el-gran-torneo-de-cell/
@@ -309,6 +308,53 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
     quedaba con partículas rotas, el dibujo fallaba y el bucle se cortaba. En calidad liviana se
     sueltan escenarios en casi cada pelea, por eso pasaba en el celular. Ahora cada escenario
     destruye solo las texturas que bajó.
+
+## Dificultad al empezar, música, avatares y donaciones (3 de noviembre)
+
+- **ELIGE LA DIFICULTAD** antes del ARCADE, el 1 VS CPU y el 2 VS CPU, con una línea que dice
+  cómo juega la CPU en cada nivel. Queda guardada y ya no está en OPCIONES.
+- **CASUAL**: sin 1 VS 1. El 2 VS 2 pasó a llamarse **2 VS CPU** y el jugador 2 ya no se puede
+  unir.
+- **Música**:
+  - Botón para prenderla o apagarla junto al de pantalla completa (`src/app/musica.ts`). En la
+    pelea con controles táctiles se esconde, para no tapar la vida del rival.
+  - Volumen en OPCIONES > MÚSICA, aparte del que baja solo cuando alguien habla.
+- **MOVIMIENTOS en el celular**:
+  - Usa los nombres de los botones de la pantalla (COMBO DÉBIL, PATADA FUERTE, PODER...).
+  - Las teclas ya no cortan la letra (pasaba desde que se agrandó la letra de la lista).
+- **Avatares** (`src/online/avatares.ts`):
+  - El jugador elige la cara de un luchador.
+  - En la web va arriba a la derecha con su apodo y un menú (CAMBIAR AVATAR, CERRAR SESIÓN).
+    En el juego, en EN LÍNEA (CAMBIAR AVATAR y la cara junto a "JUGANDO COMO").
+  - También sale en el ranking.
+  - Se guarda en `perfiles.avatar` (`supabase/migraciones/003_avatar.sql`). Mientras no se pegue
+    ese SQL, el juego funciona igual pero dice que los avatares todavía no están listos.
+  - La web y el juego se avisan con `postMessage({ torneo: 'cuenta' })` cuando alguien entra,
+    sale o cambia el apodo o el avatar.
+- **Donar**:
+  - Abajo en la web, con Mercado Pago: un botón por enlace de pago, en `DONACIONES`
+    (`src/web/portal.ts`).
+  - No se ve mientras la lista esté vacía; faltan los enlaces del usuario.
+- Se sacó "parodia sin fines de lucro" de la web, el README, este documento y `package.json`.
+
+## Golpes más fluidos y gancho estilo Mortal Kombat (3 de noviembre)
+
+- **Donar**: ya tiene los enlaces de Mercado Pago ($2.000 y $5.000). El SQL de avatares (003) está
+  pegado y revisado.
+- **Golpes fluidos**: los normales de pie y agachados de los cinco usan el doble de dibujos
+  (`herramientas/fluidez.py`), con los mismos tiempos de antes.
+- **Estelas** (`src/render/smear.ts`): cada normal deja una medialuna de luz. Las débiles son finas y
+  casi blancas, y las fuertes gruesas y del color del luchador. La diferencia entre débil y fuerte se ve
+  de lejos.
+- **Gancho** (el lanzador, ↓ + golpe fuerte): al conectar suena un golpe propio que retumba (`uppercut`
+  en sfx.ts). Además salen una columna de luz con chispas hacia arriba, polvo, un tirón de zoom con
+  destello y dos cuadros en negativo. El rival sale volando de espaldas, inclinado, y se endereza al
+  perder impulso.
+- **Pendiente, con créditos**: los videos de las patadas agachadas de René, el Vendedor y Carlitos
+  estiran la pierna de atrás, sin patear hacia adelante. El golpe bajo de René y el del Flaitiano
+  salen de pie, y los ganchos de cuatro de ellos van en diagonal. Los 15 clips nuevos ya están escritos en
+  cada `kie.json` (`agachado_golpe`, `agachado_patada`, `barrida`, `gancho_mk`), con unos 60 créditos de
+  kie cada uno. Esperan la aprobación del usuario y su clave de kie.ai.
 
 ## Pendiente y decisiones abiertas
 

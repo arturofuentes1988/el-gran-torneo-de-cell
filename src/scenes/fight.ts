@@ -15,6 +15,7 @@ import { Grieta, PartyShow, UltraShow, drawMareo, drawRemolino } from '../render
 import { FxLayer } from '../render/fx';
 import { Hud, type PracticeHudInfo } from '../render/hud';
 import { LiveShow } from '../render/live';
+import { Smears } from '../render/smear';
 import { MoveListPanel } from '../render/moveListPanel';
 import { ControlsPanel } from './controls';
 import { COSTUME_COUNT } from '../render/costume';
@@ -108,6 +109,8 @@ export class FightScene implements Scene {
     projectiles: new Container(),
   };
   private fx = new FxLayer();
+  /** Estelas de los golpes normales (en la capa con brillo de los efectos). */
+  private smears = new Smears();
   /** Show de luces de los súpers con cinematic.lights = 'disco' (detrás de los luchadores). */
   private disco = new DiscoShow();
   /** Discoteca de neón rojo del súper de Carlitos Run (cinematic.lights = 'neon'). */
@@ -259,6 +262,7 @@ export class FightScene implements Scene {
     // Orden de dibujo por zIndex: el jugador 1 delante del 2 cuando se cruzan, las ayudas detrás.
     this.layers.fighters.sortableChildren = true;
     this.projViews = new ProjectileViews(game.assets.textures, this.layers.projectiles, this.fx);
+    this.fx.addGlow(this.smears.view);
     this.hud = new Hud([a.def, b.def], game.assets.textures);
     if (this.match.teams) this.hud.setTeamMode(all.map((f) => f.def));
     this.live = new LiveShow([a.def, b.def], game.assets.textures, seed, (side, color) => this.spawnHeart(side, color));
@@ -464,6 +468,7 @@ export class FightScene implements Scene {
     this.ultraShow.destroy();
     this.party.destroy();
     for (const v of this.views.values()) v.destroy();
+    this.smears.destroy();
     this.world.destroy({ children: true });
   }
 
@@ -516,6 +521,7 @@ export class FightScene implements Scene {
       if (f.powerTimer > 0 && m.freeze === 0) this.fx.powerAura(f.x, f.y, f.def.ui.fx, m.frame);
     }
     for (const v of this.views.values()) v.step();
+    this.smears.step(this.allFighters());
     this.projViews.step(m);
     this.stepElemental();
     this.fx.step();
@@ -668,10 +674,19 @@ export class FightScene implements Scene {
           sfx.play('guardCancel');
           this.addShake(2);
           break;
-        case 'launch':
+        case 'launch': {
+          // El gancho que lanza se marca como en Mortal Kombat: columna de luz, un golpe que
+          // retumba, la pantalla que tiembla y un tirón de zoom con destello.
+          const att = m.fighters[e.side];
           this.fx.launch(e.x, e.y);
+          this.fx.uppercut(e.x, e.y, att.def.ui.fx, att.x);
           sfx.play('launch', { pan: pan(e.x) });
+          sfx.play('uppercut', { pan: pan(e.x) });
+          this.addShake(5.5);
+          this.hitPunch(e.x, e.y, 2, camLeft);
+          this.impact = Math.max(this.impact, 2);
           break;
+        }
         case 'land':
           sfx.play(e.heavy ? 'landHeavy' : 'land', { vol: e.heavy ? 1 : 0.6 });
           this.fx.dust(e.x, 0, e.heavy ? 12 : 5, e.heavy);
@@ -1259,6 +1274,7 @@ export class FightScene implements Scene {
     this.projViews.update(m);
     this.updatePowerGlows();
     this.fx.sync();
+    this.smears.draw();
     this.hud.update(m, camLeft, this.camOffY);
     this.live.update(m);
     const punch = this.punchT > 0 ? (this.punchT / this.punchMax) * (this.punchMax > 10 ? 0.11 : 0.07) : 0;

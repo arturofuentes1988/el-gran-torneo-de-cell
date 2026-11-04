@@ -42,6 +42,32 @@ export function saveMuted(muted: boolean): void {
   }
 }
 
+const KEY_MUSIC = 'torneoDeCell.musica';
+
+/** Música: prendida o apagada (botón de la esquina) y volumen de 0 a 10 (OPCIONES > MÚSICA). */
+export interface MusicPref {
+  activa: boolean;
+  volumen: number;
+}
+
+export function loadMusic(): MusicPref {
+  try {
+    const v = JSON.parse(localStorage.getItem(KEY_MUSIC) ?? 'null') as Partial<MusicPref> | null;
+    const volumen = typeof v?.volumen === 'number' && Number.isInteger(v.volumen) ? Math.max(0, Math.min(10, v.volumen)) : 10;
+    return { activa: v?.activa !== false, volumen };
+  } catch {
+    return { activa: true, volumen: 10 };
+  }
+}
+
+export function saveMusic(m: MusicPref): void {
+  try {
+    localStorage.setItem(KEY_MUSIC, JSON.stringify(m));
+  } catch {
+    // Si no se puede guardar, solo dura esta sesión.
+  }
+}
+
 const KEY_CONTROLS = 'torneoDeCell.controles';
 
 /** Controles guardados (teclas y botones de joystick de cada jugador), sin validar; null si no hay. */

@@ -11,10 +11,19 @@
   <body>
     <header class="cabecera">
       <a class="logo" href="./">EL GRAN TORNEO <b>DE CELL</b></a>
-      <nav class="pestanas">
-        <button type="button" data-pestana="jugar" class="activa">JUGAR</button>
-        <button type="button" data-pestana="ranking">RANKING</button>
-      </nav>
+      <div class="derecha">
+        <nav class="pestanas">
+          <button type="button" data-pestana="jugar" class="activa">JUGAR</button>
+          <button type="button" data-pestana="ranking">RANKING</button>
+        </nav>
+        <div id="cuenta" hidden>
+          <button type="button" class="chip" aria-haspopup="menu"><span class="avatar"></span><span class="apodo"></span></button>
+          <div class="menu-cuenta" role="menu" hidden>
+            <button type="button" data-accion="avatar">CAMBIAR AVATAR</button>
+            <button type="button" data-accion="salir">CERRAR SESIÓN</button>
+          </div>
+        </div>
+      </div>
     </header>
     <main>
       <section id="jugar" class="pestana">
@@ -40,8 +49,14 @@
           <p class="explica"></p>
           <div class="tabla"></div>
         </div>
-        <footer class="pie">EL GRAN TORNEO DE CELL · PARODIA SIN FINES DE LUCRO</footer>
       </section>
+      <footer class="pie">
+        <div class="donar" hidden>
+          <p>¿TE GUSTA EL JUEGO? AYÚDANOS A SEGUIR AGREGANDO LUCHADORES Y ESCENARIOS</p>
+          <div class="botones-donar"></div>
+        </div>
+        <div class="firma">EL GRAN TORNEO DE CELL</div>
+      </footer>
     </main>
     <script type="module" src="/src/web/portal.ts"></script>
   </body>

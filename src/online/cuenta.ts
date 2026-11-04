@@ -1,5 +1,6 @@
-// Cuentas de jugador (Supabase): entrar con Google o con correo y contraseña, y el apodo
-// con que te ven los rivales (tabla public.perfiles, ver supabase/migraciones/).
+// Cuentas de jugador (Supabase): entrar con Google o con correo y contraseña, el apodo con que
+// te ven los rivales y el avatar (la cara de un luchador) (tabla public.perfiles, ver
+// supabase/migraciones/). La web y el juego (iframe) se avisan cuando la cuenta cambia.
 // La librería de Supabase se baja solo cuando hace falta: al entrar, al tocar EN LÍNEA o,
 // al abrir el juego, si ya hay una sesión guardada. ARCADE y CASUAL no la necesitan.
 
@@ -23,7 +24,9 @@ const SIN_CONEXION = 'NO HAY CONEXIÓN · REVISA TU INTERNET';
 let cliente: Promise<SupabaseClient> | null = null;
 let usuario: User | null = null;
 /** El apodo del que entró; null si todavía no elige; undefined si no se sabe (no se ha podido leer). */
-let perfil: { apodo: string } | null | undefined;
+let perfil: { apodo: string; avatar: string | null } | null | undefined;
+/** Avisos a las pantallas (la web y el juego) cuando cambia la cuenta. */
+const oyentes: Array<() => void> = [];
 /** Conexión del arranque (sesión guardada o vuelta de Google) en curso. */
 let pendiente: Promise<void> | null = null;
 let sinConexion = false;
@@ -140,12 +143,16 @@ async function leerPerfil(): Promise<void> {
     return;
   }
   const c = await obtenerCliente();
-  const { data, error } = await aTiempo(c.from('perfiles').select('apodo').eq('id', usuario.id).maybeSingle());
-  if (error) {
+  const leer = (columnas: string) => aTiempo(c.from('perfiles').select(columnas).eq('id', usuario!.id).maybeSingle());
+  let r = await leer('apodo, avatar');
+  // Sin la columna del avatar (falta pegar supabase/migraciones/003): solo el apodo.
+  if (r.error?.code === '42703') r = await leer('apodo');
+  if (r.error) {
     perfil = undefined;
-    throw error;
+    throw r.error;
   }
-  perfil = data ? { apodo: String(data.apodo) } : null;
+  const fila = r.data as { apodo: unknown; avatar?: unknown } | null;
+  perfil = fila ? { apodo: String(fila.apodo), avatar: typeof fila.avatar === 'string' ? fila.avatar : null } : null;
 }
 
 /**
@@ -153,6 +160,10 @@ async function leerPerfil(): Promise<void> {
  * plano (mientras bajan los luchadores). Si no, no baja nada.
  */
 export function iniciarCuenta(): void {
+  // La otra página (la web o el juego) avisa cuando entra, sale o cambia el apodo o el avatar.
+  window.addEventListener('message', (e) => {
+    if (e.origin === location.origin && (e.data as { torneo?: string } | null)?.torneo === 'cuenta') void refrescarCuenta();
+  });
   const q = new URLSearchParams(location.search);
   const vueltaGoogle = q.has('code');
   if (q.has('error_description') || q.has('error')) {
@@ -179,7 +190,41 @@ export function iniciarCuenta(): void {
     } catch (err) {
       console.warn('No se pudo leer el perfil.', err);
     }
-  })().finally(() => (pendiente = null));
+  })().finally(() => {
+    pendiente = null;
+    for (const fn of oyentes) fn();
+  });
+}
+
+/** Avisa cada vez que cambia la cuenta (entra, sale, apodo o avatar), también desde la otra página. */
+export function alCambiarCuenta(fn: () => void): void {
+  oyentes.push(fn);
+}
+
+/** Avisa aquí y a la otra página (la web al juego que tiene dentro, o el juego a la web). */
+function notificar(): void {
+  for (const fn of oyentes) fn();
+  const msg = { torneo: 'cuenta' };
+  try {
+    if (window.parent !== window) window.parent.postMessage(msg, location.origin);
+    for (const f of document.querySelectorAll('iframe')) f.contentWindow?.postMessage(msg, location.origin);
+  } catch {
+    // Dentro de otro sitio: no hay a quién avisar.
+  }
+}
+
+/** Vuelve a leer la sesión y el perfil (la otra página cambió algo). */
+export async function refrescarCuenta(): Promise<void> {
+  try {
+    const c = await aTiempo(obtenerCliente());
+    const { data } = await aTiempo(c.auth.getSession());
+    usuario = data.session?.user ?? null;
+    perfil = usuario ? undefined : null;
+    if (usuario) await leerPerfil();
+  } catch (err) {
+    console.warn('No se pudo actualizar la cuenta.', err);
+  }
+  for (const fn of oyentes) fn();
 }
 
 /** La conexión del arranque, si todavía no termina (las pantallas esperan con "CONECTANDO…"). */
@@ -195,6 +240,29 @@ export function conectado(): boolean {
 /** Apodo del que entró: null si todavía no elige uno; undefined si no se ha podido leer. */
 export function apodo(): string | null | undefined {
   return perfil === undefined ? undefined : (perfil?.apodo ?? null);
+}
+
+/** Avatar del que entró (id de un luchador), o null si no eligió (o no se sabe). */
+export function avatar(): string | null {
+  return perfil?.avatar ?? null;
+}
+
+/** Guarda el avatar (la cara de un luchador); devuelve el error para mostrar, o null si quedó. */
+export async function guardarAvatar(id: string): Promise<string | null> {
+  if (!/^[a-z0-9-]{1,24}$/.test(id)) return 'ESE AVATAR NO EXISTE';
+  if (!usuario) return 'TU SESIÓN SE CERRÓ · VUELVE A ENTRAR';
+  if (!perfil) return 'PRIMERO ELIGE TU APODO EN EL JUEGO (EN LÍNEA)';
+  try {
+    const c = await aTiempo(obtenerCliente());
+    const { error } = await aTiempo(c.from('perfiles').update({ avatar: id }).eq('id', usuario.id));
+    if (error?.code === '42703' || error?.code === 'PGRST204') return 'LOS AVATARES TODAVÍA NO ESTÁN LISTOS';
+    if (error) return traducir(error);
+    perfil = { ...perfil, avatar: id };
+    notificar();
+    return null;
+  } catch (err) {
+    return traducir(err);
+  }
 }
 
 /** Vuelve a leer el apodo; devuelve el error para mostrar, o null si se pudo. */
@@ -293,6 +361,7 @@ export async function entrarConCorreo(correo: string, clave: string): Promise<st
   } catch (err) {
     console.warn('No se pudo leer el perfil.', err);
   }
+  notificar();
   return null;
 }
 
@@ -308,6 +377,7 @@ export async function crearCuenta(correo: string, clave: string): Promise<{ erro
     if (!data.session) return { confirmar: true };
     usuario = data.user;
     perfil = null;
+    notificar();
     return {};
   } catch (err) {
     return { error: traducir(err) };
@@ -347,7 +417,8 @@ export async function guardarApodo(a: string): Promise<string | null> {
     const c = await aTiempo(obtenerCliente());
     const { error } = await aTiempo(c.from('perfiles').upsert({ id: usuario.id, apodo: s }));
     if (error) return traducir(error);
-    perfil = { apodo: s };
+    perfil = { apodo: s, avatar: perfil?.avatar ?? null };
+    notificar();
     return null;
   } catch (err) {
     return traducir(err);
@@ -392,4 +463,5 @@ export async function cerrarSesion(): Promise<void> {
   usuario = null;
   perfil = null;
   marcarInvitado();
+  notificar();
 }

@@ -254,6 +254,26 @@ const SOUNDS: Record<string, Gen> = {
     const lp = lowpass(sr);
     return render(sr, 0.3, (t) => sat(o(90 + 500 * t) * Math.exp(-t * 8) * 0.6 + lp(n(), 1800) * Math.exp(-t * 14) * 0.6) * 0.7);
   },
+  // Gancho que lanza (estilo Mortal Kombat): chasquido, golpe grave que retumba y el aire que
+  // sube silbando detrás del rival.
+  uppercut: (sr) => {
+    const n = noiseGen(41);
+    const n2 = noiseGen(43);
+    const hp = highpass(sr);
+    const lp = lowpass(sr);
+    const lp2 = lowpass(sr);
+    const o = osc(sr);
+    const o2 = osc(sr);
+    return render(sr, 0.75, (t) => {
+      const crack = hp(n(), 2500) * Math.exp(-t * 60) * 0.9;
+      const body = lp(n(), 3000 * Math.exp(-t * 8) + 250) * Math.exp(-t * 9) * 1.2;
+      const boom = o(34 + 110 * Math.exp(-t * 16)) * Math.exp(-t * 4.5) * 1.1;
+      const u = Math.max(0, t - 0.03);
+      const rise = lp2(n2(), 600 + 5200 * Math.min(1, u / 0.35)) * Math.sin(Math.min(1, u / 0.55) * Math.PI) * 0.35;
+      const ring = o2(110 + 40 * t, 'tri') * Math.exp(-t * 6) * 0.15;
+      return sat(crack + body + boom + rise + ring, 2.2) * 0.85;
+    });
+  },
   super: (sr) => {
     const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];
     const os = notes.map(() => osc(sr));
@@ -409,6 +429,9 @@ export class Sfx {
   private variants = new Map<string, string[]>();
   /** Música de fondo: bus propio (baja mientras alguien habla) y la pista que suena. */
   private musicBus: GainNode | null = null;
+  /** Volumen de la música (0 = apagada), aparte del que baja solo cuando alguien habla. */
+  private musicVol: GainNode | null = null;
+  private musicLevel = 1;
   private music: { name: string; src: AudioBufferSourceNode | null; gain: GainNode | null; loopStart: number; loopEnd: number } | null = null;
   /**
    * Canales de voz (ej. un luchador): hasta cuándo está ocupado cada uno (segundos del
@@ -503,6 +526,12 @@ export class Sfx {
     this.buffers.set(name, b);
   }
 
+  /** Volumen de la música de 0 a 1 (0 = apagada); el resto de los sonidos no cambia. */
+  setMusicLevel(level: number): void {
+    this.musicLevel = Math.max(0, Math.min(1, level));
+    if (this.ctx && this.musicVol) this.musicVol.gain.setTargetAtTime(this.musicLevel, this.ctx.currentTime, 0.05);
+  }
+
   /** La web esconde el juego (pestaña RANKING): se calla todo hasta que vuelva a JUGAR. */
   pausarAudio(on: boolean): void {
     if (!this.ctx) return;
@@ -533,7 +562,9 @@ export class Sfx {
       this.voiceBus.connect(this.master);
       this.musicBus = this.ctx.createGain();
       this.musicBus.gain.value = MUSIC_GAIN;
-      this.musicBus.connect(this.master);
+      this.musicVol = this.ctx.createGain();
+      this.musicVol.gain.value = this.musicLevel;
+      this.musicBus.connect(this.musicVol).connect(this.master);
       const sr = this.ctx.sampleRate;
       for (const [name, gen] of Object.entries(SOUNDS)) this.store(name, gen(sr));
       for (const [name, spec] of this.specs) this.store(name, synthesize(spec, sr));

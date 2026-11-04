@@ -1,9 +1,11 @@
 // Menús después del título (mismo estilo: panel centrado, cursor y barra; la base está en menu.ts):
 // - MENÚ PRINCIPAL: ARCADE, EN LÍNEA, CASUAL, OPCIONES y SALIR.
-// - CASUAL: 1 VS CPU, 1 VS 1, 2 VS 2 y PRÁCTICA.
-// - OPCIONES: PERSONAJES, MOVIMIENTOS, ESCENARIOS, DEMOSTRACIÓN, CONTROLES, DIFICULTAD, SONIDO y GRÁFICOS.
+// - CASUAL: 1 VS CPU, 2 VS CPU y PRÁCTICA.
+// - ELIGE LA DIFICULTAD: antes del ARCADE, del 1 VS CPU y del 2 VS CPU.
+// - OPCIONES: PERSONAJES, MOVIMIENTOS, ESCENARIOS, DEMOSTRACIÓN, CONTROLES, SONIDO, MÚSICA y GRÁFICOS.
 
 import type { Game, Scene } from '../app/game';
+import { cambiarMusica, musica } from '../app/musica';
 import { loadDifficulty, loadQuality, saveDifficulty, saveMuted, saveQuality, type QualityPref } from '../app/settings';
 import { elegirNivel, nivel, NIVELES, NOMBRE_NIVEL } from '../content/calidad';
 import { arcade } from '../render/text';
@@ -33,7 +35,7 @@ export class MainMenuScene extends MenuScene {
 
   protected choose(id: string): void {
     const g = this.game;
-    if (id === 'arcade') this.go(new CharacterSelectScene(g, 'arcade'));
+    if (id === 'arcade') this.go(new DifficultyMenuScene(g, () => new CharacterSelectScene(g, 'arcade'), () => new MainMenuScene(g)));
     // EN LÍNEA pide cuenta (y apodo) la primera vez.
     else if (id === 'online') this.go(irAEnLinea(g));
     else if (id === 'casual') this.go(new CasualMenuScene(g));
@@ -48,13 +50,12 @@ export class MainMenuScene extends MenuScene {
   }
 }
 
-/** CASUAL: peleas sueltas (contra la CPU, entre dos, 2 VS 2) y la práctica. */
+/** CASUAL: peleas sueltas contra la CPU (1 VS CPU y, en equipos, 2 VS CPU) y la práctica. */
 export class CasualMenuScene extends MenuScene {
   constructor(game: Game) {
     super(game, 'casual', 'CASUAL', [
       { id: 'cpu', label: '1 VS CPU' },
-      { id: '2p', label: '1 VS 1' },
-      { id: 'equipos', label: '2 VS 2' },
+      { id: 'equipos', label: '2 VS CPU' },
       { id: 'practica', label: 'PRÁCTICA' },
       { id: 'volver', label: 'VOLVER' },
     ]);
@@ -62,9 +63,11 @@ export class CasualMenuScene extends MenuScene {
 
   protected choose(id: string): void {
     const g = this.game;
-    if (id === 'cpu' || id === '2p' || id === 'practica') this.go(new CharacterSelectScene(g, id));
-    // 2 VS 2: primero se arman los equipos (después, el escenario).
-    else if (id === 'equipos') this.go(new TeamSelectScene(g));
+    const here = (): Scene => new CasualMenuScene(g);
+    if (id === 'cpu') this.go(new DifficultyMenuScene(g, () => new CharacterSelectScene(g, 'cpu'), here));
+    // 2 VS CPU: la dificultad, después se arman los equipos (y el escenario).
+    else if (id === 'equipos') this.go(new DifficultyMenuScene(g, () => new TeamSelectScene(g), here));
+    else if (id === 'practica') this.go(new CharacterSelectScene(g, 'practica'));
     else this.back();
   }
 
@@ -73,9 +76,45 @@ export class CasualMenuScene extends MenuScene {
   }
 }
 
-/** OPCIONES: fichas y movimientos de los luchadores, escenarios, controles, dificultad, sonido y gráficos. */
+/** Lo que hace la CPU en cada nivel (se lee bajo la lista al marcarlo). */
+const DIFFICULTY_NOTE: Record<DifficultyId, string> = {
+  facil: 'PARA APRENDER: CASI NO SE CUBRE Y PEGA GOLPES SUELTOS',
+  normal: 'SE CUBRE LA MITAD DE LAS VECES Y HACE COMBOS CORTOS',
+  dificil: 'SE CUBRE CASI TODO, CASTIGA TUS ERRORES Y REMATA CON EL ULTRA',
+  muyDificil: 'NO PERDONA: COMBOS COMPLETOS, SÚPER Y ULTRA APENAS PUEDE',
+};
+
+/** ELIGE LA DIFICULTAD: antes del ARCADE, del 1 VS CPU y del 2 VS CPU (queda guardada; la usa también el sparring CPU). */
+export class DifficultyMenuScene extends MenuScene {
+  constructor(
+    game: Game,
+    private next: () => Scene,
+    private previous: () => Scene,
+  ) {
+    super(game, 'dificultad', 'ELIGE LA DIFICULTAD', [
+      ...DIFFICULTIES.map((d) => ({ id: d, label: DIFFICULTY_NAME[d] })),
+      { id: 'volver', label: 'VOLVER' },
+    ], 9);
+    this.mark(DIFFICULTIES.indexOf(loadDifficulty()));
+  }
+
+  protected override changed(id: string): void {
+    this.note(id in DIFFICULTY_NOTE ? DIFFICULTY_NOTE[id as DifficultyId] : '');
+  }
+
+  protected choose(id: string): void {
+    if (id === 'volver') return this.back();
+    saveDifficulty(id as DifficultyId);
+    this.go(this.next());
+  }
+
+  protected back(): void {
+    this.go(this.previous(), 'menuBack');
+  }
+}
+
+/** OPCIONES: fichas y movimientos de los luchadores, escenarios, controles, sonido, música y gráficos. */
 export class OptionsMenuScene extends MenuScene {
-  private difficulty: DifficultyId = loadDifficulty();
   /** Gráficos elegidos: BAJA, MEDIA, ALTA o ULTRA ('auto' mientras no se cambien). Se aplican al aceptar (recarga). */
   private quality: QualityPref = loadQuality();
 
@@ -86,13 +125,13 @@ export class OptionsMenuScene extends MenuScene {
       { id: 'escenarios', label: 'ESCENARIOS' },
       { id: 'demo', label: 'DEMOSTRACIÓN' },
       { id: 'controles', label: 'CONTROLES' },
-      { id: 'dificultad', label: '' },
       { id: 'sonido', label: '' },
+      { id: 'musica', label: '' },
       { id: 'graficos', label: '' },
       { id: 'volver', label: 'VOLVER' },
     ]);
-    this.updateDifficultyLabel();
     this.updateSoundLabel();
+    this.updateMusicLabel();
     this.updateQualityLabel();
   }
 
@@ -136,30 +175,34 @@ export class OptionsMenuScene extends MenuScene {
 
   override step(): void {
     super.step();
-    // La tecla M también lo cambia: la fila muestra siempre cómo está.
+    // La tecla M y el botón de música también los cambian: las filas muestran siempre cómo están.
     this.updateSoundLabel();
+    this.updateMusicLabel();
   }
 
-  private updateDifficultyLabel(): void {
-    const i = this.options.findIndex((o) => o.id === 'dificultad');
-    this.items[i].text = arcade(`DIFICULTAD: < ${DIFFICULTY_NAME[this.difficulty]} >`);
+  private updateMusicLabel(): void {
+    const i = this.options.findIndex((o) => o.id === 'musica');
+    const m = musica();
+    const text = arcade(`MÚSICA: < ${m.activa ? `${m.volumen * 10}%` : 'APAGADA'} >`);
+    if (this.items[i].text !== text) this.items[i].text = text;
   }
 
-  private changeDifficulty(step: number): void {
-    const n = DIFFICULTIES.length;
-    this.difficulty = DIFFICULTIES[(DIFFICULTIES.indexOf(this.difficulty) + step + n) % n];
-    saveDifficulty(this.difficulty);
-    this.updateDifficultyLabel();
+  /** Izquierda / derecha: volumen de a 10 % (subirlo la prende si estaba apagada). */
+  private changeMusic(dir: number): void {
+    const m = musica();
+    const volumen = Math.max(0, Math.min(10, m.volumen + dir));
+    cambiarMusica({ volumen, activa: volumen > 0 && (m.activa || dir > 0) });
+    this.updateMusicLabel();
     this.game.sfx.play('menuMove');
   }
 
   protected override sided(id: string): boolean {
-    return id === 'dificultad' || id === 'sonido' || id === 'graficos';
+    return id === 'sonido' || id === 'musica' || id === 'graficos';
   }
 
   protected override side(id: string, dir: number): void {
-    if (id === 'dificultad') this.changeDifficulty(dir);
-    else if (id === 'sonido') this.toggleSound();
+    if (id === 'sonido') this.toggleSound();
+    else if (id === 'musica') this.changeMusic(dir);
     else if (id === 'graficos') this.changeQuality(dir);
   }
 
@@ -174,8 +217,13 @@ export class OptionsMenuScene extends MenuScene {
     else if (id === 'controles') this.go(new ControlsScene(g, here));
     // La CPU contra la CPU en MUY DIFÍCIL, cambiando de luchadores en cada round.
     else if (id === 'demo') this.go(new DemoScene(g, here));
-    else if (id === 'dificultad') this.changeDifficulty(1);
     else if (id === 'sonido') this.toggleSound();
+    else if (id === 'musica') {
+      const m = musica();
+      cambiarMusica({ activa: !m.activa, volumen: m.volumen || 7 });
+      this.updateMusicLabel();
+      this.game.sfx.play('menuMove');
+    }
     else if (id === 'graficos') this.applyQuality();
     else this.back();
   }

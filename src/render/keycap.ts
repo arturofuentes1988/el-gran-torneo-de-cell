@@ -36,10 +36,12 @@ export function keycap(label: string, size = 7, accent = false): Container {
     w = h;
     g.position.set(w / 2, (h - 2) / 2);
   } else {
-    // Interlineado igual al tamaño: así la letra queda centrada en la tapa.
-    const t = pixelText(label, size - 1, 0x1a0a24, { lineHeight: size - 1 });
+    // Con su alto natural y centrada en la tapa (la parte clara, sin el borde de abajo). Antes se
+    // forzaba el interlineado al tamaño de la letra y, con la letra más grande de MOVIMIENTOS, se
+    // cortaba abajo (sobre todo con tilde: COMBO DÉBIL en el celular).
+    const t = pixelText(label, size - 1, 0x1a0a24);
     w = Math.max(h, Math.ceil(t.width) + 6);
-    t.position.set(Math.round((w - t.width) / 2), Math.round((h - 2 - (size - 1)) / 2));
+    t.position.set(Math.round((w - t.width) / 2), Math.round((h - 2 - t.height) / 2) + 0.5);
     inner.addChild(t);
   }
   const g = new Graphics();

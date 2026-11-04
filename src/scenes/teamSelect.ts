@@ -237,7 +237,7 @@ export class TeamSelectScene implements Scene {
       });
     }
     this.teamTitles[1].text = this.joined ? 'J2' : 'CPU';
-    this.hint.visible = !this.joined;
+    this.hint.visible = false;
   }
 
   private pick(side: 0 | 1, card: number): void {
@@ -283,15 +283,7 @@ export class TeamSelectScene implements Scene {
     const n = this.cards.length;
     const sfx = this.game.sfx;
 
-    // El jugador 2 se une con cualquier botón suyo (lo que la CPU tenía elegido se borra).
-    if (!this.joined && h2.any) {
-      this.joined = true;
-      this.picks[1] = [];
-      this.pos[1] = Math.min(n - 1, 1);
-      sfx.play('menuConfirm');
-      this.refreshSlots();
-      return;
-    }
+    // 2 VS CPU: el equipo de la derecha siempre es la CPU (el jugador 2 ya no se une).
 
     // Jugador 1.
     const t1 = this.p1Team();

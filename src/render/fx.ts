@@ -201,6 +201,11 @@ export class FxLayer {
     this.container.addChild(this.normalLayer, this.glowLayer);
   }
 
+  /** Agrega un dibujo propio a la capa con brillo (las estelas de los golpes). */
+  addGlow(view: Container): void {
+    this.glowLayer.addChildAt(view, 0);
+  }
+
   /** Gráficos BAJA: de cada ráfaga de partículas sale la mitad (se salta una de cada dos). */
   private salta(i: number): boolean {
     return this.particulas < 1 && i % 2 === 1;
@@ -503,6 +508,37 @@ export class FxLayer {
         s0: 0.45, s1: 0.15, a0: 1, a1: 0, drag: 0.88, grav: 0.05, stretch: 1, spin: 0,
       }, 0xc8f0ff);
     }
+  }
+
+  /**
+   * Gancho que lanza (estilo Mortal Kombat): columna de luz hacia arriba desde el impacto, rayos
+   * verticales del color de quien pega, una onda de choque grande y polvo en los pies del que pega.
+   */
+  uppercut(x: number, y: number, color: number, footX: number): void {
+    this.flash(x, y, 2, 0xffffff, 12);
+    this.ring(x, y, 0.12, 1.5, 0xffffff, 12);
+    this.ring(x, y, 0.15, 2.1, color, 18);
+    for (let i = 0; i < 9; i++) {
+      if (this.salta(i)) continue;
+      const a = -Math.PI / 2 + rand(-0.32, 0.32);
+      const l = Math.round(rand(10, 15));
+      const len = rand(1.3, 2.1);
+      this.spawn(this.tex.ray, true, {
+        x, y, vx: 0, vy: 0, life: l, max: l, s0: len * 0.3, s1: len, a0: 1, a1: 0, drag: 1, grav: 0, stretch: 0, spin: 0,
+      }, i % 3 === 0 ? 0xffffff : color, a);
+    }
+    // Chispas que suben rápido, como si el golpe arrancara el aire hacia arriba.
+    for (let i = 0; i < 16; i++) {
+      if (this.salta(i)) continue;
+      const a = -Math.PI / 2 + rand(-0.4, 0.4);
+      const v = rand(7, 13);
+      const l = Math.round(rand(12, 20));
+      this.spawn(this.tex.spark, true, {
+        x: x + rand(-8, 8), y: y + rand(-6, 10), vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: l, max: l,
+        s0: 0.6, s1: 0.2, a0: 1, a1: 0, drag: 0.9, grav: 0.12, stretch: 1, spin: 0,
+      }, i % 2 ? 0xffffff : color);
+    }
+    this.dust(footX, 0, 10, true);
   }
 
   ko(x: number, y: number): void {

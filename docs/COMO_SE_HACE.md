@@ -116,6 +116,19 @@ errores de continuidad: objetos que aparecen o quedan flotando (el agarre del Fl
 personaje que se achica al alejarse de la cámara (la caída de Pablito) o accesorios que se sacan y
 vuelven a aparecer (las zapatillas del súper de Pablito).
 
+**Golpes fluidos**: el video va a 24 cuadros por segundo y el juego a 60. Un golpe armado con un
+cuadro del video cada 2 o 3, que dura 2 a 4 cuadros del juego, se ve a saltos. `herramientas/fluidez.py
+arte/<luchador>/armado.json --max 2` reparte la duración de cada cuadro elegido entre él y el cuadro del
+video que va entre medio (si el salto es de 6 cuadros o menos). Cada cuadro elegido sigue empezando en el
+mismo instante, así que el arranque, los cuadros activos y la recuperación no cambian. El atlas crece
+unos 60 cuadros por luchador. Respaldo de antes: `armado-antes-fluidez.json`.
+
+**Estelas de los golpes** (`src/render/smear.ts`): cada normal deja una medialuna de luz que sale de la
+caja de golpe de su primer cuadro activo. Los débiles son finos y casi blancos; los fuertes, gruesos y
+del color `ui.fx` del luchador. La forma sale de la postura y el botón (recto, gancho, patada desde la
+cadera, uppercut, baja, barrida, aire). En la definición, `smear` en un movimiento la cambia, y
+`"ninguna"` la quita.
+
 ### 1.3 Clip de prueba y animaciones
 
 Kling 3.0, 3 s, `std`, `sound: off`, 1:1, imagen de inicio y de final = la guardia subida.
@@ -293,6 +306,7 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 | `video_a_cuadros.py` | Cuadros sin fondo de un video, con hoja de contacto y GIF. |
 | `linea_de_tiempo.py` | Hoja con el número de cada cuadro de varios clips, para elegir. |
 | `armar_luchador.py` | Arma el luchador (atlas, cajas de golpe, definición) desde `armado.json`. |
+| `fluidez.py` | Mete cuadros intermedios del video en los golpes normales de un `armado.json` sin cambiar sus tiempos (después, `armar_luchador.py`). |
 | `caras.py` | Caras de ELIGE LUCHADOR desde cada diseño aprobado. |
 | `voces_luchador.py` | Cortes de voz de un luchador desde `voces.json`. |
 | `preparar_voces.py` | Voces del anunciador (`arte/voces/originales/` a `public/voces/`). |

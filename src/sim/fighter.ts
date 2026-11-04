@@ -137,8 +137,15 @@ export function ultraAnim(def: FighterDef, moveId: string, u: UltraDef, i: numbe
   const st = u.sequence[i];
   const src = def.anims[st.anim] ?? def.anims.idle;
   const speed = st.speed ?? u.speed ?? 1.25;
+  // Se redondea el instante en que empieza cada cuadro (no cada duración): con muchos cuadros
+  // cortos (los golpes fluidos) la secuencia sigue durando lo mismo.
+  let acc = 0;
+  let end = 0;
   const frames: FrameDef[] = src.frames.map((f) => {
-    const o: FrameDef = { tex: f.tex, dur: Math.max(1, Math.round(f.dur / speed)) };
+    acc += f.dur;
+    const next = Math.max(end + 1, Math.round(acc / speed));
+    const o: FrameDef = { tex: f.tex, dur: next - end };
+    end = next;
     if (f.hurt) o.hurt = f.hurt;
     if (f.push) o.push = f.push;
     if (f.spawn) o.spawn = f.spawn;

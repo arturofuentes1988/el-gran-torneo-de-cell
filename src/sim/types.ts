@@ -216,7 +216,15 @@ export interface MoveDef {
   hitText?: string[];
   /** Dibujo encima de la cabeza del rival mientras dura el movimiento (ej. 'tarro'). */
   hitOverlay?: string;
+  /**
+   * Forma de la estela del golpe (render/smear.ts). Si falta, sale de la postura y el botón del
+   * normal; 'ninguna' la quita. Solo los normales dejan estela.
+   */
+  smear?: SmearKind | 'ninguna';
 }
+
+/** Estela de un golpe: recto (puño o pie casi en línea), gancho, patada desde la cadera, uppercut, baja, barrida o aire. */
+export type SmearKind = 'recto' | 'gancho' | 'patada' | 'uppercut' | 'baja' | 'barrida' | 'aire';
 
 export interface ProjectileDef {
   frames: string[];

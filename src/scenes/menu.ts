@@ -88,9 +88,24 @@ export abstract class MenuScene implements Scene {
     return false;
   }
 
+  /** Cambió la opción marcada (con las flechas o un toque). */
+  protected changed(_id: string): void {}
+
+  /** Marca una opción (al abrir el menú, por ejemplo la dificultad guardada). */
+  protected mark(i: number): void {
+    this.sel = Math.max(0, Math.min(this.options.length - 1, i));
+    lastSel.set(this.key, this.sel);
+    this.changed(this.options[this.sel].id);
+  }
+
   /** Borde de abajo de la lista (para poner textos debajo). */
   private get listBottom(): number {
     return this.top + (this.options.length - 1) * this.row + this.barH;
+  }
+
+  /** El texto de la nota (para poner algo al lado, como el avatar en EN LÍNEA). */
+  protected get noteView(): Text | null {
+    return this.noteText;
   }
 
   /** Nota fija bajo la lista (puede tener dos líneas con \n). */
@@ -155,6 +170,7 @@ export abstract class MenuScene implements Scene {
       this.sel = (this.sel + (m.up ? n - 1 : 1)) % n;
       lastSel.set(this.key, this.sel);
       this.game.sfx.play('menuMove');
+      this.changed(this.options[this.sel].id);
     }
     const id = this.options[this.sel].id;
     if (m.left || m.right) this.side(id, m.left ? -1 : 1);
@@ -165,8 +181,11 @@ export abstract class MenuScene implements Scene {
     // Tocar una opción la elige (en las de < >, tocar un costado la cambia hacia ese lado).
     const hit = this.tappedItem();
     if (hit >= 0) {
-      this.sel = hit;
-      lastSel.set(this.key, hit);
+      if (this.sel !== hit) {
+        this.sel = hit;
+        lastSel.set(this.key, hit);
+        this.changed(this.options[hit].id);
+      }
       const tid = this.options[hit].id;
       const dx = m.tap!.x - VIEW_W / 2;
       if (this.sided(tid) && Math.abs(dx) > this.barW * 0.22) this.side(tid, Math.sign(dx));

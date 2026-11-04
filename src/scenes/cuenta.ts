@@ -2,17 +2,19 @@
 // - TU CUENTA (la primera vez, después del título): ENTRAR CON GOOGLE, ENTRAR CON CORREO o
 //   JUGAR SIN CUENTA (queda recordado). EN LÍNEA la vuelve a mostrar, con VOLVER, a quien no ha entrado.
 // - ENTRAR CON CORREO y ELIGE TU APODO: formularios HTML encima del fondo de los menús.
-// - EN LÍNEA: las salas (llegan en la fase 2), cambiar apodo y cerrar sesión.
+// - EN LÍNEA: las salas (llegan en la fase 2), cambiar apodo, cambiar avatar y cerrar sesión.
+// - ELIGE TU AVATAR: la cara de un luchador (selector HTML, el mismo de la web).
 // - CONECTANDO…: espera a la cuenta (sesión guardada, vuelta de Google o lectura del apodo).
 
-import { Container } from 'pixi.js';
+import { Container, Graphics, Sprite } from 'pixi.js';
 import { VIEW_H, VIEW_W } from '../config';
 import type { Game, Scene } from '../app/game';
 import { tactil } from '../input/touch';
 import {
-  apodo, cargarPerfil, cerrarSesion, conectado, crearCuenta, cuentaPendiente, entrarConCorreo, entrarConGoogle, esInvitado,
-  guardarApodo, marcarInvitado, quedoSinConexion, sugerirApodo, tomarErrorDeVuelta, tomarVolverA, validarApodo, type Motivo,
+  apodo, avatar, cargarPerfil, cerrarSesion, conectado, crearCuenta, cuentaPendiente, entrarConCorreo, entrarConGoogle, esInvitado,
+  guardarApodo, guardarAvatar, marcarInvitado, quedoSinConexion, sugerirApodo, tomarErrorDeVuelta, tomarVolverA, validarApodo, type Motivo,
 } from '../online/cuenta';
+import { abrirSelectorDeAvatar } from '../online/avatares';
 import { abrirFormulario, type Formulario } from '../online/formulario';
 import { outlinedText } from '../render/text';
 import { backdrop } from './backdrop';
@@ -309,7 +311,53 @@ export class ApodoScene extends FormScene {
   }
 }
 
-/** EN LÍNEA (con cuenta): las salas llegan en la fase 2; por ahora, el apodo y cerrar sesión. */
+/** ELIGE TU AVATAR: la cara de un luchador (el selector HTML de la web); vuelve a EN LÍNEA. */
+class AvatarScene implements Scene {
+  readonly music = 'titulo';
+  private selector: { cerrar(): void } | null = null;
+  private saliendo = false;
+
+  constructor(
+    private game: Game,
+    private luego: () => Scene,
+  ) {}
+
+  enter(): void {
+    backdrop.attach(this.game);
+    this.selector = abrirSelectorDeAvatar({
+      actual: avatar(),
+      alElegir: async (id) => {
+        const err = await guardarAvatar(id);
+        if (!err) this.game.sfx.play('menuConfirm');
+        else this.game.sfx.play('menuBack');
+        return err;
+      },
+      alCerrar: () => {
+        this.selector = null;
+        if (!this.saliendo && this.game.scene === this) this.game.setScene(this.luego());
+      },
+    });
+  }
+
+  exit(): void {
+    backdrop.detach(this.game);
+    this.saliendo = true;
+    this.selector?.cerrar();
+  }
+
+  step(): void {
+    if (this.game.menu.back) {
+      this.game.sfx.play('menuBack');
+      this.selector?.cerrar();
+    }
+  }
+
+  render(): void {
+    backdrop.render();
+  }
+}
+
+/** EN LÍNEA (con cuenta): las salas llegan en la fase 2; por ahora, el apodo, el avatar y cerrar sesión. */
 export class OnlineScene extends MenuScene {
   constructor(game: Game) {
     super(game, 'online', 'EN LÍNEA', [
@@ -317,10 +365,24 @@ export class OnlineScene extends MenuScene {
       { id: 'unirse', label: 'UNIRSE CON CÓDIGO', dim: true },
       { id: 'rapida', label: 'PARTIDA RÁPIDA', dim: true },
       { id: 'apodo', label: 'CAMBIAR APODO' },
+      { id: 'avatar', label: 'CAMBIAR AVATAR' },
       { id: 'salir', label: 'CERRAR SESIÓN' },
       { id: 'volver', label: 'VOLVER' },
     ]);
     this.note(`JUGANDO COMO ${apodo() ?? '…'}`);
+    // Su avatar (la cara de un luchador) a la izquierda de su apodo.
+    const id = avatar();
+    const face = game.assets.roster.find((f) => f.def.id === id)?.face;
+    const t = this.noteView;
+    if (face && t) {
+      const s = new Sprite(face);
+      s.anchor.set(0.5);
+      s.width = 16;
+      s.height = 16;
+      s.position.set(t.x - t.width / 2 - 11, t.y + t.height / 2);
+      const marco = new Graphics().roundRect(s.x - 9, s.y - 9, 18, 18, 3).stroke({ color: 0xffd76a, width: 1 });
+      this.ui.addChild(s, marco);
+    }
   }
 
   protected choose(id: string): void {
@@ -330,6 +392,8 @@ export class OnlineScene extends MenuScene {
       this.aviso('LAS PELEAS EN LÍNEA LLEGAN EN LA PRÓXIMA ACTUALIZACIÓN', 'info', 180);
     } else if (id === 'apodo') {
       this.go(new ApodoScene(g, false, () => new OnlineScene(g), () => new OnlineScene(g)));
+    } else if (id === 'avatar') {
+      this.go(new AvatarScene(g, () => new OnlineScene(g)));
     } else if (id === 'salir') {
       g.sfx.play('menuConfirm');
       this.busy = true;

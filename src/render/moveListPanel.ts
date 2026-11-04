@@ -40,9 +40,14 @@ export const C_ULTRA = 0xff6a3a;
 /** Teclas del jugador que se muestran: nombre de la primera tecla de cada acción. */
 export type Caps = Record<keyof KeyBindings, string>;
 
+/** En el celular: los nombres de los botones de la pantalla (src/input/touch.ts). */
+const TOUCH_CAPS: Partial<Caps> = {
+  lp: 'COMBO DÉBIL', hp: 'COMBO FUERTE', lk: 'PATADA DÉBIL', hk: 'PATADA FUERTE', power: 'PODER', roll: 'RODAR', taunt: 'PELÁ',
+};
+
 export function capsOf(keys: KeyBindings): Caps {
   const out = {} as Caps;
-  for (const k of Object.keys(keys) as Array<keyof KeyBindings>) out[k] = keyLabel(keys[k][0]);
+  for (const k of Object.keys(keys) as Array<keyof KeyBindings>) out[k] = (tactil() && TOUCH_CAPS[k]) || keyLabel(keys[k][0]);
   return out;
 }
 
@@ -215,7 +220,7 @@ export class MoveListPanel {
     const right = VIEW_W - 14 - (tactil() ? 36 : 0);
     name.position.set(right - name.width, 8);
     this.nameMid = name.x + name.width / 2;
-    const who = tokenLine(textTokens(`TECLAS DE J${this.player + 1} · SE CAMBIAN EN CONTROLES`, 0x8ae8ff), 6);
+    const who = tokenLine(textTokens(tactil() ? 'LOS BOTONES DE LA PANTALLA' : `TECLAS DE J${this.player + 1} · SE CAMBIAN EN CONTROLES`, 0x8ae8ff), 6);
     who.position.set(right - who.width, 24);
     this.header.addChild(name, who);
 

@@ -6,14 +6,26 @@
 import '@fontsource/oswald/500.css';
 import '@fontsource/oswald/700.css';
 import './portal.css';
+import { abrirSelectorDeAvatar, urlAvatar } from '../online/avatares';
 import { SUPABASE_KEY, SUPABASE_URL } from '../online/config';
+import { alCambiarCuenta, apodo, avatar, cerrarSesion, conectado, guardarAvatar, iniciarCuenta } from '../online/cuenta';
 import { DIFFICULTIES, DIFFICULTY_NAME, type DifficultyId } from '../sim/difficulty';
 
 type Pestana = 'jugar' | 'ranking';
 type Tabla = 'puntos' | 'victorias' | 'racha' | 'arcade';
 
+/**
+ * Donaciones (Mercado Pago): un botón por enlace. Mientras esté vacío, la parte de DONAR no se ve.
+ * Cada enlace de pago se crea en Mercado Pago (Cobrar → Link de pago) y se pega aquí.
+ */
+const DONACIONES: ReadonlyArray<{ texto: string; url: string }> = [
+  { texto: '$2.000', url: 'https://mpago.la/2cGKFVN' },
+  { texto: '$5.000', url: 'https://mpago.la/1QyZHDD' },
+];
+
 interface FilaLiga {
   apodo: string;
+  avatar?: string | null;
   puntos: number;
   victorias: number;
   derrotas: number;
@@ -23,6 +35,7 @@ interface FilaLiga {
 
 interface FilaArcade {
   apodo: string;
+  avatar?: string | null;
   luchador: string;
   segundos: number;
   continues: number;
@@ -151,6 +164,27 @@ function tiempo(seg: number): string {
   return `${m}:${s.toFixed(1).padStart(4, '0')}`;
 }
 
+/** Avatar redondo: la cara elegida o, si no eligió, la inicial del apodo. */
+function avatarEl(id: string | null | undefined, nombre: string): HTMLElement {
+  const span = el('span', 'avatar');
+  if (id) {
+    const img = el('img');
+    img.src = urlAvatar(id);
+    img.alt = '';
+    span.appendChild(img);
+  } else {
+    span.textContent = (nombre.trim()[0] ?? '?').toUpperCase();
+  }
+  return span;
+}
+
+/** El jugador en el ranking: su avatar y su apodo. */
+function jugador(f: { apodo: string; avatar?: string | null }): HTMLElement {
+  const span = el('span', 'jugador');
+  span.append(avatarEl(f.avatar, f.apodo), document.createTextNode(f.apodo));
+  return span;
+}
+
 function luchador(id: string): HTMLElement {
   const span = el('span', 'luchador');
   if (LUCHADORES[id]) {
@@ -173,7 +207,7 @@ async function cargar(): Promise<void> {
       if (!filas.length) return aviso(`NADIE SE HA CORONADO EN ${DIFFICULTY_NAME[dificultad]} TODAVÍA.\n¡JUEGA ARCADE CON TU CUENTA Y SÉ EL PRIMERO!`);
       pintar(
         [{ titulo: 'JUGADOR' }, { titulo: 'LUCHADOR' }, { titulo: 'TIEMPO', num: true }, { titulo: 'CONTINUES', num: true }],
-        filas.map((f) => [f.apodo, luchador(f.luchador), tiempo(Number(f.segundos)), String(f.continues)]),
+        filas.map((f) => [jugador(f), luchador(f.luchador), tiempo(Number(f.segundos)), String(f.continues)]),
       );
       return;
     }
@@ -183,17 +217,17 @@ async function cargar(): Promise<void> {
     if (tabla === 'puntos') {
       pintar(
         [{ titulo: 'JUGADOR' }, { titulo: 'PUNTOS', num: true }, { titulo: 'GANADAS', num: true }, { titulo: 'PERDIDAS', num: true }],
-        filas.map((f) => [f.apodo, String(f.puntos), String(f.victorias), String(f.derrotas)]),
+        filas.map((f) => [jugador(f), String(f.puntos), String(f.victorias), String(f.derrotas)]),
       );
     } else if (tabla === 'victorias') {
       pintar(
         [{ titulo: 'JUGADOR' }, { titulo: 'GANADAS', num: true }, { titulo: 'PERDIDAS', num: true }, { titulo: '% GANADAS', num: true }],
-        filas.map((f) => [f.apodo, String(f.victorias), String(f.derrotas), `${Math.round((100 * f.victorias) / Math.max(1, f.victorias + f.derrotas))}%`]),
+        filas.map((f) => [jugador(f), String(f.victorias), String(f.derrotas), `${Math.round((100 * f.victorias) / Math.max(1, f.victorias + f.derrotas))}%`]),
       );
     } else {
       pintar(
         [{ titulo: 'JUGADOR' }, { titulo: 'MEJOR RACHA', num: true }, { titulo: 'RACHA ACTUAL', num: true }],
-        filas.map((f) => [f.apodo, String(f.mejor_racha), String(f.racha)]),
+        filas.map((f) => [jugador(f), String(f.mejor_racha), String(f.racha)]),
       );
     }
   } catch (err) {
@@ -221,5 +255,51 @@ for (const d of DIFFICULTIES) {
   dificultadesEl.appendChild(b);
 }
 explicaEl.textContent = EXPLICA[tabla];
+
+// Cuenta: si entraste (en el juego), tu avatar y tu apodo arriba a la derecha, con su menú.
+const cuentaEl = document.getElementById('cuenta')!;
+const chip = cuentaEl.querySelector<HTMLButtonElement>('.chip')!;
+const menuCuenta = cuentaEl.querySelector<HTMLElement>('.menu-cuenta')!;
+function pintarCuenta(): void {
+  cuentaEl.hidden = !conectado();
+  if (cuentaEl.hidden) {
+    menuCuenta.hidden = true;
+    return;
+  }
+  const nombre = apodo() ?? 'SIN APODO';
+  chip.querySelector('.avatar')!.replaceWith(avatarEl(avatar(), nombre));
+  chip.querySelector('.apodo')!.textContent = nombre;
+  chip.title = nombre;
+  // Con el ranking abierto, se vuelve a pedir (por si cambió el avatar).
+  if (!document.querySelector<HTMLElement>('#ranking')!.hidden) void cargar();
+}
+chip.addEventListener('click', (e) => {
+  e.stopPropagation();
+  menuCuenta.hidden = !menuCuenta.hidden;
+});
+document.addEventListener('click', () => (menuCuenta.hidden = true));
+menuCuenta.addEventListener('click', (e) => {
+  const accion = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-accion]')?.dataset.accion;
+  if (accion === 'avatar') abrirSelectorDeAvatar({ actual: avatar(), alElegir: guardarAvatar, alCerrar: () => undefined });
+  else if (accion === 'salir') void cerrarSesion();
+});
+alCambiarCuenta(pintarCuenta);
+// Solo si ya hay una sesión guardada baja la librería de Supabase (si no, la web sigue liviana).
+iniciarCuenta();
+
+// Abajo: DONAR (solo si hay enlaces de Mercado Pago).
+if (DONACIONES.length) {
+  const caja = document.querySelector<HTMLElement>('.pie .donar')!;
+  const botones = caja.querySelector<HTMLElement>('.botones-donar')!;
+  for (const d of DONACIONES) {
+    const a = el('a', 'boton-donar', d.texto);
+    a.href = d.url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    botones.appendChild(a);
+  }
+  caja.hidden = false;
+}
+
 // #ranking en la dirección abre directo el ranking (para compartirlo).
 if (location.hash === '#ranking') mostrar('ranking');

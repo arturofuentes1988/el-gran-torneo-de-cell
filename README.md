@@ -1,7 +1,7 @@
 # El Gran Torneo de Cell
 
 Juego de pelea 2D para el navegador, estilo arcade (SNK / Marvel vs Capcom)
-con pixel art y efectos modernos. Parodia sin fines de lucro.
+con pixel art y efectos modernos.
 
 **Estado: en desarrollo.** Se puede jugar con Loco René, Pablito Neuquén, el
 Flaitiano, el Vendedor de Leña y Carlitos Run (sprites, voces y poderes definitivos) en los escenarios de René, en
@@ -9,7 +9,10 @@ la calle del Pablito (Valdivia, con lluvia), en los cerros de Valparaíso y en S
 
 La web (`index.html`) tiene dos pestañas: **JUGAR**, con el juego (`juego.html`) dentro, y
 **RANKING**: puntos de liga, victorias y mejor racha en línea, y los campeones del ARCADE
-(los más rápidos en coronarse, por dificultad).
+(los más rápidos en coronarse, por dificultad), con el avatar de cada jugador. Si entraste con tu
+cuenta, arriba a la derecha salen tu avatar (la cara de un luchador) y tu apodo, con un menú
+para cambiar el avatar o cerrar sesión. Abajo va el botón para DONAR con Mercado Pago (se ve
+cuando hay enlaces en `DONACIONES`, en `src/web/portal.ts`).
 
 Documentación del proyecto en `docs/`: [estado del proyecto](docs/ESTADO_DEL_PROYECTO.md)
 (qué está hecho, qué falta y las reglas acordadas), [luchadores](docs/LUCHADORES.md),
@@ -140,9 +143,10 @@ CORREO o JUGAR SIN CUENTA (queda recordado). La cuenta solo hace falta para EN L
 - **EN LÍNEA**: pide cuenta y un apodo único (3 a 14 letras) la primera vez. Por ahora tiene
   CAMBIAR APODO y CERRAR SESIÓN; CREAR SALA, UNIRSE CON CÓDIGO y PARTIDA RÁPIDA llegan en la
   fase 2. Las cuentas están en Supabase (`src/online/`, tablas en `supabase/migraciones/`).
-- **CASUAL**: 1 VS CPU, 1 VS 1, 2 VS 2 y PRÁCTICA.
-- **OPCIONES**: PERSONAJES, MOVIMIENTOS, ESCENARIOS, DEMOSTRACIÓN, CONTROLES,
-  DIFICULTAD (izquierda / derecha), SONIDO y GRÁFICOS (BAJA, MEDIA, ALTA o ULTRA; si no se
+- **CASUAL**: 1 VS CPU, 2 VS CPU (equipos de dos) y PRÁCTICA. ARCADE, 1 VS CPU y 2 VS CPU
+  parten con **ELIGE LA DIFICULTAD**.
+- **OPCIONES**: PERSONAJES, MOVIMIENTOS, ESCENARIOS, DEMOSTRACIÓN, CONTROLES, SONIDO,
+  MÚSICA (volumen de a 10 %; aceptar la apaga o la prende) y GRÁFICOS (BAJA, MEDIA, ALTA o ULTRA; si no se
   cambia, se elige solo: MEDIA en celulares, ALTA o ULTRA en computadores). **DEMOSTRACIÓN** es la CPU contra la
   CPU en MUY DIFÍCIL, sin fin: cada round es una pelea nueva con otros dos
   luchadores (y colores) en otro escenario. Aceptar o volver sale.
@@ -306,8 +310,7 @@ La tabla está en `src/render/comboNames.ts`.
 
 ## Modos
 
-- **1 jugador contra la CPU.**
-- **2 jugadores** en el mismo teclado (o con joysticks).
+- **1 jugador contra la CPU** (1 VS CPU, o en equipos de dos: 2 VS CPU).
 - **Práctica:** el jugador 1 entrena contra un sparring, sin reloj ni K.O.
 - **Movimientos:** los especiales, súper, ultra y combos sugeridos de cada luchador
   (los golpes y las mecánicas están en PERSONAJES). Desde la pausa abre en el luchador
@@ -323,8 +326,7 @@ ALEATORIO; a los lados, en grande, el luchador de cada jugador, en gris mientras
 se marca y a color cuando se elige. No se elige color de ropa: si los dos eligen
 al mismo luchador, el segundo sale con otra ropa (solo cambia la que dice su
 definición, `costume`; la cara, el pelo y las zapatillas quedan igual). En 1 VS CPU
-y práctica el jugador 1 elige el suyo y después el rival (CPU o sparring); en 1 VS 1 cada uno elige con su cursor al mismo
-tiempo (el jugador 2 con sus teclas o el segundo joystick). Esc / Retroceso
+y práctica el jugador 1 elige el suyo y después el rival (CPU o sparring). Esc / Retroceso
 vuelve un paso atrás o al menú. Las caras salen de `herramientas/caras.py`. El plantel son los luchadores de
 `public/luchadores/` (René, Pablito, el Flaitiano, el Vendedor de Leña y Carlitos Run).
 
@@ -336,9 +338,9 @@ lista falta o está vacía.
 
 ### Dificultad de la CPU
 
-En OPCIONES, la fila **DIFICULTAD** se cambia con izquierda / derecha (o
-Enter). Queda guardada en el navegador; por defecto es NORMAL. Vale para
-1 jugador contra la CPU y para el sparring de práctica en modo CPU. La demo
+Se elige al empezar el ARCADE, el 1 VS CPU o el 2 VS CPU (**ELIGE LA DIFICULTAD**, con lo
+que hace la CPU en cada nivel escrito abajo). Queda guardada en el navegador (por defecto
+NORMAL) y la usa también el sparring de práctica en modo CPU. La demo
 (CPU contra CPU) siempre juega en NORMAL.
 
 | Nivel | Cómo juega |
@@ -428,5 +430,4 @@ docs/
 
 ## Aviso
 
-Parodia hecha por fans, sin fines de lucro. No es un producto oficial de
-ninguna persona, programa ni marca.
+Hecho por fans. No es un producto oficial de ninguna persona, programa ni marca.
