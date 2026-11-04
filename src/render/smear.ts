@@ -193,7 +193,12 @@ export class Smears {
       const left = ticksToActive(f, a);
       if (left > swing) continue;
       this.seen.set(f, f.attackSerial);
-      const hb = anim.frames[a].hit!.reduce((p, b) => (b.x + b.w > p.x + p.w ? b : p));
+      // La forma sale de la caja más grande del golpe: el primer cuadro activo a veces solo
+      // alcanza a tener la punta del pie que avanza (el golpe fuerte del Vendedor y de Carlitos).
+      let hb = anim.frames[a].hit![0];
+      for (let i = a; i <= lastActive(anim); i++) {
+        for (const b of anim.frames[i].hit ?? []) if (b.w * b.h > hb.w * hb.h) hb = b;
+      }
       this.list.push({
         f, arc: shape(k.kind, hb, k.heavy), heavy: k.heavy, color: f.def.ui.fx, swing, t: swing - left,
         fade: -1, fadeLen: k.kind === 'uppercut' ? 14 : k.heavy ? 10 : 7, facing: f.facing, tail0: 0,

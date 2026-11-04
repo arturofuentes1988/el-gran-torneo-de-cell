@@ -343,6 +343,8 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   pegado y revisado.
 - **Golpes fluidos**: los normales de pie y agachados de los cinco usan el doble de dibujos
   (`herramientas/fluidez.py`), con los mismos tiempos de antes.
+- El primer cuadro activo del golpe fuerte de pie del Vendedor y de Carlitos y del gancho de Pablito solo
+  tenía la punta del pie que avanza (pegaba a ras de suelo, con la chispa en los pies): ya no pega.
 - **Estelas** (`src/render/smear.ts`): cada normal deja una medialuna de luz. Las débiles son finas y
   casi blancas, y las fuertes gruesas y del color del luchador. La diferencia entre débil y fuerte se ve
   de lejos.
