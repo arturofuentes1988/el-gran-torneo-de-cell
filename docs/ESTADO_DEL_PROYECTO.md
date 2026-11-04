@@ -35,7 +35,7 @@ Ocho luchadores elegidos por el usuario más Carlitos Run (agregado el 30 de oct
 | Carlitos Run | jugable | Valdivia | LA COSTANERA DE VALDIVIA |
 | Papi Micky (Miguel Devia) | jugable | (sin confirmar) | EL SET DE LLEGÓ LA HORA |
 | Guatón Ñackson | pendiente | | idea: picada de completos |
-| Dr. Maki Gero | jugable (falta la patada baja y su música) | (sin confirmar) | EL LABORATORIO DEL DR. MAKI GERO |
+| Dr. Maki Gero | jugable | (sin confirmar) | EL LABORATORIO DEL DR. MAKI GERO |
 | Diego González | pendiente | | por decidir |
 
 Cada luchador completo cuesta unos 130 créditos de Higgsfield (ver COMO_SE_HACE.md).
@@ -420,7 +420,10 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
 - 23 clips de Kling `pro` por kie.ai y 2 de ayudantes (el Tío René robot gigante y un androide, diseñados con
   GPT Image 2.5). Revisión cuadro por cuadro: en ¡Dale color! se saltan unos cuadros con un destello que dibujó
   Kling; la patada en el aire de ¡El auténtico! salió hacia atrás y se usa volteada (`el_autentico_mix.mp4`).
-  La patada baja salió tres veces hacia atrás: por ahora `cLK`/`cHK` usan el puño agachado (pendiente).
+  La patada baja salió tres veces hacia atrás; el intento 1 (una barrida limpia a ras de suelo) se usa con las
+  piernas volteadas y el cuerpo de arriba sin tocar (`herramientas/voltear_piernas.py`), así `cLK`/`cHK` van
+  hacia adelante con la pierna de adelante, sin gastar créditos. La barrida levanta polvo y la fuerte deja un
+  rastro de colores en el suelo.
   - Especiales: ¡Dale color! (↓↑ + golpe), ¡El auténtico! (↓↑ + patada), ¡Son todos androides! (→ → + patada).
   - Súper ¡Cambia, cambia, es por tu bien! (↓↓ + golpe; solo el audio de esa frase, convertido en una máquina de
     reprogramar) y súper ¡Aquí estamos nuevamente con mi androide! (← ← + patada; el Tío René robot).
@@ -433,10 +436,14 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   - Voces: sus cinco frases reales ("aquí estamos nuevamente con mi androide", "¡cambia, cambia, es por tu
     bien!", "¡dale color!", "¡el auténtico!", "son todos androides, pues, cachái"; `arte/maki-gero/voces/`).
 - **EL LABORATORIO DEL DR. MAKI GERO** (`maki-lab`): laboratorio secreto en la cordillera con cápsulas de
-  androides, bobinas Tesla y la ventana a los Andes; loop MiniMax (14 créditos de Higgsfield). Sin música todavía.
+  androides, bobinas Tesla y la ventana a los Andes; loop MiniMax (14 créditos de Higgsfield). Música con Suno
+  (`maki-lab`): synthwave de los 80 con techno industrial de los 90, medio cyberpunk (bajo en arpegio, beeps de
+  computador, rayos láser). De las dos versiones se usa la 2: la única con un loop de ritmo bien calzado
+  (30,1 a 60,5 s; antes suena una vez la entrada).
 - `herramientas/kie_video.py` guarda cada tarea apenas la pide, retoma las que siguen en proceso y no reintenta
   un pedido sin respuesta (un pedido cortado por tiempo de espera igual se creó y se cobró).
-- Gasto: 1.602 créditos de kie (quedan 8.169) y 19,5 de Higgsfield (quedan 60,1).
+- Gasto: 1.614 créditos de kie (1.602 del luchador y el escenario, 12 de la música; quedan 8.157) y 19,5 de
+  Higgsfield (quedan 60,1).
 
 ## Pendiente y decisiones abiertas
 

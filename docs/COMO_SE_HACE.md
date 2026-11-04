@@ -122,6 +122,8 @@ pierna de ATRÁS estirada (sale como patada hacia atrás). De 10 pedidos con el 
 clip bueno alcanza para la patada baja (tramo corto) y la barrida (la pierna estirada más rato). El gancho
 estilo Mortal Kombat (`gancho_mk`: agachado hondo, el puño junto al tobillo, sube recto sobre la cabeza)
 salió bien en los cinco; con la guardia achicada para que el puño no se salga por arriba.
+Si la patada salió limpia pero hacia atrás (al Dr. Maki Gero le pasó tres veces), `voltear_piernas.py`
+voltea solo las piernas de esos cuadros y deja la cabeza, los brazos y la guardia mirando al rival.
 
 **Kling rechaza textos** ("Generation failed as the content includes sensitive information"): con
 Papi Micky pasó con "shout", "climax", "mouth wide open". Se arregla con un texto más simple y sin esas
@@ -321,6 +323,7 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 | `video_a_cuadros.py` | Cuadros sin fondo de un video, con hoja de contacto y GIF. |
 | `linea_de_tiempo.py` | Hoja con el número de cada cuadro de varios clips, para elegir. |
 | `armar_luchador.py` | Arma el luchador (atlas, cajas de golpe, definición) desde `armado.json`. |
+| `voltear_piernas.py` | Voltea solo las piernas de unos cuadros de un clip (la patada que Kling tiró hacia atrás sale hacia adelante), con una costura que va por donde no se nota. |
 | `fluidez.py` | Mete cuadros intermedios del video en los golpes normales de un `armado.json` sin cambiar sus tiempos (después, `armar_luchador.py`). |
 | `caras.py` | Caras de ELIGE LUCHADOR desde cada diseño aprobado. |
 | `voces_luchador.py` | Cortes de voz de un luchador desde `voces.json`. |

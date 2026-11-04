@@ -256,7 +256,7 @@ del género" y el coro de "Llegó la hora" (wmNkTDQQQIo, sin las partes de alcoh
 - **Entrada**: se acomoda la bata ("¡El auténtico!").
 - **Victoria**: abre los brazos como inventor orgulloso ("Son todos androides, pues, cachái").
 - **Burla**: su risa de científico loco ("Aquí estamos nuevamente con mi androide").
-- **Pendiente**: la patada baja (por ahora el puño agachado) y la música del laboratorio.
+- **Patada baja y barrida**: del intento 1 de Kling con las piernas volteadas (`herramientas/voltear_piernas.py`).
 
 **Voces** (videos 7i1TMb7CxE4 y TNkvmNHj2J4, y el audio del short X1lq6CXrd6Y; voz separada con Demucs).
 

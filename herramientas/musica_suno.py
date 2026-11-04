@@ -84,6 +84,18 @@ TEMAS = {
                   '120 bpm, D major, instrumental, seamless loop'),
         'negativo': 'cumbia, accordion, reggaeton',
     },
+    # Dr. Maki Gero (4 nov 2026): su laboratorio secreto de androides en la cordillera; el usuario pidió
+    # una canción de los 80 y 90 pero medio cyberpunk, de laboratorio futurista.
+    'maki-lab': {
+        'title': 'El Laboratorio del Dr. Maki Gero',
+        'style': ('90s arcade fighting game stage theme, Capcom CPS2 and Neo Geo style, secret futuristic android '
+                  'laboratory hidden in the Andes, cyberpunk 80s synthwave fused with 90s industrial techno, '
+                  'dark driving synth bass arpeggio, catchy heroic FM synth lead hook, electric guitar power chords, '
+                  'analog drum machine with gated reverb snare, glitchy robotic synth blips, computer beeps and laser '
+                  'zaps, mad scientist energy, futuristic, menacing but fun, 132 bpm, C minor, instrumental, '
+                  'seamless loop'),
+        'negativo': 'cumbia, accordion, reggaeton, vocoder, talkbox',
+    },
     'lena-valparaiso-v2': {
         'title': 'Los Cerros de Valparaiso (Arcade)',
         'style': ('90s arcade fighting game stage theme, Capcom CPS2 style, sunset over the hills and harbor of '

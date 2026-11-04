@@ -1226,7 +1226,7 @@ export class FightScene implements Scene {
 
   /**
    * Dr. Maki Gero: "¡El auténtico!" sube envuelto en rayos y estampa su sello dorado; "¡Dale color!"
-   * carga un aura arcoíris; los súper chisporrotean verde y celeste en sus manos.
+   * carga un aura arcoíris; los súper chisporrotean verde y celeste en sus manos; la barrida levanta polvo.
    */
   private makiMoveFx(f: Fighter, id: string, dir: number): void {
     const arco = [0xff3b3b, 0xff9a2e, 0xffe14a, 0x4dff6a, 0x3fc8ff, 0x8a5bff, 0xff4fd8];
@@ -1241,6 +1241,14 @@ export class FightScene implements Scene {
       if (f.stateFrame < 18) this.fx.aura(f.x + dir * 20, f.y - 80, arco[(f.stateFrame >> 1) % arco.length]);
     } else if (id === 'super' || id === 'robot') {
       if (f.stateFrame % 3 === 0) this.fx.electric(f.x + dir * 24, f.y - 90 - Math.random() * 40, 3, id === 'super' ? 0x3fffa0 : 0x7ff6ff);
+    } else if (id === 'cLK' || id === 'cHK') {
+      // La barrida levanta polvo donde se estira el pie; la fuerte deja además un rastro de colores en el suelo.
+      const fuerte = id === 'cHK';
+      const pie = f.x + dir * 82;
+      if (f.stateFrame === (fuerte ? 6 : 4)) this.fx.dust(pie, f.y, fuerte ? 8 : 3, fuerte);
+      if (fuerte && f.stateFrame >= 6 && f.stateFrame < 12) {
+        for (let i = 0; i < 2; i++) this.fx.trail(pie - dir * (10 + Math.random() * 50), f.y - 6, arco[(f.stateFrame + i * 3) % arco.length], 14);
+      }
     }
   }
 
