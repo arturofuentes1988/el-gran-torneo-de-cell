@@ -39,7 +39,7 @@ class Clip:
     """Cuadros de un video (a 24 por segundo) con su máscara, cargados a pedido."""
 
     def __init__(self, ruta: Path, tolerancia: float, huecos_sd: float | None = None, estricto: bool = False,
-                 ia: bool = False, ropa_blanca: bool = True, verde: bool = False):
+                 ia: bool = False, ropa_blanca: bool = True, verde: bool = False, magenta: bool = False):
         self.tmp = Path(tempfile.mkdtemp(prefix="clip_"))
         subprocess.run(
             ["ffmpeg", "-loglevel", "error", "-y", "-i", str(ruta), "-vf", "fps=24", str(self.tmp / "%04d.png")],
@@ -52,6 +52,7 @@ class Clip:
         self.ia = ia
         self.ropa_blanca = ropa_blanca
         self.verde = verde
+        self.magenta = magenta
         self.cache: dict[int, tuple[np.ndarray, np.ndarray]] = {}
         self.alfas: dict[int, np.ndarray] = {}
         self.factor = 1.0
@@ -80,7 +81,7 @@ class Clip:
         if i not in self.cache:
             rgb = np.asarray(Image.open(self.rutas[i]).convert("RGB"))
             if self.verde:
-                rgb, alfa = alfa_verde(rgb)
+                rgb, alfa = alfa_verde(rgb, self.magenta)
             elif self.ia:
                 alfa = alfa_ia(rgb, self.ropa_blanca)
             else:
@@ -393,8 +394,10 @@ def main() -> None:
     ia = cfg.get("ia", False)
     # "ropa_blanca": false para luchadores de ropa oscura: el resplandor del video no queda (ver alfa_ia).
     ropa_blanca = cfg.get("ropa_blanca", True)
-    # "fondo": "verde" recorta por chroma (videos animados sobre verde plano; ver alfa_verde).
-    verde = cfg.get("fondo") == "verde"
+    # "fondo": "verde" recorta por chroma (videos animados sobre verde plano; ver alfa_verde);
+    # "magenta" igual, sobre magenta (para ropa verde).
+    verde = cfg.get("fondo") in ("verde", "magenta")
+    magenta = cfg.get("fondo") == "magenta"
     # "reescalar": {clip: factor} para clips hechos con la guardia achicada (ver Clip.reescalar).
     reescalar = cfg.get("reescalar", {})
     pies_ref: list[tuple[float, float]] = []
@@ -406,7 +409,7 @@ def main() -> None:
             if nombre in estrictos:
                 clips[nombre] = Clip(videos / f"{nombre}.mp4", estrictos[nombre], huecos_sd, True)
             else:
-                clips[nombre] = Clip(videos / f"{nombre}.mp4", tol, huecos_sd, ia=ia is True or nombre in (ia or []), ropa_blanca=ropa_blanca, verde=verde)
+                clips[nombre] = Clip(videos / f"{nombre}.mp4", tol, huecos_sd, ia=ia is True or nombre in (ia or []), ropa_blanca=ropa_blanca, verde=verde, magenta=magenta)
             if nombre in reescalar:
                 if nombre == cfg["referencia"] or not pies_ref:
                     raise SystemExit(f"{nombre}: la referencia no se puede reescalar")

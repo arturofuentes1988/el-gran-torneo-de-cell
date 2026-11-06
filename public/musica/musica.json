@@ -52,5 +52,12 @@
     "loopStart": 30.1,
     "loopEnd": 60.5,
     "liviano": "liviano/maki-lab.mp3"
+  },
+  "samurai-pudahuel": {
+    "archivo": "samurai-pudahuel.mp3",
+    "bpm": 140.1,
+    "loopStart": 41.45,
+    "loopEnd": 90.9826,
+    "liviano": "liviano/samurai-pudahuel.mp3"
   }
 }

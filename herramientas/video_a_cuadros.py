@@ -155,26 +155,33 @@ def alfa_ia(rgb: np.ndarray, ropa_blanca: bool = True) -> np.ndarray:
     return a
 
 
-def alfa_verde(rgb: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def alfa_verde(rgb: np.ndarray, magenta: bool = False) -> tuple[np.ndarray, np.ndarray]:
     """Recorte por chroma verde (los luchadores animados sobre verde plano). Devuelve el color sin
     el reflejo verde en los bordes y el alfa (0-255).
 
     El alfa sale de cuánto domina el verde sobre el rojo y el azul (el verde del fondo y sus sombras
     más oscuras quedan transparentes); al borde le quita el tinte verde (g se limita al mayor de r y b).
     Se queda con las manchas grandes (el personaje y lo que tiene en las manos).
+
+    magenta=True: lo mismo sobre chroma magenta (para ropa verde, como el camuflaje del Samurai):
+    domina el menor de rojo y azul sobre el verde, y el tinte se quita bajando rojo y azul juntos.
     """
     f = rgb.astype(np.float32)
     r, g, b = f[..., 0], f[..., 1], f[..., 2]
-    dom = g - np.maximum(r, b)
+    dom = np.minimum(r, b) - g if magenta else g - np.maximum(r, b)
     a = np.clip(1 - (dom - 18) / (70 - 18), 0, 1)
-    # En el borde suave el color es una mezcla con el verde: se separa (si no, queda un contorno oscuro).
+    # En el borde suave el color es una mezcla con el fondo: se separa (si no, queda un contorno oscuro).
     fondo = color_fondo(rgb).astype(np.float32)
     an = np.maximum(a, 0.15)[..., None]
     f = np.where((a > 0) & (a < 1), 0, 1)[..., None] * f + np.where((a > 0) & (a < 1), 1, 0)[..., None] * np.clip((f - (1 - an) * fondo) / an, 0, 255)
     r, g, b = f[..., 0], f[..., 1], f[..., 2]
-    # Sin reflejo verde: en los bordes y en lo que quedó teñido.
-    gg = np.minimum(g, np.maximum(r, b) + 6)
-    color = np.dstack([r, gg, b])
+    # Sin reflejo del fondo: en los bordes y en lo que quedó teñido.
+    if magenta:
+        sobra = np.maximum(np.minimum(r, b) - (g + 6), 0)
+        color = np.dstack([r - sobra, g, b - sobra])
+    else:
+        gg = np.minimum(g, np.maximum(r, b) + 6)
+        color = np.dstack([r, gg, b])
     m = a > 0.5
     etiq, n = ndimage.label(m)
     if n > 1:

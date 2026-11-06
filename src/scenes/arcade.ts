@@ -1,9 +1,9 @@
 // ARCADE: el jugador elige su luchador y tiene que ganarle a cada uno de los demás,
 // uno tras otro, contra la CPU (la última pelea es un poco más difícil).
-// Antes de cada pelea, LA TORRE: un rascacielos de neón con un piso por rival y la final
-// en la azotea; el ascensor sube con la cara del jugador hasta el piso del próximo rival.
-// Cada rival pelea en su escenario (o en uno libre) y la final es en el ring de
-// EL GRAN TORNEO (el del título). Después de la torre, la pantalla VS. Si pierde:
+// Antes de cada pelea, LA TORRE: un rascacielos de neón con un piso por rival (siempre en el
+// mismo orden; la final en el último piso) y cada rival esperando en su piso. Primero se ve
+// la torre entera; después el ascensor sube con la cara del jugador hasta el piso del
+// próximo rival. Cada rival pelea en su escenario. Después de la torre, la pantalla VS. Si pierde:
 // ¿CONTINUAR? (cuenta regresiva; con aceptar repite esa pelea). Si gana todas: ¡CAMPEÓN!,
 // con el tiempo total (lo que duraron sus peleas), que se sube al ranking si tiene cuenta.
 
@@ -15,7 +15,6 @@ import { costumeFilter } from '../render/costume';
 import { NEON_CYAN, NEON_PINK } from '../render/live';
 import { arcade, outlinedText } from '../render/text';
 import { tactil } from '../input/touch';
-import type { StagePlace } from '../content/stages';
 import { subirRecordArcade } from '../online/cuenta';
 import { DIFFICULTIES, DIFFICULTY_NAME, type DifficultyId } from '../sim/difficulty';
 import { FightScene } from './fight';
@@ -25,26 +24,21 @@ import { Progreso } from '../content/descargas';
 import { BarraCarga } from '../render/barraCarga';
 import { backdrop } from './backdrop';
 
-/** Dónde es una pelea: el escenario (null = el ring de EL GRAN TORNEO), su nombre y su lugar en el mapa. */
+/** Dónde es una pelea: el escenario (null = el ring de EL GRAN TORNEO) y su nombre. */
 interface Venue {
   stageId: string | null;
   nombre: string;
-  lugar: StagePlace;
 }
 
-/** La final: el ring del título, en la costa central. */
-const RING: Venue = { stageId: null, nombre: 'EL GRAN TORNEO', lugar: { nombre: 'EL GRAN TORNEO', lat: -33.05, lon: -71.62 } };
-/** Desde dónde se ordenan las sedes si el luchador del jugador no tiene ciudad (el extremo norte). */
-const START: StagePlace = { nombre: 'INICIO', lat: -18.48, lon: -70.31 };
+/** Si no hay ningún escenario en la lista: el ring del título. */
+const RING: Venue = { stageId: null, nombre: 'EL GRAN TORNEO' };
 
-/** Una partida de ARCADE: el luchador del jugador (índice del plantel), su color, los rivales y sus sedes. */
+/** Una partida de ARCADE: el luchador del jugador (índice del plantel), su color, los rivales y sus escenarios. */
 export interface ArcadeRun {
   player: number;
   color: number;
   opponents: number[];
   venues: Venue[];
-  /** De dónde sale el viaje: la ciudad del luchador del jugador. */
-  home: StagePlace;
   /** Pelea que toca (0 = la primera). */
   index: number;
   /** Dificultad con que se empezó (la del ranking). */
@@ -55,58 +49,25 @@ export interface ArcadeRun {
 }
 
 /**
- * Empieza el ARCADE: los rivales son todos los demás luchadores del plantel. El viaje sale
- * de la ciudad del jugador y va a la de cada rival (de norte a sur), que pelea en su
- * escenario (o en uno libre de esa ciudad o de la lista); el último, en el ring del torneo.
+ * Empieza el ARCADE: los rivales son todos los demás luchadores del plantel, siempre en el
+ * mismo orden (el de ELIGE LUCHADOR, de abajo hacia arriba en la torre; el último es la final).
+ * Cada rival pelea en su escenario. Quien no tiene uno pelea en uno que no es de nadie del
+ * plantel (o en el del jugador).
  */
 export function startArcade(game: Game, player: number, color: number): Scene {
   const roster = game.assets.roster;
   const entries = game.assets.stages.entries.filter((e) => e.json);
-  const ids = roster.map((_, i) => i).filter((i) => i !== player);
+  const opponents = roster.map((_, i) => i).filter((i) => i !== player);
   // Con un solo luchador en el plantel, pelea contra sí mismo (de otro color).
-  if (!ids.length) ids.push(player);
-  const used = new Set<string>();
-  const venueOf = (opp: number): Venue => {
-    const city = roster[opp].def.ciudad;
-    const free = (x: (typeof entries)[number]) => !used.has(x.id);
-    const mine = (x: (typeof entries)[number]) => x.luchador === roster[opp].def.id;
-    const here = (x: (typeof entries)[number]) => !!city && x.lugar?.nombre === city.nombre;
-    const e =
-      entries.find((x) => free(x) && mine(x) && here(x)) ??
-      entries.find((x) => free(x) && here(x)) ??
-      entries.find((x) => free(x) && mine(x)) ??
-      entries.find(free) ??
-      entries[0];
-    if (!e) return RING;
-    used.add(e.id);
-    // En el mapa va en la ciudad del rival (si se sabe); si no, donde queda el escenario.
-    return { stageId: e.id, nombre: e.nombre, lugar: city ?? e.lugar ?? { nombre: e.nombre, lat: -33.45, lon: -70.66 } };
-  };
-  // La final (en el ring) es contra quien no tiene escenario propio; si todos tienen, contra
-  // el que tiene más (así los demás pelean en su escenario, en su ciudad).
-  const ownStages = (opp: number) => entries.filter((e) => e.luchador === roster[opp].def.id).length;
-  const finalist = ids.reduce((best, opp) => {
-    const a = ownStages(opp);
-    const b = ownStages(best);
-    return (a === 0) !== (b === 0) ? (a === 0 ? opp : best) : a >= b ? opp : best;
-  }, ids[ids.length - 1]);
-  ids.splice(ids.indexOf(finalist), 1);
-  const last = finalist;
-  const home = roster[player].def.ciudad ?? START;
-  // La ruta: desde la casa del jugador, siempre a la ciudad más cercana que falte.
-  const pending = ids.map((opp) => ({ opp, venue: venueOf(opp) }));
-  const before: typeof pending = [];
-  let here: StagePlace = home;
-  while (pending.length) {
-    const d = (v: Venue) => (v.lugar.lat - here.lat) ** 2 + (v.lugar.lon - here.lon) ** 2;
-    const k = pending.reduce((best, f, i) => (d(f.venue) < d(pending[best].venue) ? i : best), 0);
-    const [next] = pending.splice(k, 1);
-    before.push(next);
-    here = next.venue.lugar;
-  }
-  const fights = [...before, { opp: last, venue: RING }];
+  if (!opponents.length) opponents.push(player);
+  const ids = new Set(roster.map((f) => f.def.id));
+  const libre = entries.find((e) => !e.luchador || !ids.has(e.luchador)) ?? entries.find((e) => e.luchador === roster[player].def.id);
+  const venues = opponents.map((o): Venue => {
+    const e = entries.find((x) => x.luchador === roster[o].def.id) ?? libre;
+    return e ? { stageId: e.id, nombre: e.nombre } : RING;
+  });
   return new ArcadeTowerScene(game, {
-    player, color, opponents: fights.map((f) => f.opp), venues: fights.map((f) => f.venue), home, index: 0,
+    player, color, opponents, venues, index: 0,
     dificultad: loadDifficulty(), frames: 0, continues: 0,
   });
 }
@@ -293,17 +254,32 @@ class ArcadeVsScene extends ArcadeScreen {
 }
 
 /** La torre: alto de cada piso y del vestíbulo, ancho (unidades de pantalla) y dónde queda en pantalla el piso al que se sube. */
-const PISO = 62;
-const VESTIBULO = 54;
-const TORRE_W = 168;
+const PISO = 64;
+const VESTIBULO = 40;
+const TORRE_W = 176;
 const FOCO_Y = 150;
-/** Cuadros que dura la subida en ascensor. */
-const SUBIDA = 150;
+/** Lo que sobresale encima del último piso: el techo, el letrero y la antena. */
+const TECHO = 70;
+/** La torre entera: dónde queda la calle en pantalla y cuánto alto tiene (bajo los títulos). */
+const CALLE_Y = 250;
+const ALTO_VISTA = 192;
+/** El vidrio de cada piso (donde espera el rival): borde izquierdo, ancho y alto. */
+const SALA_X = -TORRE_W / 2 + 7;
+const SALA_W = TORRE_W - 14;
+const SALA_H = PISO - 10;
+/** Cuadros mirando la torre entera, y cuadro en que llega el ascensor (la cámara se acerca mientras sube). */
+const VISTA = 45;
+const SUBIDA = 165;
 
-/** Ventanas encendidas: siempre las mismas (pseudoazar fijo). */
-function encendida(piso: number, k: number): boolean {
-  const h = Math.sin(piso * 127.1 + k * 311.7) * 43758.5453;
-  return h - Math.floor(h) < 0.42;
+/** Número entre 0 y 1, siempre el mismo para el mismo `a` (pseudoazar fijo). */
+function azar(a: number): number {
+  const h = Math.sin(a) * 43758.5453;
+  return h - Math.floor(h);
+}
+
+/** Ventanas encendidas de la ciudad: siempre las mismas. */
+function encendida(edificio: number, k: number): boolean {
+  return azar(edificio * 127.1 + k * 311.7) < 0.42;
 }
 
 /** Centro de un piso en la torre (el suelo en y = 0, hacia arriba negativo); -1 es el vestíbulo. */
@@ -311,14 +287,22 @@ function centroPiso(k: number): number {
   return k < 0 ? -VESTIBULO / 2 : -(VESTIBULO + k * PISO + PISO / 2);
 }
 
+/** Color entre `a` y `b` (f de 0 a 1). */
+function mezcla(a: number, b: number, f: number): number {
+  const c = (s: number) => Math.round(((a >> s) & 255) + (((b >> s) & 255) - ((a >> s) & 255)) * f) << s;
+  return c(16) | c(8) | c(0);
+}
+
 /**
- * Antes de cada pelea, LA TORRE: un rascacielos de neón con un piso por rival (la final en la
- * azotea, bajo el letrero de EL GRAN TORNEO). El ascensor de vidrio sube con la cara del
- * jugador desde el piso anterior (o la entrada) hasta el del próximo rival; los vencidos quedan
- * en gris con una X. A los lados, el jugador y el rival en grande: el rival en sombra hasta que
+ * Antes de cada pelea, LA TORRE: un rascacielos de neón con un piso por rival, cada uno esperando de pie
+ * detrás del vidrio de su piso con el nombre de su escenario (los vencidos en gris con una X; la final en
+ * el último piso, bajo el letrero de EL GRAN TORNEO). Primero se ve la torre entera; después la cámara se
+ * acerca mientras el ascensor de vidrio sube con la cara del jugador desde el piso anterior (o la entrada)
+ * hasta el del próximo rival. A los lados, el jugador y el rival en grande: el rival en sombra hasta que
  * llega el ascensor.
  */
 class ArcadeTowerScene extends ArcadeScreen {
+  private cielo = new Graphics();
   private ciudad = new Container();
   private torre = new Container();
   private brillos = new Graphics();
@@ -326,8 +310,10 @@ class ArcadeTowerScene extends ArcadeScreen {
   private yo: BigFighter;
   private rival: BigFighter;
   private rivalFiltro: Filter | null;
+  /** Los rivales chicos, cada uno en su piso. */
+  private esperando: BigFighter[] = [];
   private abajo: Text;
-  private camDesde: number;
+  private vistaK: number;
   private camHasta: number;
   private alto: number;
 
@@ -338,13 +324,16 @@ class ArcadeTowerScene extends ArcadeScreen {
     const i = run.index;
     const opp = run.opponents[i];
     this.alto = VESTIBULO + n * PISO;
-    // La cámara parte en el piso anterior (o la entrada) y sube al del rival; en la final mira un poco más arriba (el letrero).
-    this.camDesde = FOCO_Y - centroPiso(i - 1);
+    // Primero la torre entera (achicada para que quepa bajo los títulos); después, el piso del
+    // rival a tamaño real (en la final, un poco más arriba: el letrero).
+    this.vistaK = Math.min(1, ALTO_VISTA / (this.alto + TECHO));
     this.camHasta = FOCO_Y - centroPiso(i) + (i === n - 1 ? 22 : 0);
-    this.torre.position.set(VIEW_W / 2, this.camDesde);
+    this.torre.position.set(VIEW_W / 2, CALLE_Y);
+    this.torre.scale.set(this.vistaK);
+    this.dibujarCielo();
     this.dibujarCiudad();
     this.dibujarTorre();
-    this.ui.addChild(this.ciudad, this.torre);
+    this.ui.addChild(this.cielo, this.ciudad, this.torre);
 
     // El jugador a la izquierda y el rival a la derecha (en sombra hasta que llega el ascensor).
     this.yo = new BigFighter(game, run.player, 'idle', 118, 1, costumeFilter(run.color, roster[run.player].def.costume));
@@ -362,15 +351,28 @@ class ArcadeTowerScene extends ArcadeScreen {
     this.text(arcade(roster[opp].def.name.toUpperCase()), 7, VIEW_W - 74, 250, NEON_CYAN);
 
     const final = i === n - 1 && n > 1;
-    // Franja de arriba: los títulos no quedan encima de los letreros de los pisos.
+    // Franja de arriba: los títulos no quedan encima de la torre.
     const banda = new Graphics();
     banda.rect(0, 0, VIEW_W, 50).fill({ color: 0x0a0414, alpha: 0.92 });
     banda.rect(0, 50, VIEW_W, 1).fill({ color: NEON_PINK, alpha: 0.7 });
     this.ui.addChild(banda);
     this.text('ARCADE', 12, VIEW_W / 2, 14, 0xfff4e0, 0x5a0a10);
-    this.text(arcade(final ? `PELEA FINAL · LA AZOTEA` : `PISO ${i + 1} DE ${n}`), 8, VIEW_W / 2, 31, 0xffd040);
+    this.text(arcade(final ? 'PELEA FINAL · ÚLTIMO PISO' : `PISO ${i + 1} DE ${n}`), 8, VIEW_W / 2, 31, 0xffd040);
     this.text(arcade(run.venues[i].nombre), 6, VIEW_W / 2, 43, 0xd8d0e8);
-    this.abajo = this.text(arcade(final ? 'SUBIENDO A LA AZOTEA…' : `SUBIENDO AL PISO ${i + 1}…`), 8, VIEW_W / 2, 260, 0xd8d0e8);
+    this.abajo = this.text(arcade(final ? 'SUBIENDO AL ÚLTIMO PISO…' : `SUBIENDO AL PISO ${i + 1}…`), 8, VIEW_W / 2, 260, 0xd8d0e8);
+  }
+
+  /** El cielo de noche (tapa el fondo de los menús) con estrellas. */
+  private dibujarCielo(): void {
+    const g = this.cielo;
+    const bandas = 16;
+    for (let b = 0; b < bandas; b++) {
+      g.rect(0, (VIEW_H * b) / bandas, VIEW_W, VIEW_H / bandas + 1).fill({ color: mezcla(0x04020c, 0x2a1050, b / (bandas - 1)) });
+    }
+    for (let s = 0; s < 80; s++) {
+      const y = azar(s * 7.31 + 2) * VIEW_H * 0.75;
+      g.rect(azar(s * 3.17 + 1) * VIEW_W, y, 1, 1).fill({ color: 0xfff4e0, alpha: 0.25 + azar(s * 5.9) * 0.55 });
+    }
   }
 
   /** La ciudad de noche detrás de la torre (baja más lento que la torre mientras se sube). */
@@ -400,22 +402,12 @@ class ArcadeTowerScene extends ArcadeScreen {
     const alto = this.alto;
     const x0 = -TORRE_W / 2;
     const g = new Graphics();
-    // La calle, con su línea de neón.
-    g.rect(-VIEW_W, 0, VIEW_W * 2, 60).fill({ color: 0x0a0614 });
-    g.rect(-VIEW_W, 0, VIEW_W * 2, 1.2).fill({ color: NEON_CYAN, alpha: 0.55 });
+    // La calle, con su línea de neón (ancha: con la torre entera se ve achicada).
+    g.rect(-VIEW_W * 4, 0, VIEW_W * 8, 80).fill({ color: 0x0a0614 });
+    g.rect(-VIEW_W * 4, 0, VIEW_W * 8, 1.2).fill({ color: NEON_CYAN, alpha: 0.55 });
     // Cuerpo de vidrio oscuro con una franja de reflejo.
     g.rect(x0, -alto, TORRE_W, alto).fill({ color: 0x120a26 });
     g.rect(x0, -alto, TORRE_W * 0.42, alto).fill({ color: 0x1c1238, alpha: 0.55 });
-    // Ventanas de cada piso (el letrero del piso va encima, al centro).
-    for (let k = 0; k < n; k++) {
-      const top = -(VESTIBULO + (k + 1) * PISO);
-      for (let r = 0; r < 3; r++) {
-        for (let c = 0; c < 14; c++) {
-          const on = encendida(k, r * 14 + c);
-          g.rect(x0 + 7 + c * 11.4, top + 8 + r * 17, 6, 10).fill({ color: on ? 0xffd27a : 0x261a40, alpha: on ? 0.5 : 0.95 });
-        }
-      }
-    }
     // Separación entre pisos.
     for (let k = 0; k <= n; k++) {
       const y = -(VESTIBULO + k * PISO);
@@ -423,8 +415,8 @@ class ArcadeTowerScene extends ArcadeScreen {
       g.rect(x0 - 5, y - 0.5, TORRE_W + 10, 1).fill({ color: NEON_PINK, alpha: 0.75 });
     }
     // La entrada: puertas de vidrio.
-    g.rect(-32, -36, 64, 36).fill({ color: 0x0c1830 }).stroke({ color: NEON_CYAN, width: 1, alpha: 0.8 });
-    g.rect(-0.5, -36, 1, 36).fill({ color: NEON_CYAN, alpha: 0.6 });
+    g.rect(-26, -30, 52, 30).fill({ color: 0x0c1830 }).stroke({ color: NEON_CYAN, width: 1, alpha: 0.8 });
+    g.rect(-0.5, -30, 1, 30).fill({ color: NEON_CYAN, alpha: 0.6 });
     // El techo escalonado y la antena.
     g.rect(x0 + 10, -alto - 10, TORRE_W - 20, 10).fill({ color: 0x1a0f33 }).stroke({ color: NEON_CYAN, width: 1, alpha: 0.7 });
     g.rect(x0 + 36, -alto - 20, TORRE_W - 72, 10).fill({ color: 0x1a0f33 }).stroke({ color: NEON_CYAN, width: 1, alpha: 0.7 });
@@ -437,57 +429,74 @@ class ArcadeTowerScene extends ArcadeScreen {
     const rx = x0 + TORRE_W + 13;
     g.rect(rx - 10, -alto - 4, 1, alto + 4).fill({ color: 0x8a7aa8, alpha: 0.7 });
     g.rect(rx + 9, -alto - 4, 1, alto + 4).fill({ color: 0x8a7aa8, alpha: 0.7 });
-    this.torre.addChild(g, this.brillos);
+    this.torre.addChild(g);
 
     const entrada = outlinedText('ENTRADA', 5, NEON_CYAN, 0x0a0610, 1);
     entrada.anchor.set(0.5);
-    entrada.position.set(0, -42);
+    entrada.position.set(0, -35);
     const letrero = outlinedText('EL GRAN TORNEO', 10, 0xffd040, 0x5a0a10, 2);
     letrero.anchor.set(0.5);
     letrero.position.set(0, -alto - 32);
     this.torre.addChild(entrada, letrero);
 
-    // El letrero de cada piso: la cara y el nombre del rival (los vencidos en gris con una X).
+    // Cada piso: el rival de pie detrás del vidrio, con la luz de su color, su nombre, el piso y su escenario.
     run.opponents.forEach((o, k) => {
       const a = roster[o];
-      const cy = centroPiso(k);
-      const w = 132;
-      const h = 44;
-      const px = -w / 2;
+      const top = -(VESTIBULO + (k + 1) * PISO) + 6;
+      const bottom = top + SALA_H;
       const hecho = k < run.index;
-      const ahora = k === run.index;
-      const panel = new Graphics();
-      panel.roundRect(px, cy - h / 2, w, h, 4).fill({ color: 0x0b0618, alpha: 0.94 }).stroke({ color: ahora ? NEON_CYAN : hecho ? 0x5a4a6a : 0xc89a3a, width: ahora ? 1.6 : 1 });
-      panel.roundRect(px + 5, cy - 18, 36, 36, 3).fill({ color: 0x140a24 });
-      this.torre.addChild(panel);
-      if (a.face) {
-        const cara = new Sprite(a.face);
-        cara.anchor.set(0.5);
-        cara.width = 34;
-        cara.height = 34;
-        cara.position.set(px + 23, cy);
-        if (hecho) {
-          const gris = new ColorMatrixFilter();
-          gris.desaturate();
-          gris.brightness(0.55, true);
-          cara.filters = [gris];
-        }
-        this.torre.addChild(cara);
+      const tinte = a.def.ui.color;
+      const sala = new Graphics();
+      sala.rect(SALA_X, top, SALA_W, SALA_H).fill({ color: hecho ? 0x07040d : 0x0d0820 });
+      if (!hecho) {
+        sala.rect(SALA_X, top, SALA_W, SALA_H).fill({ color: tinte, alpha: 0.14 });
+        sala.rect(SALA_X, top, SALA_W, 3).fill({ color: tinte, alpha: 0.5 });
+        for (let l = 0; l < 4; l++) sala.rect(SALA_X + 14 + l * 40, top + 3, 12, 1.5).fill({ color: 0xfff4e0, alpha: 0.75 });
+        sala.rect(SALA_X, bottom - 3, SALA_W, 3).fill({ color: tinte, alpha: 0.55 });
       }
+      this.torre.addChild(sala);
+
+      // El rival mirando hacia el ascensor, sin salirse de su piso.
+      const chico = new BigFighter(this.game, o, 'idle', 46, 1, o === run.player ? costumeFilter(run.color + 1, a.def.costume) : null);
+      chico.sprite.position.set(SALA_X + SALA_W - 32, bottom - 3);
       if (hecho) {
-        const x = new Graphics();
-        x.moveTo(px + 9, cy - 14).lineTo(px + 37, cy + 14).moveTo(px + 37, cy - 14).lineTo(px + 9, cy + 14).stroke({ color: 0xff3348, width: 2.4 });
-        this.torre.addChild(x);
+        const gris = new ColorMatrixFilter();
+        gris.desaturate();
+        gris.brightness(0.5, true);
+        chico.sprite.filters = [gris];
       }
+      const mascara = new Graphics().rect(SALA_X, top, SALA_W, SALA_H).fill({ color: 0xffffff });
+      chico.sprite.mask = mascara;
+      this.torre.addChild(mascara, chico.sprite);
+      this.esperando.push(chico);
+
+      // El reflejo del vidrio y su marco.
+      const vidrio = new Graphics();
+      vidrio.poly([SALA_X + 18, top, SALA_X + 40, top, SALA_X + 22, bottom, SALA_X, bottom, SALA_X, bottom - 8]).fill({ color: 0xffffff, alpha: 0.04 });
+      vidrio.rect(SALA_X, top, SALA_W, SALA_H).stroke({ color: hecho ? 0x3a2e4a : 0x5a4a7a, width: 1 });
+      if (hecho) {
+        const cx = SALA_X + SALA_W - 32;
+        const cy = top + SALA_H / 2;
+        vidrio.moveTo(cx - 16, cy - 18).lineTo(cx + 16, cy + 18).moveTo(cx + 16, cy - 18).lineTo(cx - 16, cy + 18).stroke({ color: 0xff3348, width: 3 });
+      }
+      this.torre.addChild(vidrio);
+
+      const final = k === n - 1 && n > 1;
+      const tx = SALA_X + 8;
       const nombre = outlinedText(arcade(a.def.name.toUpperCase()), 7, hecho ? 0x8a7fa0 : 0xffffff, 0x0a0610, 2);
       nombre.anchor.set(0, 0.5);
-      nombre.position.set(px + 48, cy - 6);
-      nombre.scale.set(Math.min(1, 80 / Math.max(1, nombre.width)));
-      const piso = outlinedText(arcade(k === n - 1 && n > 1 ? 'AZOTEA · FINAL' : hecho ? `PISO ${k + 1} · VENCIDO` : `PISO ${k + 1}`), 5, hecho ? 0x8a7fa0 : 0xffd040, 0x0a0610, 1);
+      nombre.position.set(tx, top + 13);
+      nombre.scale.set(Math.min(1, 92 / Math.max(1, nombre.width)));
+      const piso = outlinedText(arcade(hecho ? 'VENCIDO' : final ? `PISO ${k + 1} · FINAL` : `PISO ${k + 1}`), 5, hecho ? 0xff5a6a : 0xffd040, 0x0a0610, 1);
       piso.anchor.set(0, 0.5);
-      piso.position.set(px + 48, cy + 8);
-      this.torre.addChild(nombre, piso);
+      piso.position.set(tx, top + 26);
+      const sede = outlinedText(arcade(run.venues[k].nombre), 4, hecho ? 0x6a5f80 : 0xc8b8e8, 0x0a0610, 1);
+      sede.anchor.set(0, 0.5);
+      sede.position.set(tx, top + 37);
+      sede.scale.set(Math.min(1, 92 / Math.max(1, sede.width)));
+      this.torre.addChild(nombre, piso, sede);
     });
+    this.torre.addChild(this.brillos);
 
     // La cabina del ascensor, con la cara del jugador.
     const cab = new Graphics();
@@ -510,6 +519,7 @@ class ArcadeTowerScene extends ArcadeScreen {
     this.t++;
     this.yo.step();
     this.rival.step();
+    for (const f of this.esperando) f.step();
     const m = this.game.menu;
     if (m.back && this.t > 10) {
       this.game.sfx.play('menuBack');
@@ -530,23 +540,24 @@ class ArcadeTowerScene extends ArcadeScreen {
 
   override render(): void {
     super.render();
-    const k = Math.min(1, this.t / SUBIDA);
+    const k = Math.min(1, Math.max(0, (this.t - VISTA) / (SUBIDA - VISTA)));
     const e = k * k * (3 - 2 * k);
     const i = this.run.index;
-    this.torre.y = this.camDesde + (this.camHasta - this.camDesde) * e;
+    this.torre.y = CALLE_Y + (this.camHasta - CALLE_Y) * e;
+    this.torre.scale.set(this.vistaK + (1 - this.vistaK) * e);
     this.cabina.y = centroPiso(i - 1) + (centroPiso(i) - centroPiso(i - 1)) * e;
     // La ciudad baja más lento que la torre (está más lejos).
-    this.ciudad.y = 214 + (this.torre.y - FOCO_Y) * 0.22;
-    // El letrero del piso del rival late; la luz de la antena pestañea; al llegar, un destello.
+    this.ciudad.y = CALLE_Y + (this.torre.y - CALLE_Y) * 0.25;
+    // El piso del rival late; la luz de la antena pestañea; al llegar, un destello.
     const b = this.brillos;
     b.clear();
     const pulse = 0.5 + 0.5 * Math.sin(this.t / 6);
-    const cy = centroPiso(i);
-    b.roundRect(-70, cy - 26, 140, 52, 6).stroke({ color: NEON_CYAN, width: 2, alpha: 0.2 + pulse * 0.45 });
+    const top = centroPiso(i) - PISO / 2 + 6;
+    b.rect(SALA_X - 2, top - 2, SALA_W + 4, SALA_H + 4).stroke({ color: NEON_CYAN, width: 2, alpha: 0.35 + pulse * 0.5 });
     if (Math.floor(this.t / 30) % 2 === 0) b.circle(0, -this.alto - 66, 2.6).fill({ color: 0xff3348 });
     if (this.t > SUBIDA) {
       const d = this.t - SUBIDA;
-      b.roundRect(-70 - d * 2, cy - 26 - d, 140 + d * 4, 52 + d * 2, 8).stroke({ color: 0xffffff, width: 1.4, alpha: Math.max(0, 1 - d / 22) });
+      b.rect(SALA_X - 2 - d * 2, top - 2 - d, SALA_W + 4 + d * 4, SALA_H + 4 + d * 2).stroke({ color: 0xffffff, width: 1.4, alpha: Math.max(0, 1 - d / 22) });
     }
   }
 }

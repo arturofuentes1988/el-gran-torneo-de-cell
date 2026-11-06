@@ -1,0 +1,19 @@
+{
+  "voz/intro": "intro.mp3",
+  "voz/victoria": "goku.mp3",
+  "voz/burla": "frase.mp3",
+  "voz/remate": "maldito.mp3",
+  "voz/palabra": "palabra.mp3",
+  "voz/suerte": "suerte.mp3",
+  "voz/sombra": "sombra.mp3",
+  "voz/super": "amor.mp3",
+  "voz/frase": "frase.mp3",
+  "voz/maldito": "maldito.mp3",
+  "voz/resucitai": "resucitai.mp3",
+  "voz/ultra": "frase.mp3",
+  "voz/combo-corto": "palabra.mp3",
+  "voz/combo-medio": "suerte.mp3",
+  "voz/combo-largo": "goku.mp3",
+  "voz/combo-viral": "maldito.mp3",
+  "voz/combo-ultra": "amor.mp3"
+}

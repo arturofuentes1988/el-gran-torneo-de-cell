@@ -101,5 +101,27 @@
       "lat": -33.35,
       "lon": -70.25
     }
+  },
+  {
+    "id": "samurai-pudahuel",
+    "nombre": "LAGUNA SUR CON LA ESTRELLA",
+    "json": "samurai-pudahuel/escenario.json",
+    "miniatura": "samurai-pudahuel/miniatura.webp",
+    "luchador": "samurai",
+    "orden": 9,
+    "lugar": {
+      "nombre": "PUDAHUEL",
+      "lat": -33.4602,
+      "lon": -70.7522
+    }
+  },
+  {
+    "id": "samurai-luna",
+    "nombre": "LOS TECHOS DE PUDAHUEL",
+    "json": "samurai-luna/escenario.json",
+    "miniatura": "samurai-luna/miniatura.webp",
+    "luchador": "samurai",
+    "orden": 99,
+    "soloUltra": true
   }
 ]

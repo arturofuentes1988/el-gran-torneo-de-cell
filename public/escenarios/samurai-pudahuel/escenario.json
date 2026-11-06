@@ -1,0 +1,65 @@
+{
+  "id": "samurai-pudahuel",
+  "name": "LAGUNA SUR CON LA ESTRELLA",
+  "layers": [
+    {
+      "src": "fondo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -315.895,
+      "left": -5.6,
+      "liviano": {
+        "src": "liviano/fondo.webp",
+        "scale": 0.403906
+      }
+    },
+    {
+      "video": "fondo.mp4",
+      "scale": 0.374637,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -315.895,
+      "left": -5.6,
+      "liviano": {
+        "video": "liviano/fondo.mp4",
+        "scale": 0.561956
+      }
+    },
+    {
+      "src": "suelo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -70.118,
+      "floor": {
+        "strips": 64
+      },
+      "liviano": {
+        "src": "liviano/suelo.webp",
+        "scale": 0.403906
+      }
+    }
+  ],
+  "particles": [
+    {
+      "type": "polvo",
+      "count": 26,
+      "color": 16773576,
+      "alpha": 0.45,
+      "size": 1.1,
+      "band": [
+        -230,
+        -30
+      ],
+      "parallax": 0.85
+    }
+  ],
+  "music": "samurai-pudahuel"
+}

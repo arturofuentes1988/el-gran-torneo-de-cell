@@ -1,4 +1,4 @@
-"""Voltea solo las piernas de unos cuadros de un clip (fondo verde): la patada que Kling tiró hacia atrás sale
+"""Voltea solo las piernas de unos cuadros de un clip (fondo verde, o magenta con --magenta): la patada que Kling tiró hacia atrás sale
 hacia adelante, sin tocar la cabeza, los brazos ni la guardia.
 
 Uso:
@@ -24,6 +24,7 @@ from PIL import Image
 from scipy import ndimage
 
 BANDA = 3  # mezcla suave de la costura, en pixeles
+MAGENTA = False  # fondo magenta en vez de verde (--magenta)
 
 
 def leer(video: Path) -> list[np.ndarray]:
@@ -34,6 +35,8 @@ def leer(video: Path) -> list[np.ndarray]:
 
 def figura(a: np.ndarray) -> np.ndarray:
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    if MAGENTA:
+        return ~((r > g + 35) & (b > g + 35))
     return ~((g > r + 35) & (g > b + 35))
 
 
@@ -106,7 +109,10 @@ def main() -> None:
     ap.add_argument("--eje", type=int, help="cuadro con la postura pareja (por omisión, --desde - 2)")
     ap.add_argument("--corte", type=int, default=950, help="altura aproximada de la costura, en pixeles del video")
     ap.add_argument("--fps", type=int, default=24)
+    ap.add_argument("--magenta", action="store_true", help="el clip está sobre magenta (ropa verde)")
     args = ap.parse_args()
+    global MAGENTA
+    MAGENTA = args.magenta
 
     fr = leer(args.origen)
     ref = fr[args.eje if args.eje is not None else args.desde - 2]

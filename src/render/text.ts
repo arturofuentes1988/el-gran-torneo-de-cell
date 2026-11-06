@@ -43,7 +43,8 @@ export function pixelText(text: string, size: number, fill: number, style: Parti
 /** Texto con contorno (para leer sobre cualquier fondo). */
 export function outlinedText(text: string, size: number, fill: number, stroke = 0x0a0610, width = 2, style: Partial<TextStyleOptions> = {}): Text {
   return pixelText(text, size, fill, {
-    stroke: { color: stroke, width, join: 'miter' },
+    // Esquinas rectas, pero sin las puntas que el borde deja en los vértices agudos (la "M").
+    stroke: { color: stroke, width, join: 'miter', miterLimit: 2 },
     dropShadow: { color: 0x000000, alpha: 0.85, angle: Math.PI / 2, distance: Math.max(1, Math.round(size / 8)), blur: 0 },
     ...style,
   });

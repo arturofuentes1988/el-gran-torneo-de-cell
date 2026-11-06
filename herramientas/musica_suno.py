@@ -103,6 +103,16 @@ TEMAS = {
                   'accordion touches, driving rock drums, slap bass, orchestra hits, adventurous, '
                   '136 bpm, A minor, instrumental, seamless loop'),
     },
+    # El Samurai de Pudahuel (6 nov 2026): Laguna Sur con La Estrella, un maestro ninja sabio.
+    'samurai-pudahuel': {
+        'title': 'Laguna Sur con La Estrella',
+        'style': ('90s arcade fighting game stage theme, Capcom CPS2 and Neo Geo style, a wise ninja master dueling '
+                  'on a sunny street corner of a Santiago neighborhood under the snowy Andes, Japanese shamisen riffs '
+                  'and shakuhachi flute fused with 90s hard rock, thundering taiko drums, driving rock drums, slap bass, '
+                  'catchy heroic FM synth lead hook, electric guitar power chords, orchestra hits, epic samurai duel '
+                  'energy, 138 bpm, D minor, instrumental, seamless loop'),
+        'negativo': 'cumbia, reggaeton, vocoder, talkbox',
+    },
 }
 
 

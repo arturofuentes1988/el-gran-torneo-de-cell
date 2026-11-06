@@ -939,7 +939,7 @@ export class Fighter {
     if (mv.kind === 'super' || mv.kind === 'ultra') {
       this.meter -= mv.meterCost ?? (mv.kind === 'ultra' ? 200 : 100);
       m.superFlash(this, mv);
-      if (mv.kind === 'ultra') m.emit({ type: 'sfx', name: 'voz/ultra', side: this.side, who: this.def.id });
+      if (mv.kind === 'ultra') m.emit({ type: 'sfx', name: mv.ultra?.voice ?? 'voz/ultra', side: this.side, who: this.def.id });
     } else if (mv.kind === 'special') {
       this.addMeter(3);
     }

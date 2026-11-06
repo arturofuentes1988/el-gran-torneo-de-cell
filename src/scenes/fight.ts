@@ -30,7 +30,7 @@ import { DUMMY_MODES, DUMMY_NAME, PracticeDummy } from '../sim/dummy';
 import type { Fighter, StateName } from '../sim/fighter';
 import { DEAD_LINGER, Match } from '../sim/match';
 import type { SimEvent } from '../sim/events';
-import type { FighterDef, LightsKind, ProjectileDef } from '../sim/types';
+import type { FighterDef, LightsKind, ProjectileDef, SuperCinematic } from '../sim/types';
 import { MainMenuScene } from './modeSelect';
 
 /** Estados en que un luchador todavía está "dentro" de un combo o recuperándose. */
@@ -761,7 +761,7 @@ export class FightScene implements Scene {
             sfx.play(own, intro ? { channel: 'intro', mode: 'queue', maxWait: 12 } : !voz ? {} : e.wait ? { channel: who, mode: 'queue', maxWait: e.wait } : { channel: who });
           }
           else sfx.play(e.name);
-          if (who && (e.name === 'voz/remate' || e.name === 'voz/ultra') && sfx.has(own)) this.lineAt.set(who, this.t);
+          if (who && (e.name === 'voz/remate' || e.name === 'voz/ultra' || (voz && m.ultraActive)) && sfx.has(own)) this.lineAt.set(who, this.t);
           break;
         }
         case 'announce': {
@@ -982,6 +982,38 @@ export class FightScene implements Scene {
         this.fx.superBurst(e.x, e.y, 0xff5a4a);
       }
       this.addShake(e.last ? 9 : 6);
+    } else if (e.look === 'shuriken') {
+      // El shuriken se clava: chispas de acero y una ráfaga de viento.
+      this.fx.electric(e.x, e.y, 4, 0xdfeeff);
+      this.fx.trail(e.x, e.y, 0xbfe8ff, 16);
+      this.addShake(e.last ? 3 : 1);
+    } else if (e.look === 'cadena') {
+      // La cadena lo atrapa: chispas de metal y polvo bajo sus pies.
+      this.fx.electric(e.x, e.y, 5, 0xd0d8e0);
+      this.fx.dust(vic.x, 0, 4, false);
+      this.addShake(4);
+    } else if (e.look === 'sombras') {
+      // Una sombra ninja lo cruza con la katana.
+      this.fx.explosion(e.x, e.y, 0x8a6bff, !!e.last);
+      this.fx.speedLines(e.x, e.y, att.facing, 0xc8b8ff);
+      this.addShake(e.last ? 5 : 2);
+    } else if (e.look === 'iai') {
+      // El corte del amor: corazones, estallido rosa y, al final, dorado.
+      for (let i = 0; i < 6; i++) this.fx.heart(e.x + (Math.random() - 0.5) * 70, e.y - Math.random() * 50, 0xff6ad5);
+      this.fx.explosion(e.x, e.y, e.last ? 0xffd34a : 0xff6ad5, true);
+      if (e.last) {
+        this.fx.superBurst(e.x, e.y, 0xff6ad5);
+        this.impact = Math.max(this.impact, 3);
+      }
+      this.addShake(e.last ? 9 : 4);
+    } else if (e.look === 'kunai') {
+      // Lluvia de kunai: destellos de acero; el último lo bota en una explosión de humo.
+      this.fx.electric(e.x, e.y, 3, 0xffffff);
+      if (e.last) {
+        this.fx.explosion(e.x, e.y, 0xd8f0ff, true);
+        this.fx.dust(vic.x, 0, 8, true);
+      }
+      this.addShake(e.last ? 6 : 1);
     } else if (e.move?.startsWith('bici')) {
       // La bicicleta atropella: estallido de fuego, polvo y sacudón.
       this.views.get(vic)?.burn(10);
@@ -1057,6 +1089,23 @@ export class FightScene implements Scene {
       }
       if (e.combo >= 12) {
         this.views.get(vic)?.electrify(20);
+        this.impact = Math.max(this.impact, 2);
+      }
+    }
+    // Combo ninja (el Samurai de Pudahuel): chispas doradas de KI desde 3 golpes, aura dorada desde 5, tajos de
+    // luz desde 8 y desde 12 un destello blanco como un corte de luna sobre el rival.
+    if (att.def.comboFx === 'ninja' && e.combo >= 3) {
+      const ki = [0xffd34a, 0xfff1b0, 0xff6ad5, 0xbfe8ff];
+      this.fx.electric(e.x, e.y, 3 + Math.min(e.combo, 12), ki[e.combo % 4]);
+      if (e.combo >= 5) for (let i = 0; i < 2; i++) this.fx.aura(att.x, att.y - 70, ki[(this.t + i) % 2]);
+      if (e.combo >= 8) {
+        this.fx.speedLines(e.x, e.y, att.facing, 0xfff1b0);
+        this.fx.explosion(e.x, e.y, 0xffd34a, false);
+        this.addShake(2);
+      }
+      // Cada 4 golpes (no en todos: en un ultra la pantalla quedaba blanca).
+      if (e.combo >= 12 && e.combo % 4 === 0) {
+        this.fx.superBurst(vic.x, -100, 0xfff1b0);
         this.impact = Math.max(this.impact, 2);
       }
     }
@@ -1221,6 +1270,8 @@ export class FightScene implements Scene {
         this.mickyMoveFx(f, id, dir);
       } else if (f.def.id === 'maki') {
         this.makiMoveFx(f, id, dir);
+      } else if (f.def.id === 'samurai') {
+        this.samuraiMoveFx(f, id, dir);
       }
     }
   }
@@ -1248,6 +1299,24 @@ export class FightScene implements Scene {
       if (f.stateFrame < 30) this.fx.aura(f.x, f.y - 70, neon[(f.stateFrame >> 2) % 4]);
     } else if (id === 'super' || id.startsWith('gratis')) {
       if (f.stateFrame % 3 === 0) this.fx.ember(f.x + (Math.random() - 0.5) * 50, f.y - Math.random() * 140);
+    }
+  }
+
+  /**
+   * El Samurai de Pudahuel: bomba de humo al empezar "¡Haga sombra!" y los ultras, estela morada en su arrancón,
+   * humo de teletransporte al tirar los kunai y corazones mientras prepara el corte del amor.
+   */
+  private samuraiMoveFx(f: Fighter, id: string, dir: number): void {
+    if (id.startsWith('sombras') || id === 'ultra' || id === 'ultra2') {
+      if (f.stateFrame === 1) this.fx.dust(f.x, f.y, 10, true);
+      if (Math.abs(f.vx) > 1) {
+        this.fx.speedLines(f.x, f.y - 60, dir, 0xc8b8ff);
+        if (f.stateFrame % 2 === 0) this.fx.trail(f.x - dir * 10, f.y - 70, 0x8a6bff, 22);
+      }
+    } else if (id === 'kunai') {
+      if (f.stateFrame % 10 === 1) this.fx.dust(f.x + (Math.random() - 0.5) * 30, f.y, 8, true);
+    } else if (id === 'amor') {
+      if (f.stateFrame < 40 && f.stateFrame % 4 === 0) this.fx.heart(f.x + (Math.random() - 0.5) * 50, f.y - 40 - Math.random() * 80, 0xff6ad5);
     }
   }
 
@@ -1312,6 +1381,13 @@ export class FightScene implements Scene {
     const p = this.game.display.root.toGlobal({ x: x - camLeft, y: GROUND_SCREEN_Y + y + this.camOffY });
     const r = this.game.display.app.renderer.resolution;
     this.zoom.center = [p.x * r, p.y * r];
+  }
+
+  /** La cinemática del ultra que está corriendo (para su fondo y sus siluetas). */
+  private activeUltraCinematic(): SuperCinematic | undefined {
+    if (!this.match.ultraActive) return undefined;
+    const o = this.allFighters().find((f) => f.ultraRun);
+    return o ? o.def.moves[o.ultraRun!.moveId]?.cinematic : undefined;
   }
 
   private activeBackdrop(): StageView | null {
@@ -1451,6 +1527,8 @@ export class FightScene implements Scene {
       this.shownStage = stage;
     }
     stage.setDarkness(backdrop ? Math.min(this.dark, 0.3) : this.dark);
+    // El duelo bajo la luna: los dos se ven como siluetas negras a contraluz.
+    const silueta = !!backdrop && !!this.activeUltraCinematic()?.silueta;
     stage.update(camLeft - sx, this.camOffY + sy);
     this.disco.update(this.camOffY + sy);
     this.neon.update(this.camOffY + sy);
@@ -1466,6 +1544,7 @@ export class FightScene implements Scene {
       if (!v.visible) continue;
       v.alpha = ex?.role === 'dead' ? Math.max(0, Math.min(1, (DEAD_LINGER - ex.t) / 20)) : 1;
       v.sprite.zIndex = point ? (f.side === 0 ? 4 : 3) : f.side === 0 ? 2 : 1;
+      v.silueta = silueta;
       v.update();
     }
     this.projViews.update(m);

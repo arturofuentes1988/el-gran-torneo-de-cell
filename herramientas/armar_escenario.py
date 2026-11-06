@@ -14,6 +14,7 @@ Uso: python herramientas/armar_escenario.py arte/escenarios/rene/puente.json
 Claves del armado:
   id, nombre, luchador, imagen (relativa al armado), salida (relativa a la raíz)
   en_lista      false = no se agrega a escenarios.json (fondo del título)
+  soloUltra     true = está en la lista pero no se elige: solo de fondo de un ultra
   musica        tema del escenario: clave de public/musica/musica.json
   lugar         {nombre, lat, lon}: dónde queda (el mapa del ARCADE)
   ancho_px      ancho de las texturas (por defecto 4096)
@@ -197,6 +198,9 @@ def main(ruta_armado: str) -> None:
         entrada['orden'] = cfg['orden']
     if cfg.get('lugar'):
         entrada['lugar'] = cfg['lugar']
+    # "soloUltra": true = no sale en las listas; solo lo usa un ultra como fondo (cinematic.backdrop).
+    if cfg.get('soloUltra'):
+        entrada['soloUltra'] = True
     lista = [e for e in lista if e.get('id') != cfg['id']]
     lista.append(entrada)
     lista.sort(key=lambda e: e.get('orden', 0))

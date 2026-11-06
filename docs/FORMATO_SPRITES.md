@@ -227,7 +227,9 @@ defecto 200) y solo con el rival **en peligro** (`ultra.danger`, por defecto 25%
 de vida; en práctica no se pide). Lleva `cinematic` como el súper (el cartel
 dice ULTRA). Su `anim` es el arranque: si conecta de golpe, el rival queda
 pegado al frente y corre la secuencia sola, sin escalado de daño. La voz
-`voz/ultra` suena al activarlo.
+`voz/ultra` suena al activarlo (o la de `ultra.voice`, para un luchador con dos ultras,
+como el Samurai de Pudahuel). Con `cinematic.backdrop` el ultra pasa en otro escenario y,
+con `cinematic.silueta: true`, los dos se ven como siluetas negras a contraluz.
 
 ```json
 "ultra": {
@@ -427,8 +429,9 @@ el fondo con paralaje 0,7, el piso en franjas, las luces de la imagen como capas
 que laten (máscaras por brillo y saturación), una bruma que se desplaza, las
 partículas, la miniatura, y la entrada en `escenarios.json`. Se ajustan
 `corte_suelo` (dónde empieza el piso: bajo la base de lo que está atrás) y `pies`
-(dónde pisan los luchadores). `lugar` (`{nombre, lat, lon}`) dice dónde queda, para
-el mapa del ARCADE. Ver `arte/escenarios/rene/puente.json`,
+(dónde pisan los luchadores). `lugar` (`{nombre, lat, lon}`) dice dónde queda.
+`luchador` dice de quién es: en el ARCADE, cada rival pelea en el suyo. `soloUltra: true` lo deja en
+`escenarios.json` pero fuera de las listas: solo lo usa un ultra de fondo. Ver `arte/escenarios/rene/puente.json`,
 `arte/escenarios/pablito/calle.json` (con lluvia) y los prompts en
 `arte/escenarios/prompts.md`.
 
@@ -460,8 +463,8 @@ Nombres que usa la pelea (`src/audio/announcer.ts`): `voz/round1` a `voz/round4`
 `voz/draw` y `voz/winner`.
 
 El fondo del título y de los menús es un escenario más (mismo formato) en
-`public/torneo/escenario.json`, fuera de la lista (también es el ring de la
-pelea final del ARCADE).
+`public/torneo/escenario.json`, fuera de la lista (el ARCADE lo usa solo si la
+lista de escenarios está vacía).
 
 Cada capa puede traer su versión liviana para celulares, que arma
 `herramientas/escenario_liviano.py` (imágenes y video a la mitad, en `liviano/`):

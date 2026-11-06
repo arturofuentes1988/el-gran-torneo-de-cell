@@ -3,7 +3,8 @@
 // y, si no están cargados, se dibujan con vectores:
 // - bolt(): un rayo quebrado con ramas, núcleo blanco y halo celeste.
 // - ProjectileLook: el dibujo propio de un proyectil con `look` ('rayo', 'rastas',
-//   'tornado'; y los del Vendedor de Leña, en render/fuego.ts; los del Maki Gero, en render/lab.ts),
+//   'tornado'; y los del Vendedor de Leña, en render/fuego.ts; los del Maki Gero, en render/lab.ts; los del
+//   Samurai de Pudahuel, en render/ninja.ts),
 //   cuadro a cuadro según su edad.
 // - StormShow: la tormenta del súper (cinematic.lights = 'tormenta'): cielo oscuro,
 //   lluvia y relámpagos, detrás de los luchadores, en unidades de pantalla (480x270).
@@ -16,6 +17,7 @@ import { drawSilbido, drawSonico, drawTronco, drawTroncos } from './fuego';
 import { drawCajon, drawCola, drawLetras } from './cola';
 import { drawMonedas, drawOro, drawPaaa } from './neon';
 import { drawAndroides, drawCambia, drawColor, drawColorRayo, drawRobo } from './lab';
+import { drawCadena, drawCaligrafia, drawCortes, drawIai, drawKunai, drawShuriken, drawSombras } from './ninja';
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 
@@ -98,8 +100,8 @@ export class LookSprites {
     this.used = 0;
   }
 
-  /** Pone `tex` en (x, y) con escala (sx negativo = espejado), giro y opacidad; `add` = brilla. */
-  put(tex: Texture, x: number, y: number, sx: number, sy: number, rot = 0, alpha = 1, add = false): void {
+  /** Pone `tex` en (x, y) con escala (sx negativo = espejado), giro y opacidad; `add` = brilla; `tint` lo tiñe (las sombras ninja). */
+  put(tex: Texture, x: number, y: number, sx: number, sy: number, rot = 0, alpha = 1, add = false, tint = 0xffffff): void {
     let s = this.pool[this.used];
     if (!s) {
       s = new Sprite();
@@ -115,6 +117,7 @@ export class LookSprites {
     s.scale.set(sx, sy);
     s.rotation = rot;
     s.alpha = alpha;
+    s.tint = tint;
     s.visible = alpha > 0.01;
   }
 
@@ -144,7 +147,7 @@ export class ProjectileLook {
 
   /** Cuadros que se sigue viendo después de que el proyectil desaparece (el rayo se apaga, el remolino se deshace). */
   get linger(): number {
-    const linger: Record<string, number> = { rayo: 26, tornado: 18, troncos: 16, sonico: 20, letras: 16, paaa: 16, monedas: 14, oro: 18, color: 14, colorRayo: 12, androides: 12, cambia: 20 };
+    const linger: Record<string, number> = { rayo: 26, tornado: 18, troncos: 16, sonico: 20, letras: 16, paaa: 16, monedas: 14, oro: 18, color: 14, colorRayo: 12, androides: 12, cambia: 20, shuriken: 10, cadena: 10, sombras: 12, iai: 26, kunai: 14, caligrafia: 20, cortes: 6 };
     return linger[this.kind] ?? 0;
   }
 
@@ -171,6 +174,13 @@ export class ProjectileLook {
     else if (this.kind === 'androides') drawAndroides(this.base, this.g, p, after, this.spr);
     else if (this.kind === 'cambia') drawCambia(this.base, this.g, p, after);
     else if (this.kind === 'robo') drawRobo(this.base, this.g, p, after, this.spr);
+    else if (this.kind === 'shuriken') drawShuriken(this.base, this.g, p, after);
+    else if (this.kind === 'cadena') drawCadena(this.base, this.g, p, after);
+    else if (this.kind === 'sombras') drawSombras(this.base, this.g, p, after, this.spr);
+    else if (this.kind === 'iai') drawIai(this.base, this.g, p, after);
+    else if (this.kind === 'kunai') drawKunai(this.base, this.g, p, after);
+    else if (this.kind === 'caligrafia') drawCaligrafia(this.base, this.g, p, after, this.spr);
+    else if (this.kind === 'cortes') drawCortes(this.base, this.g, p, after);
     this.spr.end();
   }
 

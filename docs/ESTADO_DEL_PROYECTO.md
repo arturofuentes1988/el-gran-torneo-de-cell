@@ -24,9 +24,9 @@ Marvel vs Capcom, con los personajes del fenómeno de TikTok chileno "Torneo de 
 
 ## Plantel
 
-Ocho luchadores elegidos por el usuario más Carlitos Run (agregado el 30 de octubre). Cinco ya se pueden jugar.
+Ocho luchadores elegidos por el usuario más Carlitos Run (agregado el 30 de octubre). Siete ya se pueden jugar.
 
-| Luchador | Estado | Ciudad (mapa del ARCADE) | Escenario propio |
+| Luchador | Estado | Ciudad | Escenario propio |
 |---|---|---|---|
 | Tío René | jugable | Santiago | LA CABAÑA DEL LAGO |
 | Pablito Neuquén | jugable | Valdivia | LA CALLE DEL PABLITO |
@@ -65,9 +65,9 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
 
 ## Modos
 
-- **ARCADE**: eliges luchador y le ganas a los demás. Un mapa de Chile (acostado) muestra el
-  viaje desde tu ciudad hasta la de cada rival, siempre a la más cercana. Cada rival pelea en
-  su escenario; la final es en el ring, contra quien no tenga escenario propio (hoy el Flaitiano).
+- **ARCADE**: eliges luchador y le ganas a los demás. LA TORRE tiene un piso por rival, siempre
+  en el mismo orden (el de ELIGE LUCHADOR, de abajo hacia arriba; la final es el último piso, hoy
+  el Dr. Maki Gero). Cada rival pelea en su propio escenario.
 - **CASUAL**: 1 VS CPU, 1 VS 1, 2 VS 2 (con cambio y ayuda) y PRÁCTICA.
 - **OPCIONES**: PERSONAJES, MOVIMIENTOS, ESCENARIOS, DEMOSTRACIÓN, CONTROLES, DIFICULTAD y SONIDO.
   - **DEMOSTRACIÓN** (`src/scenes/demo.ts`): la CPU contra la CPU en MUY DIFÍCIL, sin fin. Cada
@@ -473,6 +473,50 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
   eco corto para exagerarlos (`public/sonidos/`). Reemplazan a los sintetizados del mismo nombre; en cada golpe
   suena una al azar. El bloqueo viejo tenía un tono puro de 2.929 Hz (por eso sonaba a metal hueco); el nuevo es un
   golpe sordo contra los antebrazos con el roce de la ropa.
+
+## LA TORRE del ARCADE ordenada (5 de noviembre)
+
+Pedido del usuario: "quiero que el edificio tenga a los enemigos y que cada uno de los
+personajes pelee en su escenario, no quiero que sea tan desordenado".
+
+- Antes el orden salía de un viaje por ciudades (distinto según con quién jugabas) y varios
+  peleaban en un escenario ajeno: el Tío René en LA CANCHA, el Flaitiano en SANTIAGO DE NOCHE
+  y el finalista en el ring.
+- Ahora el orden es siempre el de ELIGE LUCHADOR, sin el del jugador, de abajo hacia arriba;
+  la final es el último piso (hoy el Dr. Maki Gero, o Papi Micky si juegas con el Maki).
+- Cada rival pelea en el escenario que tiene su `luchador` en `escenarios.json`. Quien no tiene
+  uno pelea en uno que no es de nadie del plantel (SANTIAGO DE NOCHE). Si tampoco hay, pelea en
+  el del jugador. El ring de EL GRAN TORNEO ya no se usa en el ARCADE.
+- La torre muestra a los enemigos: cada uno espera de pie detrás del vidrio de su piso, con la
+  luz de su color, su nombre, el piso y el nombre de su escenario. Los vencidos quedan en gris
+  con una X. Primero se ve la torre entera (unos 0,75 s); después la cámara se acerca mientras
+  sube el ascensor. Fondo propio: cielo de noche con estrellas y la ciudad (ya no se ve el
+  templo de los menús detrás).
+- El campo `ciudad` de cada definición ya no se usa en el ARCADE (queda como dato).
+- Textos: el borde negro ya no deja puntas en los vértices agudos (la "M"); `miterLimit` 2
+  en `outlinedText`.
+
+## El Samurai de Pudahuel (6 de noviembre)
+
+Pedido del usuario: agregarlo al torneo **como una persona sabia**, un ninja súper poderoso que pelea con katana
+y armas ninja; primero se analizaron sus videos (frases y personaje) y después se definieron los poderes.
+
+- Octavo luchador (`samurai`): con él se completan las 8 casillas de ELIGE LUCHADOR. Es el último del plantel,
+  así que en el ARCADE ahora es el piso final (antes el Dr. Maki Gero).
+- Voces de sus propios videos: el usuario eligió 8 frases y los recortes (ver `docs/LUCHADORES.md`).
+- Diseño: cara A con pañuelo ninja (GPT Image 2.5), cuerpo con la chaqueta de camuflaje hecha chaqueta ninja.
+- Escenario LAGUNA SUR CON LA ESTRELLA, desde el Street View del usuario y una foto libre de Wikimedia; el ultra
+  ¡HAGA SOMBRA! pasa en LOS TECHOS DE PUDAHUEL bajo la luna (escenario `"soloUltra": true`: no sale en las listas)
+  con los dos luchadores en silueta (`cinematic.silueta`). Música Suno "Laguna Sur con La Estrella" (shamisen,
+  shakuhachi, taikos y rock de los 90).
+- Motor: `UltraDef.voice` (cada ultra con su voz), `cinematic.silueta`, `soloUltra` en los escenarios,
+  `"fondo": "magenta"` en el armado y `--magenta` en `voltear_piernas.py`, `comboFx: "ninja"`, efectos en
+  `src/render/ninja.ts`.
+- Clips: 25 de Kling por kie (kie subió el precio: 60,6 por clip de 3 s y 80,8 por los de 4 s). La barrida salió
+  hacia atrás y se volteó sin gastar. Provisorios mientras el usuario decide si se repiten: la patada fuerte de pie
+  (salió hacia atrás) usa la patada de frente; el golpe fuerte (Kling borró la hoja bajo unas estelas) usa el
+  arrancón con corte; la victoria (casi no se mueve) usa la meditación; el corte iai del súper se ve con poco
+  movimiento (el efecto de luz hace el trabajo).
 
 ## Pendiente y decisiones abiertas
 

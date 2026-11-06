@@ -17,8 +17,8 @@ Archivos de cada luchador (con `<id>` del juego y `<carpeta>` de trabajo):
 | Notas de trabajo | `arte/<carpeta>/plan.md` |
 | Fotos y videos del usuario | `referencias/<carpeta>/` |
 
-`arte/` y `referencias/` no se suben a GitHub. El orden del plantel está en `REAL_FIGHTERS`
-de `src/main.ts`: `rene`, `pablito`, `flaitiano`, `lena`, `carlitos`.
+`arte/` y `referencias/` no se suben a GitHub. El orden del plantel está en `FIGHTERS`
+de `src/main.ts`: `rene`, `pablito`, `flaitiano`, `lena`, `carlitos`, `micky`, `maki`, `samurai`.
 
 ---
 
@@ -81,7 +81,7 @@ boludo!", "Con este chaquetón, fierushi", "Le pego un charchazo" (y la frase co
 - **Diseño** (B2 con zapatillas nuevas): puffer blanco sobre polerón blanco, jeans blancos con
   dibujos tipo grafiti (sin letras), bananano negro, rastas largas con hilos blancos y puntas
   verdes, zapatillas bajas de running blancas con verde.
-- **Escenario propio**: todavía no (idea: feria libre). Es el finalista del ARCADE.
+- **Escenario propio**: LA CANCHA (era de René; idea original: feria libre).
 - **Colores**: ropa clara (`light`), `face` 0.5 con 3 vecinos de piel (la capucha y los
   hombros se tiñen enteros; dientes y ojos quedan).
 - **Combos eléctricos**: chispas desde 3 golpes, rastas que brillan desde 5, agua desde 8,
@@ -262,3 +262,43 @@ del género" y el coro de "Llegó la hora" (wmNkTDQQQIo, sin las partes de alcoh
 
 **Efectos** (código, `src/render/lab.ts`): proyectiles `color`, `colorRayo`, `androides`, `cambia` (con su parte
 delantera `drawCambiaFrente`) y `robo`; ayudantes pintados en `ProjectileDef.sprites`.
+
+## El Samurai de Pudahuel
+
+- **id**: `samurai` · **carpeta**: `arte/samurai-de-pudahuel/` · **ciudad**: Pudahuel (Santiago)
+- **Quién es**: el "Ninja Malveke" de Pudahuel Sur, conocido por sus "consejos" y sus "frases para el día".
+- **Cómo se muestra**: como un maestro ninja **sabio y súper poderoso**. Nunca: drogas, la vida en la calle,
+  internaciones, su mamá, los rumores de que "desapareció", insultos ni el documental o "la triste historia".
+- **Diseño**: la cara A (pañuelo ninja negro, pelo parado con canas, barba gris), su chaqueta de camuflaje hecha
+  chaqueta ninja, collar de cuentas de madera, katana en la mano y el bastón de madera que es su vaina en la
+  espalda, kusarigama en la cintura, shuriken en el cinturón, botas tabi. Cara y cuerpo con GPT Image 2.5.
+- **Escenario**: LAGUNA SUR CON LA ESTRELLA (la esquina de verdad, desde el Street View del usuario: la iglesia
+  con el campanario de concreto, el bandejón con palmeras, la feria con toldos azules, la micro, el quiltro y la
+  cordillera nevada). El ultra ¡HAGA SOMBRA! pasa en LOS TECHOS DE PUDAHUEL bajo la luna (`samurai-luna`, solo
+  de fondo del ultra: `"soloUltra": true`).
+- **Clips sobre magenta** (su chaqueta es verde): `"fondo": "magenta"` en el armado.
+- **Combos ninja** (`comboFx: "ninja"`): chispas doradas de KI desde 3 golpes, aura dorada desde 5, tajos de luz
+  desde 8 y un destello blanco desde 12.
+
+| Movimiento | Comando |
+|---|---|
+| ¡La palabra no se la lleva el viento! (shuriken con estela de viento; fuerte: 3 en abanico) | ↓ ↘ → + golpe |
+| ¡Ven a probar suerte pa' acá! (la cadena de la kusarigama lo atrapa y lo tira hacia él) | ↓ ↙ ← + golpe |
+| ¡Haga sombra! (bomba de humo y 2 o 3 sombras ninja que cruzan al rival) | → → + patada |
+| Súper ¡EL AMOR TODO LO PUEDE! (corte iai de luz rosa y dorada que cruza la pantalla; 1 barra) | ↓ ↓ + golpe |
+| Súper ¡EL 0,01 % DE SU PODER! (humo de teletransporte y lluvia de kunai sobre el rival; 1 barra) | ← ← + patada |
+| Ultra ¡UNA FRASE PA'L DÍA! (escribe la frase en el aire a katanazos, en letras doradas; 2 barras) | ↓ ↓ + patada |
+| Ultra ¡HAGA SOMBRA! (los techos de Pudahuel bajo la luna, los dos como siluetas; 2 barras) | ↓ ↘ → ↓ ↘ → + patada |
+
+- **Entrada**: "Una frase pa'l día… Maldito el hombre que cree en el hombre".
+- **Victoria**: se sienta a meditar ("Yo soy Goku, el verdadero Goku").
+- **Burla**: medita ("Una frase pa'l día").
+- **Al levantarse**: "Cada vez que despertái, resucitái".
+- **Patadas**: siempre hacia adelante. La barrida es la de Kling con las piernas volteadas
+  (`herramientas/voltear_piernas.py --magenta`, clip achicado al 0,75).
+
+**Voces** (de sus propios videos, voz separada con Demucs; recortes elegidos por el usuario en
+`referencias/samurai-de-pudahuel/frases-elegidas/`): 01, 05, 06a, 09, 13, 21, 22 y 23.
+
+**Efectos** (código, `src/render/ninja.ts`): proyectiles `shuriken`, `cadena`, `sombras` (con sus propios cuadros
+teñidos), `iai`, `kunai`, `caligrafia` y `cortes`; la silueta del ultra es `cinematic.silueta`.

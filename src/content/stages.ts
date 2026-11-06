@@ -5,6 +5,8 @@
 // Los escenarios se cargan recién antes de su pelea (ver contenido.ts) y quedan
 // en caché. El fondo del título y los menús tiene su propio archivo
 // (public/torneo/escenario.json, ver scenes/titleArena.ts), fuera de la lista.
+// Con "soloUltra": true el escenario no aparece en las listas: solo lo usa un ultra
+// como fondo (cinematic.backdrop), por ejemplo los techos de Pudahuel del Samurai.
 
 import type { Texture } from 'pixi.js';
 import { StageView } from '../render/stage';
@@ -38,16 +40,20 @@ interface RawEntry {
   json?: string;
   miniatura?: string;
   lugar?: StagePlace;
+  soloUltra?: boolean;
 }
 
 export class StageLibrary {
   readonly entries: readonly StageEntry[];
+  /** Todos, con los que solo usa un ultra (no salen en `entries`). */
+  private all: readonly StageEntry[];
   private stages = new Map<string, Promise<StageView>>();
   private ready = new Set<string>();
   private thumbs = new Map<string, Promise<Texture | null>>();
 
-  constructor(entries: StageEntry[]) {
+  constructor(entries: StageEntry[], soloUltra: StageEntry[] = []) {
     this.entries = entries;
+    this.all = [...entries, ...soloUltra];
   }
 
   /** Primer escenario de la lista: el de las peleas de prueba. */
@@ -58,19 +64,20 @@ export class StageLibrary {
   /** Lee la lista (sin escenarios no se puede pelear: si falta o viene vacía, falla). */
   static async load(indexUrl: string, prog?: Progreso): Promise<StageLibrary> {
     const entries: StageEntry[] = [];
+    const ocultos: StageEntry[] = [];
     const base = new URL(indexUrl, location.href);
     const abs = (p?: string) => (p ? new URL(p, base).href : undefined);
     const list = await bajarJson<unknown>(indexUrl, prog);
     for (const e of Array.isArray(list) ? (list as RawEntry[]) : []) {
-      if (!e?.id || !e.json || entries.some((x) => x.id === e.id)) continue;
-      entries.push({ id: e.id, nombre: e.nombre ?? e.id, luchador: e.luchador, json: abs(e.json)!, miniatura: abs(e.miniatura), lugar: e.lugar });
+      if (!e?.id || !e.json || entries.some((x) => x.id === e.id) || ocultos.some((x) => x.id === e.id)) continue;
+      (e.soloUltra ? ocultos : entries).push({ id: e.id, nombre: e.nombre ?? e.id, luchador: e.luchador, json: abs(e.json)!, miniatura: abs(e.miniatura), lugar: e.lugar });
     }
     if (!entries.length) throw new Error(`No hay escenarios en ${indexUrl}`);
-    return new StageLibrary(entries);
+    return new StageLibrary(entries, ocultos);
   }
 
   find(id: string): StageEntry | undefined {
-    return this.entries.find((e) => e.id === id);
+    return this.all.find((e) => e.id === id);
   }
 
   /** El escenario listo para usar (se carga la primera vez que se pide; `prog` anota lo que se baja). */

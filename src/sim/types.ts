@@ -136,6 +136,11 @@ export interface SuperCinematic {
   backdrop?: string;
   /** Pedazo de canción que suena con el súper: voz propia del luchador ("voz/…"). */
   song?: string;
+  /**
+   * Mientras dura el ultra con su `backdrop`, los luchadores se ven como siluetas negras a contraluz
+   * (el duelo bajo la luna del Samurai de Pudahuel).
+   */
+  silueta?: boolean;
 }
 
 /**
@@ -182,6 +187,8 @@ export interface UltraDef {
   speed?: number;
   /** Distancia a la que queda el rival pegado, en unidades (por defecto 42). */
   distance?: number;
+  /** Voz al empezar el ultra ("voz/…"); por defecto "voz/ultra". Para un luchador con dos ultras. */
+  voice?: string;
 }
 /** Dirección del viejo modo fácil (botón especial + dirección). Ya no hay botón especial: se ignora. */
 export type EasyDir = 'neutral' | 'forward' | 'back' | 'down';
@@ -261,7 +268,8 @@ export interface ProjectileDef {
   /**
    * Dibujo propio en vez de (o además de) sus cuadros: 'rayo', 'tornado', 'rastas', 'geiser' (el Flaitiano);
    * 'silbido', 'tronco', 'troncos', 'sonico' (el Vendedor de Leña); 'cola', 'cajon', 'letras' (Carlitos);
-   * 'paaa', 'monedas', 'oro' (Papi Micky); 'color', 'colorRayo', 'androides', 'cambia', 'robo' (Dr. Maki Gero).
+   * 'paaa', 'monedas', 'oro' (Papi Micky); 'color', 'colorRayo', 'androides', 'cambia', 'robo' (Dr. Maki Gero);
+   * 'shuriken', 'cadena', 'sombras', 'iai', 'kunai', 'caligrafia', 'cortes' (el Samurai de Pudahuel).
    * Usa los efectos pintados compartidos (public/efectos/) si están cargados.
    */
   look?: string;
@@ -352,10 +360,10 @@ export interface FighterDef {
    * 'fuego' = brasas, aura de llamas, estallidos y un pilar de fuego; 'laboratorio' = chispas de
    * colores, código verde y descargas sobre el rival.
    */
-  comboFx?: 'electrico' | 'fuego' | 'cola' | 'neon' | 'laboratorio';
+  comboFx?: 'electrico' | 'fuego' | 'cola' | 'neon' | 'laboratorio' | 'ninja';
   /** Cuál es su ropa, para los colores alternativos (ver render/costume.ts). */
   costume?: CostumeDef;
-  /** De dónde es (para el mapa del ARCADE): nombre de la ciudad, latitud y longitud. */
+  /** De dónde es: nombre de la ciudad, latitud y longitud (dato; el ARCADE ya no lo usa). */
   ciudad?: { nombre: string; lat: number; lon: number };
   /**
    * 2 VS 2: movimiento (id de moves) que hace al entrar como AYUDA. Si falta, el

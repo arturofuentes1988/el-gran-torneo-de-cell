@@ -4,10 +4,11 @@ Juego de pelea 2D para el navegador, estilo arcade (SNK / Marvel vs Capcom)
 con pixel art y efectos modernos.
 
 **Estado: en desarrollo.** Se puede jugar con Tío René, Pablito Neuquén, el
-Flaitiano, el Vendedor de Leña, Carlitos Run, Papi Micky y el Dr. Maki Gero (sprites, voces y poderes definitivos)
+Flaitiano, el Vendedor de Leña, Carlitos Run, Papi Micky, el Dr. Maki Gero y el Samurai de Pudahuel (sprites, voces y
+poderes definitivos)
 en la cabaña del lago (René), la cancha (el Flaitiano), la calle del Pablito (Valdivia, con lluvia), los cerros de
 Valparaíso, la costanera de Valdivia (Carlitos, con lobos marinos), el set de "Llegó la hora" (Papi Micky), el
-laboratorio en la cordillera (Maki Gero) y Santiago de noche.
+laboratorio en la cordillera (Maki Gero), Laguna Sur con La Estrella en Pudahuel (el Samurai) y Santiago de noche.
 Los demás luchadores del plantel vienen después.
 
 La web (`index.html`) tiene dos pestañas: **JUGAR**, con el juego (`juego.html`) dentro, y
@@ -135,12 +136,12 @@ CORREO o JUGAR SIN CUENTA (queda recordado). La cuenta solo hace falta para EN L
 
 - **ARCADE**: eliges tu luchador y le ganas a cada uno de los demás contra la
   CPU. Antes de cada pelea, **LA TORRE**: un rascacielos de neón con un piso por rival
-  y la final en la azotea; el ascensor sube con tu cara hasta el piso del próximo rival
-  (los vencidos quedan en gris con una X) y a los lados salen los dos luchadores. El
-  orden sale de las ciudades (campo `ciudad` de cada definición), siempre a la más
-  cercana. Cada rival pelea en su escenario (o en uno de su ciudad), y la final es en
-  el ring de EL GRAN TORNEO, contra quien no tenga escenario propio (la última pelea es
-  un poco más difícil). Si pierdes, ¿CONTINUAR? repite esa pelea; si les ganas a todos,
+  y cada rival esperando detrás del vidrio de su piso (los vencidos quedan en gris con
+  una X). Primero se ve la torre entera; después el ascensor sube con tu cara hasta el
+  piso del próximo rival, y a los lados salen los dos luchadores. El orden es siempre el
+  de ELIGE LUCHADOR, de abajo hacia arriba, y la final es el último piso (la última pelea
+  es un poco más difícil). Cada rival pelea en su propio escenario (el que tiene su
+  `luchador` en `escenarios.json`). Si pierdes, ¿CONTINUAR? repite esa pelea; si les ganas a todos,
   ¡CAMPEÓN!, con el tiempo total (lo que duraron tus peleas, también las perdidas), que
   se sube al ranking de la web si entraste con tu cuenta.
 - **EN LÍNEA**: pide cuenta y un apodo único (3 a 14 letras) la primera vez. Por ahora tiene
@@ -258,6 +259,20 @@ Dr. Maki Gero (el científico loco que crea androides; arcoíris, rayos y su Tí
 En "abajo, arriba + botón" el botón le gana al salto: si se aprieta antes de despegar, sale el poder.
 Sus combos se llenan de chispas de colores y, desde 12 golpes, el rival queda electrificado.
 
+El Samurai de Pudahuel (maestro ninja sabio con katana, shuriken, kusarigama y kunai):
+
+| Movimiento | Comando |
+|---|---|
+| ¡La palabra no se la lleva el viento! (shuriken con estela de viento; el fuerte tira tres en abanico) | abajo, adelante + golpe |
+| ¡Ven a probar suerte pa' acá! (la cadena de la kusarigama atrapa al rival y lo tira hacia él) | abajo, atrás + golpe |
+| ¡Haga sombra! (bomba de humo y sus sombras ninja cruzan al rival con la katana) | adelante, adelante + patada |
+| Súper ¡EL AMOR TODO LO PUEDE! (en calma, un tajo de luz rosa y dorada cruza la pantalla; 1 barra) | abajo, abajo + golpe |
+| Súper ¡EL 0,01 % DE SU PODER! (aparece y desaparece en humo y le llueven kunai desde todos lados; 1 barra) | atrás, atrás + patada |
+| Ultra ¡UNA FRASE PA'L DÍA! (escribe la frase en el aire a katanazos, en letras doradas; 2 barras) | abajo, abajo + patada |
+| Ultra ¡HAGA SOMBRA! (los techos de Pudahuel bajo la luna, los dos como siluetas; 2 barras) | abajo, adelante dos veces + patada |
+
+Sus combos se llenan de chispas doradas de KI y tajos de luz.
+
 - **Agarre:** pegado al rival, aprieta un golpe y una patada juntos (cualquiera
   de cada uno, hasta ~0,1 s de diferencia entre los dos; con atrás lo tira hacia atrás). También sale con adelante o
   atrás + golpe fuerte. Se escapa apretando golpe justo al ser agarrado. Los
@@ -358,7 +373,8 @@ al mismo luchador, el segundo sale con otra ropa (solo cambia la que dice su
 definición, `costume`; la cara, el pelo y las zapatillas quedan igual). En 1 VS CPU
 y práctica el jugador 1 elige el suyo y después el rival (CPU o sparring). Esc / Retroceso
 vuelve un paso atrás o al menú. Las caras salen de `herramientas/caras.py`. El plantel son los luchadores de
-`public/luchadores/` (René, Pablito, el Flaitiano, el Vendedor de Leña, Carlitos Run, Papi Micky y el Dr. Maki Gero).
+`public/luchadores/` (René, Pablito, el Flaitiano, el Vendedor de Leña, Carlitos Run, Papi Micky, el Dr. Maki Gero y el
+Samurai de Pudahuel).
 
 Antes de cada pelea se elige el escenario (**ELIGE ESCENARIO**, o ALEATORIO).
 Mientras no se elija uno, los menús y las peleas de prueba usan el primero de

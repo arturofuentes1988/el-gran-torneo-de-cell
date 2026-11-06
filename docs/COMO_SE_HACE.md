@@ -92,6 +92,11 @@ Con ropa oscura (Pablito) va además `"ropa_blanca": false`: no se rellenan los 
 próximos luchadores pintados conviene pedir la guardia sobre fondo de color plano (verde, o magenta
 si el luchador tiene verde, como el Flaitiano) y recortar por color.
 
+**Fondo magenta** (el Samurai de Pudahuel, de chaqueta de camuflaje verde): la guardia va sobre magenta
+(255, 0, 255), el texto final pide "chroma-key magenta, nothing on him is magenta or pink" y el armado lleva
+`"fondo": "magenta"` (el mismo recorte por dominancia, del menor de rojo y azul sobre el verde).
+`voltear_piernas.py` también sirve con `--magenta`.
+
 **Efectos de los poderes pintados** (`public/efectos/`, compartidos por todos): los videos de efectos se
 piden a Kling por kie.ai **sin guardia**, solo con texto y sobre fondo negro puro (`arte/efectos/kie.json`,
 unos 42 créditos de kie cada uno en `std`); los objetos (parlante, tronco, cajón, botella) con GPT Image

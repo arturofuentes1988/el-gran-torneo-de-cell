@@ -1,0 +1,67 @@
+{
+  "id": "samurai-luna",
+  "name": "LOS TECHOS DE PUDAHUEL",
+  "layers": [
+    {
+      "src": "fondo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -322.915,
+      "left": -5.6,
+      "liviano": {
+        "src": "liviano/fondo.webp",
+        "scale": 0.403906
+      }
+    },
+    {
+      "src": "niebla.webp",
+      "scale": 0.273438,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -84.2,
+      "repeatX": true,
+      "scrollX": 0.03,
+      "additive": true,
+      "alpha": 0.06,
+      "liviano": {
+        "src": "liviano/niebla.webp",
+        "scale": 0.546876
+      }
+    },
+    {
+      "src": "suelo.webp",
+      "scale": 0.201953,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": -42.2,
+      "floor": {
+        "strips": 64
+      },
+      "liviano": {
+        "src": "liviano/suelo.webp",
+        "scale": 0.403906
+      }
+    }
+  ],
+  "particles": [
+    {
+      "type": "polvo",
+      "count": 30,
+      "color": 14542591,
+      "alpha": 0.5,
+      "size": 1.0,
+      "band": [
+        -240,
+        -40
+      ],
+      "parallax": 0.85
+    }
+  ]
+}

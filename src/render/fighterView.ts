@@ -35,6 +35,8 @@ export class FighterView {
   private baseTint: number;
   /** Copia que brilla en azul encima del luchador mientras está electrocutado. */
   private zapGlow = new Sprite();
+  /** Se ve como silueta negra a contraluz (el ultra bajo la luna del Samurai de Pudahuel). */
+  silueta = false;
 
   constructor(
     private fighter: Fighter,
@@ -141,8 +143,8 @@ export class FighterView {
     this.sprite.rotation = tilt;
     this.sprite.scale.set(f.facing * k, k);
     const zapOn = this.zap > 0 && Math.floor(this.zap / 2) % 2 === 0;
-    this.sprite.tint = zapOn ? this.zapTint : this.baseTint;
-    this.zapGlow.visible = zapOn && this.sprite.visible;
+    this.sprite.tint = this.silueta ? 0x08080f : zapOn ? this.zapTint : this.baseTint;
+    this.zapGlow.visible = zapOn && !this.silueta && this.sprite.visible;
     if (this.zapGlow.visible) {
       this.zapGlow.texture = tex;
       this.zapGlow.anchor.copyFrom(this.sprite.anchor);
