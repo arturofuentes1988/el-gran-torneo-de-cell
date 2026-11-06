@@ -86,6 +86,14 @@ export interface StageActorDef {
   rise?: number;
   /** Lo mismo en el otro extremo (`range[0]`), solo el desvanecido: alguien que se pierde entre los toldos. */
   fadeStart?: number;
+  /**
+   * Camino en vez de `range`: puntos [x de la capa, y de mundo, escala, ancho] de un extremo al otro. Así un auto
+   * entra por el borde de la pantalla, dobla por una avenida y se aleja achicándose hasta perderse en la
+   * distancia (`ancho` < 1 lo angosta al doblar: se le ve de atrás). Al revés, viene desde lo lejos. Con `dir`:
+   * 'derecha' = del primer punto al último, 'izquierda' = al revés, 'ambas' = al azar. La velocidad baja con la
+   * escala (lo lejano se mueve más lento) y solo se desvanece donde es diminuto (escala < 0,2).
+   */
+  path?: Array<[number, number, number, number]>;
 }
 
 export interface StagePulseDef {
@@ -302,6 +310,10 @@ class ParticleField {
 
 interface Actor {
   def: StageActorDef;
+  /** Largo de cada tramo del camino y el total (si tiene camino) y cuánto lleva recorrido. */
+  segs: number[];
+  total: number;
+  s: number;
   frames: Texture[];
   view: Sprite;
   shadow: Graphics | null;
@@ -336,7 +348,11 @@ class ActorField {
       view.visible = false;
       this.container.addChild(view);
       // La primera pasada sale pronto, escalonada entre los actores.
-      this.actors.push({ def: a, frames, view, shadow, x: 0, dir: 1, speed: 0, wait: rnd(0.5, Math.max(1, a.wait[0])) * 60, seed: Math.random() * 1000 });
+      const segs: number[] = [];
+      const pts = a.path ?? [];
+      for (let k = 1; k < pts.length; k++) segs.push(Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
+      const total = segs.reduce((x, y) => x + y, 0);
+      this.actors.push({ def: a, frames, view, shadow, segs, total, s: 0, x: 0, dir: 1, speed: 0, wait: rnd(0.5, Math.max(1, a.wait[0])) * 60, seed: Math.random() * 1000 });
     }
   }
 
@@ -345,6 +361,10 @@ class ActorField {
     const x0 = (this.def.left ?? 0) - camLeft * this.def.parallax[0];
     const fy = this.def.parallax[1];
     for (const a of this.actors) {
+      if (a.def.path && a.total > 0) {
+        this.updatePath(a, x0, camOffY * fy, dt, t);
+        continue;
+      }
       const margen = (a.frames[0].width * a.def.scale) / 2 + 10;
       const [r0, r1] = a.def.range ?? [-margen, w + margen];
       if (a.wait > 0) {
@@ -381,6 +401,60 @@ class ActorField {
         a.shadow.scale.set(esc / a.def.scale);
         a.shadow.position.set(sx, snap(sy));
       }
+    }
+  }
+
+  /** Un actor con camino: avanza a lo largo de sus puntos, con la escala y el ancho de cada tramo. */
+  private updatePath(a: Actor, x0: number, offY: number, dt: number, t: number): void {
+    const pts = a.def.path!;
+    if (a.wait > 0) {
+      a.wait -= dt;
+      a.view.visible = false;
+      if (a.shadow) a.shadow.visible = false;
+      if (a.wait > 0) return;
+      const d = a.def.dir ?? 'ambas';
+      a.dir = d === 'derecha' ? 1 : d === 'izquierda' ? -1 : Math.random() < 0.5 ? 1 : -1;
+      a.speed = rnd(a.def.speed[0], a.def.speed[1]);
+      a.s = a.dir > 0 ? 0 : a.total;
+    }
+    // Dónde va: tramo y fracción del tramo.
+    let rest = Math.min(a.total, Math.max(0, a.s));
+    let i = 0;
+    while (i < a.segs.length - 1 && rest > a.segs[i]) rest -= a.segs[i++];
+    const f = a.segs[i] > 0 ? rest / a.segs[i] : 0;
+    const p0 = pts[i];
+    const p1 = pts[i + 1];
+    const lerp = (u: number, v: number) => u + (v - u) * f;
+    const x = lerp(p0[0], p1[0]);
+    const y = lerp(p0[1], p1[1]);
+    const sc = lerp(p0[2], p1[2]);
+    const an = lerp(p0[3], p1[3]);
+    // Lo lejano avanza más lento en pantalla.
+    a.s += a.dir * a.speed * Math.max(0.15, sc) * dt;
+    if (a.s < 0 || a.s > a.total) {
+      a.wait = rnd(a.def.wait[0], a.def.wait[1]) * 60;
+      a.view.visible = false;
+      if (a.shadow) a.shadow.visible = false;
+      return;
+    }
+    // Hacia dónde mira: hacia donde se mueve en x (al alejarse casi no se nota).
+    const mira = (p1[0] - p0[0]) * a.dir >= 0 ? 1 : -1;
+    const tex = a.frames[Math.floor((t + a.seed) / Math.max(1, a.def.frameDur ?? 4)) % a.frames.length];
+    a.view.texture = tex;
+    a.view.visible = true;
+    const esc = a.def.scale * sc;
+    a.view.scale.set(esc * an * mira, esc);
+    // Solo se desvanece donde ya es diminuto: se pierde en la distancia.
+    a.view.alpha = Math.min(1, Math.max(0, (sc - 0.12) / 0.1));
+    const bob = a.def.bob ? Math.sin((t + a.seed) * 0.9) * a.def.bob * sc : 0;
+    const sx = snap(x0 + x);
+    const sy = GROUND_SCREEN_Y + y + offY;
+    a.view.position.set(sx, snap(sy + bob));
+    if (a.shadow) {
+      a.shadow.visible = true;
+      a.shadow.alpha = a.view.alpha;
+      a.shadow.scale.set(sc * Math.max(0.4, an), sc);
+      a.shadow.position.set(sx, snap(sy));
     }
   }
 }

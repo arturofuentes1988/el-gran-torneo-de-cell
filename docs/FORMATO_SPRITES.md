@@ -434,7 +434,10 @@ partículas, la miniatura, y la entrada en `escenarios.json`. Se ajustan
 `escenarios.json` pero fuera de las listas: solo lo usa un ultra de fondo. Con `vida` (lista de StageActorDef) se suma
 una capa de autos, micros y gente que cruzan por el fondo cada tanto: `frames` (varios = el paso), `scale`, `y` de los
 pies o ruedas, `speed` y `wait` [mín, máx], `range` (tramo en x de la capa), `fade`/`shrink`/`rise` (se aleja por una
-avenida al final del tramo) y `fadeStart` (se pierde al comienzo). Ver `arte/escenarios/samurai-pudahuel/calle.json`. Ver `arte/escenarios/rene/puente.json`,
+avenida al final del tramo) y `fadeStart` (se pierde al comienzo). Mejor que `range`: `path`, puntos [x, y, escala,
+ancho] de un extremo al otro: entra por el borde de la pantalla, dobla por una avenida y se aleja achicándose (ancho < 1
+= se le ve de atrás) hasta perderse en la distancia; nada aparece ni desaparece en medio de la calle. Ver
+`arte/escenarios/samurai-pudahuel/calle.json`. Ver `arte/escenarios/rene/puente.json`,
 `arte/escenarios/pablito/calle.json` (con lluvia) y los prompts en
 `arte/escenarios/prompts.md`.
 
