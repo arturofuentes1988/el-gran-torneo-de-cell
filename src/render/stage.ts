@@ -94,6 +94,12 @@ export interface StageActorDef {
    * escala (lo lejano se mueve más lento) y solo se desvanece donde es diminuto (escala < 0,2).
    */
   path?: Array<[number, number, number, number]>;
+  /**
+   * Público quieto: siempre en este punto [x de la capa, y de mundo de los pies], repitiendo sus cuadros (alentando).
+   * No entra ni sale: está ahí toda la pelea. `flip` lo da vuelta (el grupo del otro lado mira hacia el centro).
+   */
+  at?: [number, number];
+  flip?: boolean;
 }
 
 export interface StagePulseDef {
@@ -361,6 +367,21 @@ class ActorField {
     const x0 = (this.def.left ?? 0) - camLeft * this.def.parallax[0];
     const fy = this.def.parallax[1];
     for (const a of this.actors) {
+      if (a.def.at) {
+        const tex = a.frames[Math.floor((t + a.seed) / Math.max(1, a.def.frameDur ?? 4)) % a.frames.length];
+        a.view.texture = tex;
+        a.view.visible = true;
+        a.view.alpha = 1;
+        a.view.scale.set(a.def.scale * (a.def.flip ? -1 : 1), a.def.scale);
+        const sx = snap(x0 + a.def.at[0]);
+        const sy = snap(GROUND_SCREEN_Y + a.def.at[1] + camOffY * fy);
+        a.view.position.set(sx, sy);
+        if (a.shadow) {
+          a.shadow.visible = true;
+          a.shadow.position.set(sx, sy);
+        }
+        continue;
+      }
       if (a.def.path && a.total > 0) {
         this.updatePath(a, x0, camOffY * fy, dt, t);
         continue;
