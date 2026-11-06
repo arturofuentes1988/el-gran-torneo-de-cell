@@ -474,6 +474,11 @@ def main() -> None:
             # Un clip reescalado vive en un lienzo con `borde` de aire: la guardia queda corrida.
             b = c.borde
             dx = centro_torso(m) - (torso0 + b) if spec.get("centrar") or spec.get("pies") else 0.0
+            # "mover_x": {"desde": a, "hasta": b, "px": n} corre esos cuadros n pixeles del video hacia adelante
+            # (la barrida volteada del Samurai: el pie de apoyo queda donde estaba al agacharse).
+            mover = spec.get("mover_x")
+            if mover and mover["desde"] <= i <= mover["hasta"]:
+                dx -= mover["px"]
             dy = caja(m)[3] - (ay0 + b) if spec.get("pies") else 0.0
             ax, ay = ax0 + b + dx, ay0 + b + dy
             tex = f"{id_}/{spec['clip']}/{i}" + ("c" if dx or dy else "") + ("h" if arreglada else "")

@@ -24,11 +24,7 @@
         1
       ],
       "top": -315.895,
-      "left": -5.6,
-      "liviano": {
-        "video": "liviano/fondo.mp4",
-        "scale": 0.561956
-      }
+      "left": -5.6
     },
     {
       "src": "suelo.webp",

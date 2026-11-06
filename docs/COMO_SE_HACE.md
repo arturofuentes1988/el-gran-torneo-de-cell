@@ -96,6 +96,10 @@ si el luchador tiene verde, como el Flaitiano) y recortar por color.
 (255, 0, 255), el texto final pide "chroma-key magenta, nothing on him is magenta or pink" y el armado lleva
 `"fondo": "magenta"` (el mismo recorte por dominancia, del menor de rojo y azul sobre el verde).
 `voltear_piernas.py` también sirve con `--magenta`.
+Después de voltear una patada, revisar en el atlas que el pie de apoyo no salte al pasar de la guardia
+agachada a la patada: si salta, la animación arranca desde la guardia agachada y los cuadros volteados se corren
+con `"mover_x": {"desde": a, "hasta": b, "px": n}` en esa animación del armado (n en pixeles del video; la
+barrida del Samurai va corrida 77 px).
 
 **Efectos de los poderes pintados** (`public/efectos/`, compartidos por todos): los videos de efectos se
 piden a Kling por kie.ai **sin guardia**, solo con texto y sobre fondo negro puro (`arte/efectos/kie.json`,
