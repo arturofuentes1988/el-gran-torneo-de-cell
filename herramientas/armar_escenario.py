@@ -24,10 +24,12 @@ Claves del armado:
   brillos       [{nombre, sat_min, sat_max, val_min, desenfoque, alpha, pulso}]
   niebla        {color [r,g,b], alpha, y, alto, velocidad}
   particulas    lista tal cual para StageDef.particles
+  vida          autos y gente que cruzan por el fondo: lista de StageActorDef (frames relativos al armado)
   video         MP4 en loop de la misma imagen (opcional): se recorta a la zona del fondo
                 y se codifica para la web como fondo.mp4, encima de la imagen fija.
   solape        fracción del alto que el fondo baja bajo el corte (el piso se funde ahí)
 """
+import shutil
 import subprocess
 import json
 import pathlib
@@ -133,6 +135,20 @@ def main(ruta_armado: str) -> None:
 
     # Luces que laten (a media resolución: son un brillo aditivo).
     rgb = np.asarray(im.crop((0, 0, W, fila_corte)), dtype=np.float32)
+    # Vida: autos, micros y gente que cruzan por el fondo (StageActorDef). Sus cuadros se copian a vida/.
+    if cfg.get('vida'):
+        (salida / 'vida').mkdir(exist_ok=True)
+        actores = []
+        for act in cfg['vida']:
+            act = dict(act)
+            cuadros = []
+            for f in act['frames']:
+                origen = armado_path.parent / f
+                shutil.copyfile(origen, salida / 'vida' / origen.name)
+                cuadros.append(f'vida/{origen.name}')
+            act['frames'] = cuadros
+            actores.append(act)
+        capas.append({'actors': actores, 'scale': 1, 'parallax': [p, 1], 'top': 0, 'left': round(izquierda, 3), 'width': round(W * escala, 3)})
     for b in ([] if cfg.get('video') and not cfg.get('brillos_con_video') else cfg.get('brillos', [])):
         m = mascara_brillo(rgb, b)
         glow = (rgb * m[..., None]).clip(0, 255).astype(np.uint8)

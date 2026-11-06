@@ -431,7 +431,10 @@ partículas, la miniatura, y la entrada en `escenarios.json`. Se ajustan
 `corte_suelo` (dónde empieza el piso: bajo la base de lo que está atrás) y `pies`
 (dónde pisan los luchadores). `lugar` (`{nombre, lat, lon}`) dice dónde queda.
 `luchador` dice de quién es: en el ARCADE, cada rival pelea en el suyo. `soloUltra: true` lo deja en
-`escenarios.json` pero fuera de las listas: solo lo usa un ultra de fondo. Ver `arte/escenarios/rene/puente.json`,
+`escenarios.json` pero fuera de las listas: solo lo usa un ultra de fondo. Con `vida` (lista de StageActorDef) se suma
+una capa de autos, micros y gente que cruzan por el fondo cada tanto: `frames` (varios = el paso), `scale`, `y` de los
+pies o ruedas, `speed` y `wait` [mín, máx], `range` (tramo en x de la capa), `fade`/`shrink`/`rise` (se aleja por una
+avenida al final del tramo) y `fadeStart` (se pierde al comienzo). Ver `arte/escenarios/samurai-pudahuel/calle.json`. Ver `arte/escenarios/rene/puente.json`,
 `arte/escenarios/pablito/calle.json` (con lluvia) y los prompts en
 `arte/escenarios/prompts.md`.
 

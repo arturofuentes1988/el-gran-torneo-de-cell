@@ -44,6 +44,48 @@ export interface StageLayerDef {
   pulse?: StagePulseDef;
   /** Calidad liviana (celulares): las mismas imágenes a la mitad, con su escala (herramientas/escenario_liviano.py). */
   liviano?: Pick<StageLayerDef, 'src' | 'video' | 'frames' | 'scale'>;
+  /**
+   * Capa de vida: autos, micros y gente que cruzan el escenario de un lado al otro, cada tanto (ver
+   * StageActorDef). Va en el orden de las capas (las que siguen, como el piso, quedan delante). Usa
+   * `parallax`, `left` y `width` de esta capa; `top` no se usa.
+   */
+  actors?: StageActorDef[];
+  /** Ancho en unidades de la capa de vida: los actores entran por x < 0 y salen por x > width. */
+  width?: number;
+}
+
+/** Un auto, una micro o una persona que pasa por el fondo (capa `actors`). */
+export interface StageActorDef {
+  /** Cuadros (rutas relativas al JSON, mirando a la derecha); varios = animación (el paso). */
+  frames: string[];
+  /** Cuadros de 60 por segundo que dura cada imagen (por defecto 4). */
+  frameDur?: number;
+  /** Unidades de mundo por pixel de imagen. */
+  scale: number;
+  /** y de mundo de los pies o las ruedas, con la cámara en reposo (0 = suelo, negativo hacia arriba). */
+  y: number;
+  /** Velocidad en unidades por cuadro (60 por segundo): [mínima, máxima]. */
+  speed: [number, number];
+  /** Espera entre una pasada y la siguiente, en segundos: [mínima, máxima]. */
+  wait: [number, number];
+  /** Hacia dónde va: 'ambas' (al azar, por defecto), 'derecha' o 'izquierda'. */
+  dir?: 'ambas' | 'derecha' | 'izquierda';
+  /** Vaivén vertical en unidades (el motor de la micro). */
+  bob?: number;
+  /** Sombra bajo el actor (ancho en unidades). */
+  shadow?: number;
+  /**
+   * Tramo que recorre, en x de la capa: [inicio, fin]. Por defecto de borde a borde, fuera de la pantalla. Así un
+   * auto entra por la izquierda y dobla por una avenida, o alguien camina solo por una vereda.
+   */
+  range?: [number, number];
+  /** Unidades antes de `range[1]` en que se desvanece (dobla por la avenida y se aleja; se mete entre los toldos). */
+  fade?: number;
+  /** Mientras se desvanece se achica a esta fracción y sube `rise` unidades (se aleja hacia el fondo). */
+  shrink?: number;
+  rise?: number;
+  /** Lo mismo en el otro extremo (`range[0]`), solo el desvanecido: alguien que se pierde entre los toldos. */
+  fadeStart?: number;
 }
 
 export interface StagePulseDef {
@@ -258,6 +300,91 @@ class ParticleField {
   }
 }
 
+interface Actor {
+  def: StageActorDef;
+  frames: Texture[];
+  view: Sprite;
+  shadow: Graphics | null;
+  /** x de la capa (unidades), dirección y velocidad de la pasada en curso; `wait` cuadros hasta la próxima. */
+  x: number;
+  dir: 1 | -1;
+  speed: number;
+  wait: number;
+  seed: number;
+}
+
+const rnd = (a: number, b: number): number => a + Math.random() * (b - a);
+
+/** Capa de vida: los actores cruzan de un borde al otro y esperan un rato antes de volver a pasar. */
+class ActorField {
+  readonly container = new Container();
+  private actors: Actor[] = [];
+
+  constructor(private def: StageLayerDef, textures: Texture[]) {
+    let i = 0;
+    for (const a of def.actors ?? []) {
+      const frames = textures.slice(i, i + a.frames.length);
+      i += a.frames.length;
+      if (!frames.length) continue;
+      let shadow: Graphics | null = null;
+      if (a.shadow) {
+        shadow = new Graphics().ellipse(0, 0, a.shadow / 2, Math.max(1.5, a.shadow * 0.05)).fill({ color: 0x1a1410, alpha: 0.3 });
+        this.container.addChild(shadow);
+      }
+      const view = new Sprite(frames[0]);
+      view.anchor.set(0.5, 1);
+      view.visible = false;
+      this.container.addChild(view);
+      // La primera pasada sale pronto, escalonada entre los actores.
+      this.actors.push({ def: a, frames, view, shadow, x: 0, dir: 1, speed: 0, wait: rnd(0.5, Math.max(1, a.wait[0])) * 60, seed: Math.random() * 1000 });
+    }
+  }
+
+  update(camLeft: number, camOffY: number, dt: number, t: number): void {
+    const w = this.def.width ?? STAGE_W;
+    const x0 = (this.def.left ?? 0) - camLeft * this.def.parallax[0];
+    const fy = this.def.parallax[1];
+    for (const a of this.actors) {
+      const margen = (a.frames[0].width * a.def.scale) / 2 + 10;
+      const [r0, r1] = a.def.range ?? [-margen, w + margen];
+      if (a.wait > 0) {
+        a.wait -= dt;
+        a.view.visible = false;
+        if (a.shadow) a.shadow.visible = false;
+        if (a.wait > 0) continue;
+        const d = a.def.dir ?? 'ambas';
+        a.dir = d === 'derecha' ? 1 : d === 'izquierda' ? -1 : Math.random() < 0.5 ? 1 : -1;
+        a.speed = rnd(a.def.speed[0], a.def.speed[1]);
+        a.x = a.dir > 0 ? r0 : r1;
+      }
+      a.x += a.dir * a.speed * dt;
+      if ((a.dir > 0 && a.x > r1) || (a.dir < 0 && a.x < r0)) {
+        a.wait = rnd(a.def.wait[0], a.def.wait[1]) * 60;
+        continue;
+      }
+      const tex = a.frames[Math.floor((t + a.seed) / Math.max(1, a.def.frameDur ?? 4)) % a.frames.length];
+      a.view.texture = tex;
+      a.view.visible = true;
+      // Cerca del final del tramo se desvanece, se achica y sube: se aleja por la avenida.
+      const k = a.def.fade ? Math.min(1, Math.max(0, (a.x - (r1 - a.def.fade)) / a.def.fade)) : 0;
+      const esc = a.def.scale * (1 - k * (1 - (a.def.shrink ?? 1)));
+      a.view.scale.set(esc * a.dir, esc);
+      const k0 = a.def.fadeStart ? Math.min(1, Math.max(0, (r0 + a.def.fadeStart - a.x) / a.def.fadeStart)) : 0;
+      a.view.alpha = (1 - k) * (1 - k0);
+      const bob = a.def.bob ? Math.sin((t + a.seed) * 0.9) * a.def.bob : 0;
+      const sx = snap(x0 + a.x);
+      const sy = GROUND_SCREEN_Y + a.def.y - k * (a.def.rise ?? 0) + camOffY * fy;
+      a.view.position.set(sx, snap(sy + bob));
+      if (a.shadow) {
+        a.shadow.visible = true;
+        a.shadow.alpha = (1 - k) * (1 - k0);
+        a.shadow.scale.set(esc / a.def.scale);
+        a.shadow.position.set(sx, snap(sy));
+      }
+    }
+  }
+}
+
 export class StageView {
   readonly container = new Container();
   /** Oscurece el fondo durante el flash del súper. */
@@ -267,6 +394,7 @@ export class StageView {
   readonly music: string | null;
   private layers: Layer[] = [];
   private particles: ParticleField[] = [];
+  private actors: ActorField[] = [];
   private darkAlpha = 0;
   private lastTime = performance.now();
   /** Las texturas que bajó este escenario (las únicas que suelta al destruirse). */
@@ -303,7 +431,8 @@ export class StageView {
     const layers = def.layers
       .map((l) => (calidad === 'liviano' && l.liviano ? { ...l, ...l.liviano } : l))
       .filter((l) => conVideo || !l.video);
-    const files = (l: StageLayerDef) => (l.video ? [l.video] : (l.frames ?? (l.src ? [l.src] : [])));
+    const files = (l: StageLayerDef) =>
+      l.actors ? l.actors.flatMap((a) => a.frames) : l.video ? [l.video] : (l.frames ?? (l.src ? [l.src] : []));
     if (prog) for (const l of layers) for (const f of files(l)) prog.esperar(abs(f));
     // Video en loop, mudo (así el navegador lo deja reproducirse solo); si no parte, queda la imagen fija.
     const loaded = await Promise.all(
@@ -358,6 +487,12 @@ export class StageView {
   }
 
   private addHd(def: StageLayerDef, textures: Texture[]): void {
+    if (def.actors) {
+      const field = new ActorField(def, textures);
+      this.actors.push(field);
+      this.container.addChild(field.container);
+      return;
+    }
     const tex = textures[0];
     if (!tex) return;
     if (def.floor) {
@@ -461,6 +596,7 @@ export class StageView {
       if (l.pulse) l.view.alpha = l.alpha * pulseLevel(l.pulse, t);
     }
     for (const p of this.particles) p.update(camLeft, camOffY, dt);
+    for (const a of this.actors) a.update(camLeft, camOffY, dt, t);
     this.darken.alpha = this.darkAlpha;
   }
 
