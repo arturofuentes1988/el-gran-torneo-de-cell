@@ -77,10 +77,13 @@ export async function cargarTamanos(): Promise<void> {
   }
 }
 
-/** Baja un archivo entero anotando el avance. */
-export async function bajar(url: string, prog?: Progreso): Promise<Blob> {
+/**
+ * Baja un archivo entero anotando el avance. `cache: 'no-cache'` pregunta al servidor si cambió antes de usar la copia
+ * guardada (si no cambió, responde sin volver a mandarlo).
+ */
+export async function bajar(url: string, prog?: Progreso, cache?: RequestCache): Promise<Blob> {
   prog?.esperar(url);
-  const res = await fetch(url);
+  const res = await fetch(url, cache ? { cache } : undefined);
   if (!res.ok) throw new Error(`No se pudo bajar ${url} (${res.status})`);
   if (!prog || !res.body) {
     const blob = await res.blob();
@@ -102,8 +105,12 @@ export async function bajar(url: string, prog?: Progreso): Promise<Blob> {
   return new Blob(partes, { type: res.headers.get('content-type') ?? '' });
 }
 
+/**
+ * Las definiciones (escenarios, luchadores) siempre se revisan con el servidor: GitHub Pages deja guardar 10 minutos,
+ * y una definición vieja con imágenes o videos nuevos descuadra todo (un video a otra escala parte el fondo).
+ */
 export async function bajarJson<T>(url: string, prog?: Progreso): Promise<T> {
-  return JSON.parse(await (await bajar(url, prog)).text()) as T;
+  return JSON.parse(await (await bajar(url, prog, 'no-cache')).text()) as T;
 }
 
 export interface OpcionesTextura {

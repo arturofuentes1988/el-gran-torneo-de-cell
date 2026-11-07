@@ -24,7 +24,7 @@ export class MusicLibrary {
   /** Lee la lista de pistas. Si falta, el juego sigue sin música. */
   async load(url: string): Promise<void> {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-cache' });
       if (!res.ok) return;
       const list = (await res.json()) as Record<string, { archivo?: string; liviano?: string; loopStart?: number; loopEnd?: number }>;
       const base = new URL(url, location.href);

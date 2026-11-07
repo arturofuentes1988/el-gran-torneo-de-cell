@@ -476,7 +476,7 @@ export class Sfx {
   async loadManifest(url: string, prefix = '', prog?: Progreso): Promise<number> {
     let manifest: SampleManifest;
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-cache' });
       if (!res.ok) return 0;
       manifest = (await res.json()) as SampleManifest;
     } catch {
