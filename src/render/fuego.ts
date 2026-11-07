@@ -55,7 +55,7 @@ export function flame(g: Graphics, x: number, y: number, h: number, w: number, t
 }
 
 /** Tronco de leña de largo `len` y grosor `r`, centrado en (x, y) y girado `ang` (capa normal). */
-export function drawLog(g: Graphics, x: number, y: number, len: number, r: number, ang: number): void {
+function drawLog(g: Graphics, x: number, y: number, len: number, r: number, ang: number): void {
   const c = Math.cos(ang);
   const s = Math.sin(ang);
   const hx = (c * len) / 2;

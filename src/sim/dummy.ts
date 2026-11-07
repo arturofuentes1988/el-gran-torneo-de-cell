@@ -7,7 +7,7 @@ import type { DifficultyId } from './difficulty';
 import { ACTIONABLE, type Fighter } from './fighter';
 import type { Match } from './match';
 
-export type DummyMode = 'guardiaBaja' | 'agachado' | 'salta' | 'bloquea' | 'bloqueaTras' | 'cpu';
+type DummyMode = 'guardiaBaja' | 'agachado' | 'salta' | 'bloquea' | 'bloqueaTras' | 'cpu';
 
 export const DUMMY_MODES: readonly DummyMode[] = ['guardiaBaja', 'agachado', 'salta', 'bloquea', 'bloqueaTras', 'cpu'];
 

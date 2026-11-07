@@ -16,10 +16,10 @@ import { arcade, outlinedText } from './text';
 
 export const NEON_PINK = 0xff2e63;
 export const NEON_CYAN = 0x2be4f0;
-export const NEON_YELLOW = 0xffd23f;
-export const NEON_RED = 0xff3b3b;
+const NEON_YELLOW = 0xffd23f;
+const NEON_RED = 0xff3b3b;
 /** Colores de los corazones que suben, como los "me gusta" de un live. */
-export const HEART_COLORS: readonly number[] = [NEON_PINK, NEON_RED, NEON_CYAN, NEON_YELLOW];
+const HEART_COLORS: readonly number[] = [NEON_PINK, NEON_RED, NEON_CYAN, NEON_YELLOW];
 
 const INK = 0x0a0414;
 const SIDES = [0, 1] as const;
@@ -119,7 +119,7 @@ function tierFor(hits: number): number {
 }
 
 /** Separador de miles chileno: 12345 → "12.345". */
-export function formatViews(n: number): string {
+function formatViews(n: number): string {
   return String(Math.max(0, Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 

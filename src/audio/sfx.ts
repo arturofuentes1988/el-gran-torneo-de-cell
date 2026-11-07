@@ -339,7 +339,7 @@ const SOUNDS: Record<string, Gen> = {
 };
 
 /** Sintetiza un sonido descrito como datos (capas de osciladores/ruido). */
-export function synthesize(spec: SoundSpec, sr: number): Float32Array<ArrayBuffer> {
+function synthesize(spec: SoundSpec, sr: number): Float32Array<ArrayBuffer> {
   const tail = spec.echo ? spec.echo.delay * 5 : 0;
   const end = Math.max(0.01, ...spec.layers.map((l) => (l.start ?? 0) + l.dur)) + tail;
   const out = new Float32Array(Math.ceil(end * sr));
@@ -411,7 +411,7 @@ const DUCK = 0.55;
 const LATE_LIMIT = 1500;
 
 /** Manifiesto de muestras: nombre → archivo, o lista de archivos (variantes: suena una al azar). */
-export type SampleManifest = Record<string, string | string[]>;
+type SampleManifest = Record<string, string | string[]>;
 
 export class Sfx {
   private ctx: AudioContext | null = null;

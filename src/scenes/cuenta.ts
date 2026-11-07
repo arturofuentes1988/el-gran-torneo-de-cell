@@ -113,7 +113,7 @@ class EsperaScene implements Scene {
 }
 
 /** TU CUENTA (primera vez) o EN LÍNEA sin haber entrado: Google, correo, o seguir sin cuenta. */
-export class CuentaScene extends MenuScene {
+class CuentaScene extends MenuScene {
   constructor(
     game: Game,
     private motivo: Motivo,
@@ -213,7 +213,7 @@ abstract class FormScene implements Scene {
 }
 
 /** ENTRAR CON CORREO: correo y contraseña; ENTRAR o CREAR CUENTA. */
-export class CorreoScene extends FormScene {
+class CorreoScene extends FormScene {
   constructor(
     game: Game,
     private motivo: Motivo,
@@ -266,7 +266,7 @@ export class CorreoScene extends FormScene {
 }
 
 /** ELIGE TU APODO (recién creada la cuenta) o CAMBIAR APODO (desde EN LÍNEA). */
-export class ApodoScene extends FormScene {
+class ApodoScene extends FormScene {
   constructor(
     game: Game,
     private nuevo: boolean,
@@ -358,7 +358,7 @@ class AvatarScene implements Scene {
 }
 
 /** EN LÍNEA (con cuenta): las salas llegan en la fase 2; por ahora, el apodo, el avatar y cerrar sesión. */
-export class OnlineScene extends MenuScene {
+class OnlineScene extends MenuScene {
   constructor(game: Game) {
     super(game, 'online', 'EN LÍNEA', [
       { id: 'crear', label: 'CREAR SALA', dim: true },

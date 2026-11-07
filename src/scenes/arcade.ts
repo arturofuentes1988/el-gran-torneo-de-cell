@@ -34,7 +34,7 @@ interface Venue {
 const RING: Venue = { stageId: null, nombre: 'EL GRAN TORNEO' };
 
 /** Una partida de ARCADE: el luchador del jugador (índice del plantel), su color, los rivales y sus escenarios. */
-export interface ArcadeRun {
+interface ArcadeRun {
   player: number;
   color: number;
   opponents: number[];

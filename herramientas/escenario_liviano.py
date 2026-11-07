@@ -8,7 +8,8 @@ Por cada carpeta con escenario.json:
     unas 5 veces menos. La escala de la capa se ajusta para que ocupe lo mismo.
   - Crea liviano/ con todas las imágenes y el video a la mitad (para celulares), y en
     cada capa del JSON agrega "liviano": {"src"|"video"|"frames": ..., "scale": ...}.
-Se puede volver a correr: lo que ya está achicado no se vuelve a comprimir.
+Se puede volver a correr: lo que ya está achicado no se vuelve a comprimir. armar_escenario.py lo corre solo al
+final con rehacer=True (borra liviano/ y lo hace de nuevo desde lo recién armado, así nunca queda viejo).
 """
 
 import json
@@ -53,10 +54,12 @@ def imagen_mitad(origen: Path, destino: Path) -> float:
     return img.width / w
 
 
-def achicar(carpeta: Path) -> None:
+def achicar(carpeta: Path, rehacer: bool = False) -> None:
     ruta_json = carpeta / "escenario.json"
     defin = json.loads(ruta_json.read_text(encoding="utf-8"))
     liviano = carpeta / "liviano"
+    if rehacer and liviano.exists():
+        shutil.rmtree(liviano)
     liviano.mkdir(exist_ok=True)
     for capa in defin["layers"]:
         if "video" in capa:
@@ -67,7 +70,7 @@ def achicar(carpeta: Path) -> None:
             destino = liviano / Path(capa["video"]).name
             if not destino.exists():
                 video(ruta, destino, round(ancho / 2 / 2) * 2, CRF_LIVIANO)
-                capa["liviano"] = {"video": f"liviano/{destino.name}", "scale": round(capa["scale"] * ancho / ancho_video(destino), 6)}
+            capa["liviano"] = {"video": f"liviano/{destino.name}", "scale": round(capa["scale"] * ancho / ancho_video(destino), 6)}
             if ancho > ANCHO_HD:
                 video(ruta, ruta, ANCHO_HD, CRF_HD)
                 capa["scale"] = round(capa["scale"] * ancho_original / ancho_video(ruta), 6)
@@ -86,7 +89,7 @@ def achicar(carpeta: Path) -> None:
             if not nombres or "liviano" in capa:
                 continue
             capa["liviano"] = {("frames" if "frames" in capa else "src"): (nuevos if "frames" in capa else nuevos[0]), "scale": round(capa["scale"] * factor, 6)}
-    ruta_json.write_text(json.dumps(defin, ensure_ascii=False, indent=2), encoding="utf-8")
+    ruta_json.write_text(json.dumps(defin, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

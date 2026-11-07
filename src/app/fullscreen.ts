@@ -21,11 +21,11 @@ interface KeyboardLock {
 let auto = window.top === window;
 let wasFull = false;
 
-export function isFullscreen(): boolean {
+function isFullscreen(): boolean {
   return document.fullscreenElement != null;
 }
 
-export async function enterFullscreen(): Promise<void> {
+async function enterFullscreen(): Promise<void> {
   if (isFullscreen() || !document.fullscreenEnabled) return;
   try {
     await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
@@ -43,7 +43,7 @@ export function exitFullscreen(): void {
   if (isFullscreen()) void document.exitFullscreen().catch(() => undefined);
 }
 
-export function toggleFullscreen(): void {
+function toggleFullscreen(): void {
   if (isFullscreen()) exitFullscreen();
   else void enterFullscreen();
 }

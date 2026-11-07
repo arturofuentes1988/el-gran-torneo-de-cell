@@ -63,7 +63,7 @@ function clave(url: string): string {
 }
 
 /** Tamaño esperado de un archivo según tamanos.json (0 si no está). */
-export function tamano(url: string): number {
+function tamano(url: string): number {
   return tamanos[clave(url)] ?? 0;
 }
 
@@ -132,7 +132,7 @@ export async function bajarTextura(url: string, op: OpcionesTextura = {}, prog?:
 }
 
 /** Atlas de Pixi (JSON + imagen). Respeta "scale" del JSON: los atlas livianos se dibujan del mismo tamaño. */
-export async function bajarAtlas(jsonUrl: string, op: OpcionesTextura = {}, prog?: Progreso): Promise<Spritesheet> {
+async function bajarAtlas(jsonUrl: string, op: OpcionesTextura = {}, prog?: Progreso): Promise<Spritesheet> {
   const data = await bajarJson<SpritesheetData>(jsonUrl, prog);
   const imagen = new URL(data.meta.image ?? '', new URL(jsonUrl, location.href)).href;
   const tex = await bajarTextura(imagen, op, prog);
@@ -142,7 +142,7 @@ export async function bajarAtlas(jsonUrl: string, op: OpcionesTextura = {}, prog
 }
 
 /** Anota de antemano un atlas (su JSON y su imagen) para que el total de la barra no salte. */
-export function expectAtlas(prog: Progreso, jsonUrl: string): void {
+function expectAtlas(prog: Progreso, jsonUrl: string): void {
   prog.esperar(jsonUrl);
   prog.esperar(jsonUrl.replace(/\.json$/, '.webp'));
 }

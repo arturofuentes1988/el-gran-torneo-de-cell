@@ -7,7 +7,7 @@ import type { Game, Scene } from '../app/game';
 import { outlinedText } from '../render/text';
 import { backdrop } from './backdrop';
 
-export interface Item {
+interface Item {
   id: string;
   label: string;
   /** Opción que todavía no está disponible: se ve más apagada. */
@@ -19,7 +19,7 @@ const lastSel = new Map<string, number>();
 
 /** Colores de los avisos bajo la lista. */
 const AVISO = { info: 0xffe6a0, error: 0xff8a8a, ok: 0x8affb0 } as const;
-export type TipoAviso = keyof typeof AVISO;
+type TipoAviso = keyof typeof AVISO;
 
 /**
  * Menú centrado de estilo moderno: cada opción es una barra inclinada semitransparente;

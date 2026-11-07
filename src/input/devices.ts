@@ -45,7 +45,7 @@ export const ACTIONS: ReadonlyArray<{ id: Action; label: string }> = [
   { id: 'assist', label: 'AYUDA (2 VS 2)' },
 ];
 
-export const DEFAULT_KEYS: readonly [KeyBindings, KeyBindings] = [
+const DEFAULT_KEYS: readonly [KeyBindings, KeyBindings] = [
   {
     up: ['ArrowUp'], down: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'],
     lp: ['KeyA'], hp: ['KeyS'], lk: ['KeyZ'], hk: ['KeyX'], power: ['KeyD'], roll: ['KeyC'], taunt: ['ControlLeft'],
@@ -61,7 +61,7 @@ export const DEFAULT_KEYS: readonly [KeyBindings, KeyBindings] = [
 ];
 
 /** Joystick: X/Y golpes, A/B patadas, RB Modo Poder, LB rodada, Select pelá, RT cambio y LT ayuda. */
-export const DEFAULT_PAD: PadBindings = { lp: 2, hp: 3, lk: 0, hk: 1, power: 5, roll: 4, taunt: 8, tag: 7, assist: 6 };
+const DEFAULT_PAD: PadBindings = { lp: 2, hp: 3, lk: 0, hk: 1, power: 5, roll: 4, taunt: 8, tag: 7, assist: 6 };
 
 function copyKeys(k: KeyBindings): KeyBindings {
   const out = {} as KeyBindings;
@@ -76,7 +76,7 @@ function copyKeys(k: KeyBindings): KeyBindings {
 export const P1_KEYS: KeyBindings = copyKeys(DEFAULT_KEYS[0]);
 export const P2_KEYS: KeyBindings = copyKeys(DEFAULT_KEYS[1]);
 /** Botones del joystick de cada jugador (joystick 1 = J1, joystick 2 = J2). */
-export const PAD_KEYS: [PadBindings, PadBindings] = [{ ...DEFAULT_PAD }, { ...DEFAULT_PAD }];
+const PAD_KEYS: [PadBindings, PadBindings] = [{ ...DEFAULT_PAD }, { ...DEFAULT_PAD }];
 
 /** Teclas que no se pueden asignar: pausa, depuración, sonido y las opciones de la práctica. */
 export const RESERVED_KEYS: ReadonlySet<string> = new Set([
@@ -265,7 +265,7 @@ export class Keyboard {
   }
 }
 
-export interface PadSnapshot {
+interface PadSnapshot {
   up: boolean;
   down: boolean;
   left: boolean;
@@ -316,11 +316,6 @@ export class Gamepads {
     const s = this.snaps[i];
     if (!s) return -1;
     return s.buttons.findIndex((b, n) => b && !this.prev[i][n]);
-  }
-
-  /** Flanco de subida de una dirección (para menús). */
-  any(): boolean {
-    return this.snaps.some((s) => s !== null);
   }
 }
 

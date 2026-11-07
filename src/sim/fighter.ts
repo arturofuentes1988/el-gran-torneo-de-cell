@@ -24,7 +24,7 @@ export const ACTIONABLE: ReadonlySet<StateName> = new Set<StateName>([
 /** Cuadros de búfer para los botones. */
 const BUFFER = 4;
 /** Golpes máximos a un rival en el aire antes de que sea intocable. */
-export const MAX_JUGGLE = 3;
+const MAX_JUGGLE = 3;
 /** Golpes máximos en el aire después de un lanzador (combo aéreo). */
 export const MAX_JUGGLE_LAUNCHED = 8;
 /** Orden de las cadenas: débil → fuerte (golpe débil, patada débil, golpe fuerte, patada fuerte). */
@@ -48,7 +48,7 @@ export const LAUNCH_FOLLOW = 26;
 
 // ---------------------------------------------------------------- combos Killer
 /** Cuadros (sin contar el congelamiento de impacto) para empezar un DOBLE después de que conecta un especial. */
-export const KI_WINDOW = 18;
+const KI_WINDOW = 18;
 /** DOBLES máximos por combo. */
 export const MAX_DOBLES = 4;
 /** Cuadros de BLOQUEO tras un COMBO BREAKER equivocado. */
@@ -66,7 +66,7 @@ const DOBLE_RANGE = 110;
 export const isStrong = (b: Btn): boolean => b === 'hp' || b === 'hk';
 
 /** Ultra en curso: secuencia, víctima pegada y golpes dados. */
-export interface UltraRun {
+interface UltraRun {
   u: UltraDef;
   moveId: string;
   victim: Fighter;
@@ -179,7 +179,7 @@ export function ultraAnim(def: FighterDef, moveId: string, u: UltraDef, i: numbe
   return key;
 }
 
-export type JumpKind = 'normal' | 'short' | 'super';
+type JumpKind = 'normal' | 'short' | 'super';
 
 export interface Aabb {
   x0: number;
@@ -188,7 +188,7 @@ export interface Aabb {
   y1: number;
 }
 
-export interface ThrowData {
+interface ThrowData {
   victim: Fighter;
   t: number;
   back: boolean;

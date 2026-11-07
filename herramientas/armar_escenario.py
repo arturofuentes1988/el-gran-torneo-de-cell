@@ -6,6 +6,7 @@ Lee arte/escenarios/<carpeta>/<armado>.json y escribe en public/escenarios/<id>/
   - brillo-*.webp luces de la imagen (neones, ampolletas) para hacerlas latir
   - niebla.webp  bruma que se desplaza (opcional)
   - miniatura.webp vista de la cámara en reposo (pantalla ELIGE ESCENARIO)
+  - liviano/     todo a la mitad para celulares (escenario_liviano.py, que además deja el video HD a 2208 px)
   - escenario.json  la definición (StageDef, ver src/render/stage.ts)
 y agrega o reemplaza la entrada en public/escenarios/escenarios.json.
 
@@ -44,6 +45,8 @@ import sys
 
 import numpy as np
 from PIL import Image, ImageFilter
+
+import escenario_liviano
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 VIEW_W, VIEW_H, STAGE_W, SUELO_Y = 480, 270, 960, 248
@@ -227,6 +230,8 @@ def main(ruta_armado: str) -> None:
     if cfg.get('musica'):
         definicion['music'] = cfg['musica']
     (salida / 'escenario.json').write_text(json.dumps(definicion, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+    # Versión liviana (celulares) y video HD a 2208 px: siempre de nuevo, desde lo recién armado.
+    escenario_liviano.achicar(salida, rehacer=True)
 
     # Lista de escenarios del juego ("en_lista": false para fondos que no se eligen, como el del título).
     if cfg.get('en_lista') is False:

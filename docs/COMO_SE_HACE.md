@@ -344,7 +344,7 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 | `kie_video.py` | Animaciones con Kling 3.0 por kie.ai desde `arte/<luchador>/kie.json` (`KIE_API_KEY`). |
 | `efectos_vfx.py` | Efectos pintados compartidos (`public/efectos/`) desde videos sobre negro y objetos pintados (`arte/efectos/vfx.json`). |
 | `calidades.py` | Reparte los atlas de un luchador o de los efectos en HD y liviano, y en grupos menú / pelea (lo corren solos `armar_luchador.py` y `efectos_vfx.py`). |
-| `escenario_liviano.py` | Achica un escenario: video HD a 2208 px y versión liviana de cada capa para celulares. Correrlo después de `armar_escenario.py`. |
+| `escenario_liviano.py` | Achica un escenario: video HD a 2208 px y versión liviana de cada capa para celulares. `armar_escenario.py` lo corre solo al final (rehace `liviano/` desde cero). |
 | `tamanos.mjs` | Escribe `public/tamanos.json` (tamaño de cada archivo, para las barras de carga). Corre solo antes de `npm run dev` y `npm run build`. |
 | `musica_loop.py` | Prepara un tema para sonar en loop y lo agrega a `musica.json`. |
 | `musica_lluvia.py` | Cama de lluvia sintetizada para mezclar bajo un tema. |

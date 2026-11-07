@@ -6,10 +6,10 @@
 import { Container, Graphics } from 'pixi.js';
 import { outlinedText, pixelText } from './text';
 
-export const ARROWS: Record<string, number> = { '→': 0, '↘': 45, '↓': 90, '↙': 135, '←': 180, '↖': 225, '↑': 270, '↗': 315 };
+const ARROWS: Record<string, number> = { '→': 0, '↘': 45, '↓': 90, '↙': 135, '←': 180, '↖': 225, '↑': 270, '↗': 315 };
 
 /** Flecha dibujada (apunta a la derecha y se rota), del alto de una letra de tamaño `size`. */
-export function arrowIcon(deg: number, color: number, size: number, outline = true): Graphics {
+function arrowIcon(deg: number, color: number, size: number, outline = true): Graphics {
   const s = size / 2 + 0.5;
   const g = new Graphics();
   g.poly([-s, -s * 0.32, s * 0.1, -s * 0.32, s * 0.1, -s * 0.85, s, 0, s * 0.1, s * 0.85, s * 0.1, s * 0.32, -s, s * 0.32]).fill(color);

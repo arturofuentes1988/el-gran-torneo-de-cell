@@ -22,7 +22,7 @@ import { drawCadena, drawCaligrafia, drawCortes, drawIai, drawKunai, drawShurike
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 
 /** Celeste eléctrico y blanco azulado del rayo; agua. */
-export const C_BOLT = 0x9fe8ff;
+const C_BOLT = 0x9fe8ff;
 const C_CORE = 0xf4fdff;
 const C_WATER = 0x5fd0ff;
 const C_DREAD = 0x2a1a12;

@@ -6,7 +6,7 @@
 // (`<id>/voz/combo-corto`, etc., ver docs/FORMATO_SPRITES.md); si ese
 // luchador no la tiene, la del anunciador (`voz/combo3`…), si existe.
 
-export interface ComboName {
+interface ComboName {
   /** Golpes desde los que vale el nombre. */
   min: number;
   name: string;
@@ -17,9 +17,9 @@ export interface ComboName {
 }
 
 /** Tramos de las frases propias de cada luchador. */
-export type ComboLine = 'voz/combo-corto' | 'voz/combo-medio' | 'voz/combo-largo' | 'voz/combo-viral';
+type ComboLine = 'voz/combo-corto' | 'voz/combo-medio' | 'voz/combo-largo' | 'voz/combo-viral';
 
-export const COMBO_NAMES: readonly ComboName[] = [
+const COMBO_NAMES: readonly ComboName[] = [
   { min: 3, name: '¡COMBO WENO!', voice: 'voz/combo3', line: 'voz/combo-corto' },
   { min: 4, name: '¡COMBO BACÁN!', voice: 'voz/combo4', line: 'voz/combo-corto' },
   { min: 5, name: '¡COMBO PULENTO!', voice: 'voz/combo5', line: 'voz/combo-medio' },

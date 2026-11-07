@@ -5,7 +5,7 @@
 
 import { tactil } from '../input/touch';
 
-export interface Campo {
+interface Campo {
   id: string;
   etiqueta: string;
   tipo?: 'text' | 'email' | 'password';
@@ -15,13 +15,13 @@ export interface Campo {
   max?: number;
 }
 
-export interface Boton {
+interface Boton {
   id: string;
   texto: string;
   tipo?: 'principal' | 'normal' | 'volver';
 }
 
-export interface OpcionesFormulario {
+interface OpcionesFormulario {
   titulo: string;
   nota?: string;
   campos: Campo[];

@@ -75,7 +75,7 @@ const WINDOWS: Record<PatternId, number> = { qcf: 16, qcb: 16, dp: 18, qcf2: 34,
 /** → →: cuadros hacia atrás en que tiene que estar todo el doble toque. */
 const FF_WINDOW = 14;
 /** Machacar: pulsaciones del botón y cuadros en que tienen que caer todas. */
-export const MASH_COUNT = 4;
+const MASH_COUNT = 4;
 const MASH_WINDOW = 30;
 /** Mantener y soltar: cuadros mínimos con el botón apretado antes de soltarlo (medio segundo). */
 export const HOLD_FRAMES = 30;
@@ -100,7 +100,6 @@ export class InputBuffer {
   private consumed = new Uint16Array(SIZE);
   private head = 0;
   private count = 0;
-  held = 0;
   chargeBack = 0;
   private chargeValid = 0;
   /** Mantener y soltar: cuadros seguidos que lleva apretado cada botón (por bit). */
@@ -124,7 +123,6 @@ export class InputBuffer {
         this.holdFrames.set(bit, 0);
       }
     }
-    this.held = inp.held;
 
     if (isBack(r)) {
       this.chargeBack++;
@@ -140,7 +138,6 @@ export class InputBuffer {
     this.pressed.fill(0);
     this.consumed.fill(0);
     this.count = 0;
-    this.held = 0;
     this.chargeBack = 0;
     this.chargeValid = 0;
     this.holdFrames.clear();
@@ -157,11 +154,6 @@ export class InputBuffer {
     this.release.used = true;
   }
 
-  /** Cuadros que lleva apretado un botón (para mostrar la carga). */
-  heldFor(bit: number): number {
-    return this.holdFrames.get(bit) ?? 0;
-  }
-
   private idx(age: number): number {
     return (this.head - age + SIZE * 2) % SIZE;
   }
@@ -170,10 +162,6 @@ export class InputBuffer {
   dir(age = 0): number {
     if (age >= this.count) return 5;
     return this.rel[this.idx(age)];
-  }
-
-  isHeld(bits: number): boolean {
-    return (this.held & bits) !== 0;
   }
 
   /** Busca la pulsación no consumida más reciente de alguno de los bits. */

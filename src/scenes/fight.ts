@@ -47,7 +47,7 @@ const COMBO_WAIT = 3;
 const REFILL_DELAY = 60;
 
 /** Estado del modo práctica (opciones y lectura del combo). */
-export type PracticeState = PracticeHudInfo;
+type PracticeState = PracticeHudInfo;
 
 interface InputSource {
   sample(m: Match): FrameInput;
@@ -84,7 +84,7 @@ const pauseBarY = (i: number): number => P_Y + P_PAD + i * P_ROW;
  * Opciones de la pelea (índices de game.assets.roster). teams: 2 VS 2, los de cada equipo.
  * fighters: 1 VS 1, el del jugador 1 y el del 2 (si falta, la pareja por defecto de assets.fighters).
  */
-export interface FightOptions {
+interface FightOptions {
   teams?: [number[], number[]];
   fighters?: [number, number];
   /** Color de ropa de cada lado (0 = el original), elegido en ELIGE LUCHADOR. */

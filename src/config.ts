@@ -14,7 +14,7 @@ export const STAGE_W = 960;
 export const WALL_MARGIN = 22;
 
 /** La simulación corre siempre a 60 cuadros por segundo. */
-export const SIM_HZ = 60;
+const SIM_HZ = 60;
 export const FRAME_MS = 1000 / SIM_HZ;
 
 /** Barra de súper: 3 niveles de 100. */

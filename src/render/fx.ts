@@ -41,7 +41,7 @@ interface SheetFx {
   t: number;
 }
 
-export interface SheetOptions {
+interface SheetOptions {
   /** Unidades de mundo por pixel de textura (arte HD: ~0.25 a 0.35). */
   scale?: number;
   /** Cuadros de simulación por cuadro de animación. */

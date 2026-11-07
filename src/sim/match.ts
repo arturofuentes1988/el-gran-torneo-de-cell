@@ -7,7 +7,7 @@ import {
 import { Rng } from './rng';
 import type { FighterDef, HitProps, MoveDef, ProjectileDef } from './types';
 
-export type Phase = 'intro' | 'fight' | 'ko' | 'timeover' | 'matchEnd';
+type Phase = 'intro' | 'fight' | 'ko' | 'timeover' | 'matchEnd';
 
 // ---------------------------------------------------------------- 2 VS 2
 
@@ -16,10 +16,10 @@ const RED_SHARE = 0.5;
 /** Vida roja que recupera por cuadro el compañero que descansa (fracción de la vida máxima: media barra en ~10 s). */
 const RED_REGEN = 1 / 1200;
 /** Cuadros de espera entre cambios. */
-export const TAG_COOLDOWN = 180;
+const TAG_COOLDOWN = 180;
 /** Cuadros de espera para volver a llamar a la ayuda, desde que se va (más si la golpearon). */
-export const ASSIST_COOLDOWN = 240;
-export const ASSIST_COOLDOWN_HIT = 360;
+const ASSIST_COOLDOWN = 240;
+const ASSIST_COOLDOWN_HIT = 360;
 /** Cuadros desde el K.O. del punto hasta que entra el compañero. */
 const KO_ENTRY_DELAY = 64;
 /** Invulnerabilidad del que entra tras un K.O.: la caída (~28 cuadros) y ~40 más. */
@@ -57,7 +57,7 @@ const NO_ASSIST: ReadonlySet<StateName> = new Set<StateName>([
  * Movimiento de ayuda: FighterDef.assist o el primer especial con un proyectil
  * que avanza (si no hay, uno con cualquier proyectil, o el primer especial).
  */
-export function assistMoveId(def: FighterDef): string {
+function assistMoveId(def: FighterDef): string {
   if (def.assist && def.moves[def.assist]) return def.assist;
   const specials = def.specials.filter((id) => def.moves[id]?.kind === 'special' && def.moves[id].stance !== 'air');
   const proj = (id: string) => def.projectiles[def.moves[id].projectile ?? ''];
@@ -70,14 +70,14 @@ export function assistMoveId(def: FighterDef): string {
 }
 
 /** Súper del luchador (para el súper en equipo), o null. */
-export function superMoveId(def: FighterDef): string | null {
+function superMoveId(def: FighterDef): string | null {
   return def.specials.find((id) => def.moves[id]?.kind === 'super' && def.moves[id].stance !== 'air') ?? null;
 }
 
-export type ExtraRole = 'assist' | 'leaving' | 'dead';
+type ExtraRole = 'assist' | 'leaving' | 'dead';
 
 /** Un luchador en pantalla que no es el punto: la ayuda, el que sale o el caído. */
-export interface Extra {
+interface Extra {
   f: Fighter;
   role: ExtraRole;
   /** Cuadros en este rol (el caído cuenta solo mientras está en el suelo). */
@@ -92,7 +92,7 @@ export interface Extra {
   moveId: string;
 }
 
-export interface Team {
+interface Team {
   members: Fighter[];
   /** Índice del punto: el que pelea en pantalla (match.fighters[lado]). */
   point: number;
@@ -111,7 +111,7 @@ export interface Team {
 }
 
 /** Lo que muestra el HUD de un equipo. */
-export interface TeamStatus {
+interface TeamStatus {
   partner: Fighter | null;
   /** 0..1: lista cuando llega a 1. */
   assist: number;

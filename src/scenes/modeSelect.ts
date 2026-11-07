@@ -85,7 +85,7 @@ const DIFFICULTY_NOTE: Record<DifficultyId, string> = {
 };
 
 /** ELIGE LA DIFICULTAD: antes del ARCADE, del 1 VS CPU y del 2 VS CPU (queda guardada; la usa también el sparring CPU). */
-export class DifficultyMenuScene extends MenuScene {
+class DifficultyMenuScene extends MenuScene {
   constructor(
     game: Game,
     private next: () => Scene,
@@ -114,7 +114,7 @@ export class DifficultyMenuScene extends MenuScene {
 }
 
 /** OPCIONES: fichas y movimientos de los luchadores, escenarios, controles, sonido, música y gráficos. */
-export class OptionsMenuScene extends MenuScene {
+class OptionsMenuScene extends MenuScene {
   /** Gráficos elegidos: BAJA, MEDIA, ALTA o ULTRA ('auto' mientras no se cambien). Se aplican al aceptar (recarga). */
   private quality: QualityPref = loadQuality();
 

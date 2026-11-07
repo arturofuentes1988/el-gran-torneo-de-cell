@@ -214,7 +214,7 @@ function notificar(): void {
 }
 
 /** Vuelve a leer la sesión y el perfil (la otra página cambió algo). */
-export async function refrescarCuenta(): Promise<void> {
+async function refrescarCuenta(): Promise<void> {
   try {
     const c = await aTiempo(obtenerCliente());
     const { data } = await aTiempo(c.auth.getSession());
@@ -426,7 +426,7 @@ export async function guardarApodo(a: string): Promise<string | null> {
 }
 
 /** Un ARCADE ganado, para el ranking de campeones. */
-export interface RecordArcade {
+interface RecordArcade {
   dificultad: string;
   luchador: string;
   segundos: number;

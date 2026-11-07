@@ -38,7 +38,7 @@ const BIG_X = 84;
 /** Cuadros que se ve "¡LISTOS!" antes de seguir. */
 const READY_FRAMES = 36;
 
-export type SelectMode = Exclude<FightMode, 'demo'> | 'arcade';
+type SelectMode = Exclude<FightMode, 'demo'> | 'arcade';
 
 interface Keys {
   left: string[];

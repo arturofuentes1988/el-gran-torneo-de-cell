@@ -28,7 +28,7 @@ const DIBUJO: Record<Nivel, { arte: Calidad; maxS: number; dpr: number; particul
 };
 
 /** Nombres viejos (antes había solo HD y liviano) y los de la URL. */
-export function aNivel(v: string | null | undefined): Nivel | null {
+function aNivel(v: string | null | undefined): Nivel | null {
   if (v === 'hd') return 'alta';
   if (v === 'liviano') return 'media';
   return (NIVELES as readonly string[]).includes(v ?? '') ? (v as Nivel) : null;

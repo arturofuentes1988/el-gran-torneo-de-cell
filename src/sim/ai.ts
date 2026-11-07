@@ -58,7 +58,7 @@ export interface AiParams {
  * - MUY DIFÍCIL: reacciona al instante, bloquea alto y bajo sin equivocarse mientras dure el ataque,
  *   castiga todo, combos completos y gasta súper y ultra apenas puede.
  */
-export const AI_LEVELS: Record<DifficultyId, AiParams> = {
+const AI_LEVELS: Record<DifficultyId, AiParams> = {
   facil: {
     reaction: 30, block: 0.1, blockCorrect: 0.45, antiAir: 0.003,
     specials: 0.15, combos: 0.05, launcher: 0, superUse: 0, powerUse: 0, ultraUse: 0,
@@ -173,11 +173,6 @@ export class CpuController {
 
   constructor(readonly side: 0 | 1, seed: number, level: DifficultyId | AiParams | number = 'normal') {
     this.rng = new Rng(seed);
-    this.p = levelFrom(level);
-  }
-
-  /** Cambia la dificultad en caliente (muñeco de práctica). */
-  setLevel(level: DifficultyId | AiParams): void {
     this.p = levelFrom(level);
   }
 
