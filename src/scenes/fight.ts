@@ -651,6 +651,8 @@ export class FightScene implements Scene {
           this.addShake(e.spark === 'light' ? 1.4 : e.spark === 'heavy' ? 3.2 : 4.6);
           this.elementalHit(e);
           if (e.spark !== 'light') this.grunt(m.fighters[e.side === 0 ? 1 : 0], 'voz/dolor', 0.7);
+          // El público del escenario (si tiene) celebra el golpe.
+          this.game.assets.stage.alentar();
           break;
         }
         case 'block':

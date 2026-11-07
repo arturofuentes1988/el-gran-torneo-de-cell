@@ -10,146 +10,17 @@
         1
       ],
       "top": -315.895,
-      "left": -5.6,
-      "liviano": {
-        "src": "liviano/fondo.webp",
-        "scale": 0.403906
-      }
+      "left": -5.6
     },
     {
       "video": "fondo.mp4",
-      "scale": 0.374637,
+      "scale": 0.280978,
       "parallax": [
         0.7,
         1
       ],
       "top": -315.895,
       "left": -5.6
-    },
-    {
-      "actors": [
-        {
-          "frames": [
-            "vida/grupo1-00.webp",
-            "vida/grupo1-01.webp",
-            "vida/grupo1-02.webp",
-            "vida/grupo1-03.webp",
-            "vida/grupo1-04.webp",
-            "vida/grupo1-05.webp",
-            "vida/grupo1-06.webp",
-            "vida/grupo1-07.webp",
-            "vida/grupo1-08.webp",
-            "vida/grupo1-09.webp",
-            "vida/grupo1-10.webp",
-            "vida/grupo1-11.webp",
-            "vida/grupo1-12.webp",
-            "vida/grupo1-13.webp",
-            "vida/grupo1-14.webp",
-            "vida/grupo1-15.webp",
-            "vida/grupo1-16.webp",
-            "vida/grupo1-17.webp",
-            "vida/grupo1-18.webp",
-            "vida/grupo1-19.webp",
-            "vida/grupo1-20.webp",
-            "vida/grupo1-21.webp",
-            "vida/grupo1-22.webp",
-            "vida/grupo1-23.webp",
-            "vida/grupo1-24.webp",
-            "vida/grupo1-25.webp",
-            "vida/grupo1-26.webp",
-            "vida/grupo1-27.webp",
-            "vida/grupo1-28.webp",
-            "vida/grupo1-29.webp",
-            "vida/grupo1-30.webp",
-            "vida/grupo1-31.webp",
-            "vida/grupo1-32.webp",
-            "vida/grupo1-33.webp",
-            "vida/grupo1-34.webp",
-            "vida/grupo1-35.webp"
-          ],
-          "frameDur": 5,
-          "scale": 0.17,
-          "y": -88,
-          "speed": [
-            0,
-            0
-          ],
-          "wait": [
-            0,
-            0
-          ],
-          "at": [
-            250,
-            -88
-          ],
-          "shadow": 44
-        },
-        {
-          "frames": [
-            "vida/grupo2-00.webp",
-            "vida/grupo2-01.webp",
-            "vida/grupo2-02.webp",
-            "vida/grupo2-03.webp",
-            "vida/grupo2-04.webp",
-            "vida/grupo2-05.webp",
-            "vida/grupo2-06.webp",
-            "vida/grupo2-07.webp",
-            "vida/grupo2-08.webp",
-            "vida/grupo2-09.webp",
-            "vida/grupo2-10.webp",
-            "vida/grupo2-11.webp",
-            "vida/grupo2-12.webp",
-            "vida/grupo2-13.webp",
-            "vida/grupo2-14.webp",
-            "vida/grupo2-15.webp",
-            "vida/grupo2-16.webp",
-            "vida/grupo2-17.webp",
-            "vida/grupo2-18.webp",
-            "vida/grupo2-19.webp",
-            "vida/grupo2-20.webp",
-            "vida/grupo2-21.webp",
-            "vida/grupo2-22.webp",
-            "vida/grupo2-23.webp",
-            "vida/grupo2-24.webp",
-            "vida/grupo2-25.webp",
-            "vida/grupo2-26.webp",
-            "vida/grupo2-27.webp",
-            "vida/grupo2-28.webp",
-            "vida/grupo2-29.webp",
-            "vida/grupo2-30.webp",
-            "vida/grupo2-31.webp",
-            "vida/grupo2-32.webp",
-            "vida/grupo2-33.webp",
-            "vida/grupo2-34.webp",
-            "vida/grupo2-35.webp"
-          ],
-          "frameDur": 5,
-          "scale": 0.17,
-          "y": -82,
-          "speed": [
-            0,
-            0
-          ],
-          "wait": [
-            0,
-            0
-          ],
-          "at": [
-            600,
-            -82
-          ],
-          "flip": true,
-          "shadow": 44
-        }
-      ],
-      "scale": 1,
-      "parallax": [
-        0.7,
-        1
-      ],
-      "top": 0,
-      "left": -5.6,
-      "width": 827.2
     },
     {
       "src": "suelo.webp",
@@ -161,11 +32,322 @@
       "top": -70.118,
       "floor": {
         "strips": 64
-      },
-      "liviano": {
-        "src": "liviano/suelo.webp",
-        "scale": 0.403906
       }
+    },
+    {
+      "actors": [
+        {
+          "frames": [
+            "vida/joven-y-abuelo-00.webp",
+            "vida/joven-y-abuelo-01.webp",
+            "vida/joven-y-abuelo-02.webp",
+            "vida/joven-y-abuelo-03.webp",
+            "vida/joven-y-abuelo-04.webp",
+            "vida/joven-y-abuelo-05.webp",
+            "vida/joven-y-abuelo-06.webp",
+            "vida/joven-y-abuelo-07.webp",
+            "vida/joven-y-abuelo-08.webp",
+            "vida/joven-y-abuelo-09.webp",
+            "vida/joven-y-abuelo-10.webp",
+            "vida/joven-y-abuelo-11.webp",
+            "vida/joven-y-abuelo-12.webp",
+            "vida/joven-y-abuelo-13.webp",
+            "vida/joven-y-abuelo-14.webp",
+            "vida/joven-y-abuelo-15.webp",
+            "vida/joven-y-abuelo-16.webp",
+            "vida/joven-y-abuelo-17.webp",
+            "vida/joven-y-abuelo-18.webp",
+            "vida/joven-y-abuelo-19.webp",
+            "vida/joven-y-abuelo-20.webp",
+            "vida/joven-y-abuelo-21.webp",
+            "vida/joven-y-abuelo-22.webp",
+            "vida/joven-y-abuelo-23.webp",
+            "vida/joven-y-abuelo-24.webp",
+            "vida/joven-y-abuelo-25.webp",
+            "vida/joven-y-abuelo-26.webp",
+            "vida/joven-y-abuelo-27.webp",
+            "vida/joven-y-abuelo-28.webp",
+            "vida/joven-y-abuelo-29.webp",
+            "vida/joven-y-abuelo-30.webp",
+            "vida/joven-y-abuelo-31.webp",
+            "vida/joven-y-abuelo-32.webp",
+            "vida/joven-y-abuelo-33.webp",
+            "vida/joven-y-abuelo-34.webp",
+            "vida/joven-y-abuelo-35.webp"
+          ],
+          "frameDur": 5,
+          "pausa": [
+            0.6,
+            2.8
+          ],
+          "at": [
+            239.31,
+            -87.28
+          ],
+          "y": -87.28,
+          "scale": 0.13712,
+          "speed": [
+            0,
+            0
+          ],
+          "wait": [
+            0,
+            0
+          ],
+          "shadow": 23.0
+        },
+        {
+          "frames": [
+            "vida/senora-bolsa-00.webp",
+            "vida/senora-bolsa-01.webp",
+            "vida/senora-bolsa-02.webp",
+            "vida/senora-bolsa-03.webp",
+            "vida/senora-bolsa-04.webp",
+            "vida/senora-bolsa-05.webp",
+            "vida/senora-bolsa-06.webp",
+            "vida/senora-bolsa-07.webp",
+            "vida/senora-bolsa-08.webp",
+            "vida/senora-bolsa-09.webp",
+            "vida/senora-bolsa-10.webp",
+            "vida/senora-bolsa-11.webp",
+            "vida/senora-bolsa-12.webp",
+            "vida/senora-bolsa-13.webp",
+            "vida/senora-bolsa-14.webp",
+            "vida/senora-bolsa-15.webp",
+            "vida/senora-bolsa-16.webp",
+            "vida/senora-bolsa-17.webp",
+            "vida/senora-bolsa-18.webp",
+            "vida/senora-bolsa-19.webp",
+            "vida/senora-bolsa-20.webp",
+            "vida/senora-bolsa-21.webp",
+            "vida/senora-bolsa-22.webp",
+            "vida/senora-bolsa-23.webp",
+            "vida/senora-bolsa-24.webp",
+            "vida/senora-bolsa-25.webp",
+            "vida/senora-bolsa-26.webp",
+            "vida/senora-bolsa-27.webp",
+            "vida/senora-bolsa-28.webp",
+            "vida/senora-bolsa-29.webp",
+            "vida/senora-bolsa-30.webp",
+            "vida/senora-bolsa-31.webp",
+            "vida/senora-bolsa-32.webp",
+            "vida/senora-bolsa-33.webp",
+            "vida/senora-bolsa-34.webp",
+            "vida/senora-bolsa-35.webp"
+          ],
+          "frameDur": 5,
+          "pausa": [
+            0.6,
+            2.8
+          ],
+          "at": [
+            286.77,
+            -92.53
+          ],
+          "y": -92.53,
+          "scale": 0.10613,
+          "speed": [
+            0,
+            0
+          ],
+          "wait": [
+            0,
+            0
+          ],
+          "shadow": 9.7
+        },
+        {
+          "frames": [
+            "vida/joven-amarilla-00.webp",
+            "vida/joven-amarilla-01.webp",
+            "vida/joven-amarilla-02.webp",
+            "vida/joven-amarilla-03.webp",
+            "vida/joven-amarilla-04.webp",
+            "vida/joven-amarilla-05.webp",
+            "vida/joven-amarilla-06.webp",
+            "vida/joven-amarilla-07.webp",
+            "vida/joven-amarilla-08.webp",
+            "vida/joven-amarilla-09.webp",
+            "vida/joven-amarilla-10.webp",
+            "vida/joven-amarilla-11.webp",
+            "vida/joven-amarilla-12.webp",
+            "vida/joven-amarilla-13.webp",
+            "vida/joven-amarilla-14.webp",
+            "vida/joven-amarilla-15.webp",
+            "vida/joven-amarilla-16.webp",
+            "vida/joven-amarilla-17.webp",
+            "vida/joven-amarilla-18.webp",
+            "vida/joven-amarilla-19.webp",
+            "vida/joven-amarilla-20.webp",
+            "vida/joven-amarilla-21.webp",
+            "vida/joven-amarilla-22.webp",
+            "vida/joven-amarilla-23.webp",
+            "vida/joven-amarilla-24.webp",
+            "vida/joven-amarilla-25.webp",
+            "vida/joven-amarilla-26.webp",
+            "vida/joven-amarilla-27.webp",
+            "vida/joven-amarilla-28.webp",
+            "vida/joven-amarilla-29.webp",
+            "vida/joven-amarilla-30.webp",
+            "vida/joven-amarilla-31.webp",
+            "vida/joven-amarilla-32.webp",
+            "vida/joven-amarilla-33.webp",
+            "vida/joven-amarilla-34.webp",
+            "vida/joven-amarilla-35.webp"
+          ],
+          "frameDur": 5,
+          "pausa": [
+            0.6,
+            2.8
+          ],
+          "at": [
+            603.84,
+            -49.72
+          ],
+          "y": -49.72,
+          "scale": 0.20168,
+          "speed": [
+            0,
+            0
+          ],
+          "wait": [
+            0,
+            0
+          ],
+          "shadow": 17.4,
+          "parallax": 0.7873
+        },
+        {
+          "frames": [
+            "vida/grandote-00.webp",
+            "vida/grandote-01.webp",
+            "vida/grandote-02.webp",
+            "vida/grandote-03.webp",
+            "vida/grandote-04.webp",
+            "vida/grandote-05.webp",
+            "vida/grandote-06.webp",
+            "vida/grandote-07.webp",
+            "vida/grandote-08.webp",
+            "vida/grandote-09.webp",
+            "vida/grandote-10.webp",
+            "vida/grandote-11.webp",
+            "vida/grandote-12.webp",
+            "vida/grandote-13.webp",
+            "vida/grandote-14.webp",
+            "vida/grandote-15.webp",
+            "vida/grandote-16.webp",
+            "vida/grandote-17.webp",
+            "vida/grandote-18.webp",
+            "vida/grandote-19.webp",
+            "vida/grandote-20.webp",
+            "vida/grandote-21.webp",
+            "vida/grandote-22.webp",
+            "vida/grandote-23.webp",
+            "vida/grandote-24.webp",
+            "vida/grandote-25.webp",
+            "vida/grandote-26.webp",
+            "vida/grandote-27.webp",
+            "vida/grandote-28.webp",
+            "vida/grandote-29.webp",
+            "vida/grandote-30.webp",
+            "vida/grandote-31.webp",
+            "vida/grandote-32.webp",
+            "vida/grandote-33.webp",
+            "vida/grandote-34.webp",
+            "vida/grandote-35.webp"
+          ],
+          "frameDur": 5,
+          "pausa": [
+            0.6,
+            2.8
+          ],
+          "at": [
+            628.07,
+            -42.85
+          ],
+          "y": -42.85,
+          "scale": 0.22883,
+          "speed": [
+            0,
+            0
+          ],
+          "wait": [
+            0,
+            0
+          ],
+          "shadow": 23.3,
+          "parallax": 0.8166
+        },
+        {
+          "frames": [
+            "vida/nina-00.webp",
+            "vida/nina-01.webp",
+            "vida/nina-02.webp",
+            "vida/nina-03.webp",
+            "vida/nina-04.webp",
+            "vida/nina-05.webp",
+            "vida/nina-06.webp",
+            "vida/nina-07.webp",
+            "vida/nina-08.webp",
+            "vida/nina-09.webp",
+            "vida/nina-10.webp",
+            "vida/nina-11.webp",
+            "vida/nina-12.webp",
+            "vida/nina-13.webp",
+            "vida/nina-14.webp",
+            "vida/nina-15.webp",
+            "vida/nina-16.webp",
+            "vida/nina-17.webp",
+            "vida/nina-18.webp",
+            "vida/nina-19.webp",
+            "vida/nina-20.webp",
+            "vida/nina-21.webp",
+            "vida/nina-22.webp",
+            "vida/nina-23.webp",
+            "vida/nina-24.webp",
+            "vida/nina-25.webp",
+            "vida/nina-26.webp",
+            "vida/nina-27.webp",
+            "vida/nina-28.webp",
+            "vida/nina-29.webp",
+            "vida/nina-30.webp",
+            "vida/nina-31.webp",
+            "vida/nina-32.webp",
+            "vida/nina-33.webp",
+            "vida/nina-34.webp",
+            "vida/nina-35.webp"
+          ],
+          "frameDur": 5,
+          "pausa": [
+            0.6,
+            2.8
+          ],
+          "at": [
+            649.28,
+            -45.68
+          ],
+          "y": -45.68,
+          "scale": 0.13258,
+          "speed": [
+            0,
+            0
+          ],
+          "wait": [
+            0,
+            0
+          ],
+          "shadow": 13.6,
+          "parallax": 0.8046
+        }
+      ],
+      "scale": 1,
+      "parallax": [
+        0.7,
+        1
+      ],
+      "top": 0,
+      "left": -5.6,
+      "width": 827.2
     }
   ],
   "particles": [

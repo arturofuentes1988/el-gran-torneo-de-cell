@@ -100,6 +100,17 @@ export interface StageActorDef {
    */
   at?: [number, number];
   flip?: boolean;
+  /**
+   * Con `at`: paralaje del suelo bajo sus pies (si está parado en el piso con perspectiva, que se desplaza más rápido
+   * mientras más cerca está). Así no patina sobre la vereda cuando la cámara se mueve. Sin esto usa el de la capa.
+   */
+  parallax?: number;
+  /**
+   * Con `at`: celebra a su ritmo. Pasa sus cuadros una vez (de pie, alienta, vuelve a quedar de pie) y descansa entre
+   * estos segundos [mínimo, máximo] antes de la siguiente; cada vuelta va un poco más lenta o más rápida. Cuando un
+   * golpe conecta, los que descansan saltan a alentar (StageView.alentar). Sin esto repite sus cuadros sin parar.
+   */
+  pausa?: [number, number];
 }
 
 export interface StagePulseDef {
@@ -168,6 +179,8 @@ interface Layer {
 
 /** Recorrido horizontal de la cámara más un margen por el temblor de pantalla. */
 const CAM_RANGE = STAGE_W - VIEW_W + 16;
+/** camLeft con la cámara en reposo (al centro). */
+const CAM_REST = (STAGE_W - VIEW_W) / 2;
 
 /** Nivel (0..1) de una luz que late, en el cuadro t. */
 function pulseLevel(p: StagePulseDef, t: number): number {
@@ -329,6 +342,9 @@ interface Actor {
   speed: number;
   wait: number;
   seed: number;
+  /** Público que celebra a su ritmo (con `pausa`): cuadro en curso, cuadros de 60 por imagen en esta vuelta. */
+  k: number;
+  dur: number;
 }
 
 const rnd = (a: number, b: number): number => a + Math.random() * (b - a);
@@ -358,8 +374,19 @@ class ActorField {
       const pts = a.path ?? [];
       for (let k = 1; k < pts.length; k++) segs.push(Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
       const total = segs.reduce((x, y) => x + y, 0);
-      this.actors.push({ def: a, frames, view, shadow, segs, total, s: 0, x: 0, dir: 1, speed: 0, wait: rnd(0.5, Math.max(1, a.wait[0])) * 60, seed: Math.random() * 1000 });
+      const actor: Actor = { def: a, frames, view, shadow, segs, total, s: 0, x: 0, dir: 1, speed: 0, wait: rnd(0.5, Math.max(1, a.wait[0])) * 60, seed: Math.random() * 1000, k: 0, dur: a.frameDur ?? 4 };
+      // El público parte desfasado: unos a media celebración, otros descansando.
+      if (a.at && a.pausa) {
+        actor.k = Math.random() < 0.5 ? Math.random() * frames.length : 0;
+        actor.wait = actor.k > 0 ? 0 : rnd(0, a.pausa[1]) * 60;
+      }
+      this.actors.push(actor);
     }
+  }
+
+  /** Un golpe conectó: el público que descansa se pone a alentar casi al tiro (cada uno con su reacción). */
+  alentar(): void {
+    for (const a of this.actors) if (a.def.at && a.def.pausa && a.wait > 0) a.wait = Math.min(a.wait, rnd(2, 16));
   }
 
   update(camLeft: number, camOffY: number, dt: number, t: number): void {
@@ -368,12 +395,36 @@ class ActorField {
     const fy = this.def.parallax[1];
     for (const a of this.actors) {
       if (a.def.at) {
-        const tex = a.frames[Math.floor((t + a.seed) / Math.max(1, a.def.frameDur ?? 4)) % a.frames.length];
-        a.view.texture = tex;
+        let cuadro: number;
+        let respira = 1;
+        if (a.def.pausa) {
+          if (a.wait > 0) {
+            // Descansa de pie, respirando apenas.
+            a.wait -= dt;
+            cuadro = 0;
+            respira = 1 + 0.006 * Math.sin(t * 0.06 + a.seed);
+          } else {
+            a.k += dt / a.dur;
+            if (a.k >= a.frames.length) {
+              a.k = 0;
+              a.wait = rnd(a.def.pausa[0], a.def.pausa[1]) * 60;
+              a.dur = (a.def.frameDur ?? 4) * rnd(0.85, 1.2);
+            }
+            cuadro = Math.floor(a.k);
+          }
+        } else {
+          cuadro = Math.floor((t + a.seed) / Math.max(1, a.def.frameDur ?? 4)) % a.frames.length;
+        }
+        a.view.texture = a.frames[cuadro];
         a.view.visible = true;
         a.view.alpha = 1;
-        a.view.scale.set(a.def.scale * (a.def.flip ? -1 : 1), a.def.scale);
-        const sx = snap(x0 + a.def.at[0]);
+        a.view.scale.set(a.def.scale * (a.def.flip ? -1 : 1), a.def.scale * respira);
+        // Parado en el piso con perspectiva: se mueve como la franja de piso bajo sus pies (igual que addFloor).
+        const pa = a.def.parallax;
+        const ancho = VIEW_W + CAM_RANGE * (pa ?? 0);
+        const sx = snap(
+          pa === undefined ? x0 + a.def.at[0] : VIEW_W / 2 - ancho / 2 - (camLeft - CAM_REST) * pa + (a.def.at[0] / w) * ancho,
+        );
         const sy = snap(GROUND_SCREEN_Y + a.def.at[1] + camOffY * fy);
         a.view.position.set(sx, sy);
         if (a.shadow) {
@@ -673,12 +724,11 @@ export class StageView {
     this.lastTime = now;
     this.lastDraw = now;
     for (const v of this.videos) if (v.paused) void v.play().catch(() => undefined);
-    const camRest = (STAGE_W - VIEW_W) / 2;
     for (const l of this.layers) {
       const x = l.left - camLeft * l.fx;
       const y = snap(GROUND_SCREEN_Y + l.top + camOffY * l.fy);
       if (l.strips) {
-        for (const s of l.strips) s.view.position.set(VIEW_W / 2 - s.w / 2 - (camLeft - camRest) * s.p, y + s.y);
+        for (const s of l.strips) s.view.position.set(VIEW_W / 2 - s.w / 2 - (camLeft - CAM_REST) * s.p, y + s.y);
       } else if (l.frames) {
         (l.view as Sprite | TilingSprite).texture = l.frames[Math.floor(t / l.frameDur) % l.frames.length];
       }
@@ -697,5 +747,10 @@ export class StageView {
 
   setDarkness(a: number): void {
     this.darkAlpha = a;
+  }
+
+  /** Un golpe conectó: el público del escenario (si tiene) celebra. */
+  alentar(): void {
+    for (const a of this.actors) a.alentar();
   }
 }

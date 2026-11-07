@@ -24,7 +24,14 @@ Claves del armado:
   brillos       [{nombre, sat_min, sat_max, val_min, desenfoque, alpha, pulso}]
   niebla        {color [r,g,b], alpha, y, alto, velocidad}
   particulas    lista tal cual para StageDef.particles
-  vida          autos y gente que cruzan por el fondo: lista de StageActorDef (frames relativos al armado)
+  vida          autos y gente del fondo: lista de StageActorDef (frames relativos al armado). Se dibujan encima
+                del piso. Público parado en un punto: en vez de `at` y `scale`, "pies_px" [x, y] (dónde pisa, en
+                pixeles de la imagen a `ancho_px` de ancho), "alto_m" (cuánto mide) y "alto_sprite" (cuánto mide
+                de pie en pixeles de su sprite); el armado calcula su lugar, su tamaño con la perspectiva (ver
+                `perspectiva`), su sombra ("sombra_m" de ancho, 0.6 por defecto) y el paralaje del suelo bajo sus
+                pies (si pisa el piso).
+  perspectiva   {horizonte, px_por_m}: fila de la imagen del horizonte y pixeles por metro por cada fila bajo él
+                (a `ancho_px`): un metro mide px_por_m * (y - horizonte) pixeles en la fila y.
   video         MP4 en loop de la misma imagen (opcional): se recorta a la zona del fondo
                 y se codifica para la web como fondo.mp4, encima de la imagen fija.
   solape        fracción del alto que el fondo baja bajo el corte (el piso se funde ahí)
@@ -135,9 +142,14 @@ def main(ruta_armado: str) -> None:
 
     # Luces que laten (a media resolución: son un brillo aditivo).
     rgb = np.asarray(im.crop((0, 0, W, fila_corte)), dtype=np.float32)
-    # Vida: autos, micros y gente que cruzan por el fondo (StageActorDef). Sus cuadros se copian a vida/.
+    # Vida: autos, micros y gente del fondo (StageActorDef). Sus cuadros se copian a vida/. La capa va al final,
+    # encima del piso: así el público puede pararse en la vereda de adelante.
+    capa_vida = None
     if cfg.get('vida'):
-        (salida / 'vida').mkdir(exist_ok=True)
+        if (salida / 'vida').exists():
+            shutil.rmtree(salida / 'vida')
+        (salida / 'vida').mkdir()
+        tope_suelo = -(fila_pies - fila_corte) * escala
         actores = []
         for act in cfg['vida']:
             act = dict(act)
@@ -147,8 +159,22 @@ def main(ruta_armado: str) -> None:
                 shutil.copyfile(origen, salida / 'vida' / origen.name)
                 cuadros.append(f'vida/{origen.name}')
             act['frames'] = cuadros
+            if 'pies_px' in act:
+                x, y = act.pop('pies_px')
+                persp = cfg['perspectiva']
+                px_m = persp['px_por_m'] * (y - persp['horizonte'])
+                pies = (y - fila_pies) * escala
+                act['at'] = [round(x * escala, 2), round(pies, 2)]
+                act['y'] = act['at'][1]
+                act['scale'] = round(act.pop('alto_m') * px_m * escala / act.pop('alto_sprite'), 5)
+                act.setdefault('speed', [0, 0])
+                act.setdefault('wait', [0, 0])
+                act['shadow'] = round(act.pop('sombra_m', 0.6) * px_m * escala, 1)
+                # Pisa el piso con perspectiva: se mueve con la franja bajo sus pies (como addFloor en stage.ts).
+                if pies > tope_suelo:
+                    act['parallax'] = round(1 + (p - 1) * pies / tope_suelo, 4)
             actores.append(act)
-        capas.append({'actors': actores, 'scale': 1, 'parallax': [p, 1], 'top': 0, 'left': round(izquierda, 3), 'width': round(W * escala, 3)})
+        capa_vida = {'actors': actores, 'scale': 1, 'parallax': [p, 1], 'top': 0, 'left': round(izquierda, 3), 'width': round(W * escala, 3)}
     for b in ([] if cfg.get('video') and not cfg.get('brillos_con_video') else cfg.get('brillos', [])):
         m = mascara_brillo(rgb, b)
         glow = (rgb * m[..., None]).clip(0, 255).astype(np.uint8)
@@ -184,6 +210,8 @@ def main(ruta_armado: str) -> None:
     guardar_webp(suelo, salida / 'suelo.webp')
     capas.append({'src': 'suelo.webp', 'scale': round(escala, 6), 'parallax': [p, 1],
                   'top': round(-(fila_pies - fila_corte) * escala, 3), 'floor': {'strips': cfg.get('franjas', 64)}})
+    if capa_vida:
+        capas.append(capa_vida)
 
     # Miniatura: lo que se ve con la cámara en reposo (al centro).
     x0 = ((STAGE_W - VIEW_W) / 2 + MARGEN) * p / escala

@@ -436,8 +436,14 @@ una capa de autos, micros y gente que cruzan por el fondo cada tanto: `frames` (
 pies o ruedas, `speed` y `wait` [mín, máx], `range` (tramo en x de la capa), `fade`/`shrink`/`rise` (se aleja por una
 avenida al final del tramo) y `fadeStart` (se pierde al comienzo). Mejor que `range`: `path`, puntos [x, y, escala,
 ancho] de un extremo al otro: entra por el borde de la pantalla, dobla por una avenida y se aleja achicándose (ancho < 1
-= se le ve de atrás) hasta perderse en la distancia; nada aparece ni desaparece en medio de la calle. Ver
-`arte/escenarios/samurai-pudahuel/calle.json`. Ver `arte/escenarios/rene/puente.json`,
+= se le ve de atrás) hasta perderse en la distancia; nada aparece ni desaparece en medio de la calle. Público que mira
+la pelea: `at` [x, y] (siempre en su lugar) con `pausa` [mín, máx] segundos: cada uno celebra a su ritmo (pasa sus
+cuadros una vez y descansa de pie) y los que descansan saltan a alentar cuando un golpe conecta
+(`StageView.alentar`). En el armado se describe por dónde pisa en la imagen: `pies_px` [x, y], `alto_m`, `alto_sprite`
+(de pie, en pixeles del sprite) y `sombra_m`, más `perspectiva` {horizonte, px_por_m} del escenario; el armado calcula
+`at`, `scale`, la sombra y, si pisa el piso con perspectiva, su `parallax` (se mueve con la franja bajo sus pies y no
+patina). La capa de vida va encima del piso. Ver `arte/escenarios/samurai-pudahuel/calle.json` y
+`publico/cortar_publico.py` (separa a cada persona de un clip con varias). Ver `arte/escenarios/rene/puente.json`,
 `arte/escenarios/pablito/calle.json` (con lluvia) y los prompts en
 `arte/escenarios/prompts.md`.
 
