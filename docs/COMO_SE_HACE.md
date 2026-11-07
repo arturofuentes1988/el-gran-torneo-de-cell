@@ -351,3 +351,5 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 | `musica.py` | Temas sintetizados desde cero (respaldo, sin IA). |
 | `sonido_intro.py` | Jingle de encendido estilo consola de los 90 (ya no se usa en el juego). |
 | `bocetos.py` | Bocetos gratis de movimientos con FLUX.1 Kontext (Hugging Face). |
+| `dificultad_sim.ts` | Torneo de la CPU contra la CPU entre niveles de dificultad (`npx tsx`). |
+| `rollback_prueba.ts` | Prueba del juego en línea sin navegador (`npx tsx herramientas/rollback_prueba.ts [peleas]`): guardar y cargar la pelea, y dos computadores simulados por una red mala que tienen que quedar idénticos a una pelea de referencia. Correrla después de cambiar la simulación (`src/sim/`). |

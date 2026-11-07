@@ -518,6 +518,37 @@ y armas ninja; primero se analizaron sus videos (frases y personaje) y después 
   arrancón con corte; la victoria (casi no se mueve) usa la meditación; el corte iai del súper se ve con poco
   movimiento (el efecto de luz hace el trabajo).
 
+## En línea, fase 2 · Paso A: la pelea se puede rebobinar (7 de noviembre)
+
+Plan acordado para jugar en línea: **A** preparar la simulación (este paso), **B** salas con código
+(conexión directa entre los dos navegadores, WebRTC, con Supabase solo para presentarlos), **C** servidor
+de respaldo (TURN de Cloudflare), desconexiones, revancha, PARTIDA RÁPIDA y puntos de liga.
+
+- `src/sim/estado.ts`: `guardar(match)` saca una foto de todo lo que cambia en la pelea, `cargar(foto)`
+  la deja igual (escribe en los mismos objetos: la pantalla no se entera) y `huella(foto)` la resume en un
+  número para notar si dos computadores se separaron. Las definiciones de los luchadores no se copian
+  (campos `FIJOS`). Si se agrega a la simulación un campo que apunte a una definición, sumarlo ahí.
+- `src/online/rollback.ts` (`SesionRollback`): el control propio se aplica 2 cuadros después; del rival se
+  adivina que sigue igual y, cuando llega distinto, se carga la foto y se rehacen hasta 8 cuadros. Los
+  avisos (sonidos, chispas) que ya salieron no se repiten al rehacer. Cada 30 cuadros se comparan
+  huellas. Arma y recibe paquetes; todavía no sabe de redes ni está conectada al juego (eso es el Paso B).
+- `herramientas/rollback_prueba.ts`: peleas de la CPU contra la CPU (también 2 VS 2) jugadas por dos
+  computadores simulados con red perfecta, 50 ms, 100 ms con 10 % de paquetes perdidos y 170 ms con 25 %
+  perdidos: todos los cuadros quedaron idénticos a la pelea de referencia. Foto: 12 µs guardar, 6 µs
+  cargar; un cuadro de simulación, 15 a 18 µs (rehacer 8 cuadros cuesta ~0,2 ms en un computador).
+  - La prueba tiene además una huella independiente que recorre todo el objeto de la pelea sin usar
+    `FIJOS`, y desvíos con todos los botones (también la pelá, que usa el generador al azar). Se
+    comprobó que avisa si a `guardar()` se le escapa el generador al azar o si la sesión no rehace.
+- La simulación ya era determinista: generador al azar con semilla (`Rng`), sin `Math.random`, sin hora
+  y sin funciones matemáticas que den distinto entre navegadores (solo sumas, multiplicaciones y
+  `Math.sqrt`, que es exacta). Los datos de los luchadores son los mismos en HD y en liviano.
+- **Para el Paso B**:
+  - La espera de las frases de entrada (`introDelay`) hoy sale del largo de los audios: en línea tiene
+    que ser un número fijo igual en los dos.
+  - Los dos tienen que tener la misma versión del juego: comparar una huella de las definiciones al conectarse.
+  - Con más de ~130 ms de ida el rollback de 8 cuadros no alcanza y el juego espera: subir el retraso
+    según el ping (Paso C).
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra
