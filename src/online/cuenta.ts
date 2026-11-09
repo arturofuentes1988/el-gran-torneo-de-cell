@@ -32,7 +32,8 @@ let pendiente: Promise<void> | null = null;
 let sinConexion = false;
 let errorVuelta: string | null = null;
 
-function obtenerCliente(): Promise<SupabaseClient> {
+/** El cliente de Supabase (se baja la librería la primera vez). También lo usan las salas en línea. */
+export function obtenerCliente(): Promise<SupabaseClient> {
   cliente ??= import('@supabase/supabase-js').then(
     ({ createClient }) => {
       const c = createClient(SUPABASE_URL, SUPABASE_KEY, {

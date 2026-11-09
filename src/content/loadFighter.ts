@@ -23,6 +23,15 @@ export interface FighterAsset {
   fightAtlases: string[];
   /** Cómo se crean sus texturas (filtrado y mipmaps según la calidad). */
   texOptions: OpcionesTextura;
+  /** Huella de la definición tal como llegó (en línea, los dos tienen que tener la misma versión). */
+  huella: number;
+}
+
+/** Huella de un texto (FNV-1a de 32 bits). */
+export function huellaTexto(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
+  return h >>> 0;
 }
 
 /** atlas.json: una lista (formato viejo, todo junto) o calidades con grupos. */
@@ -80,6 +89,8 @@ export function validateFighter(def: FighterDef, textures: Record<string, Textur
  */
 export async function loadFighterFolder(folder: string, id: string, calidad: Calidad, prog?: Progreso): Promise<FighterAsset> {
   const [index, def] = await Promise.all([bajarJson<AtlasIndex>(`${folder}/atlas.json`, prog), bajarJson<FighterDef>(`${folder}/${id}.json`, prog)]);
+  // Antes de que la pelea le agregue animaciones armadas (DOBLE, tramos del ultra).
+  const huella = huellaTexto(JSON.stringify(def));
   const groups = Array.isArray(index) ? { menu: index, pelea: [] } : (index[calidad] ?? index.hd ?? {});
   const scaleMode = def.texFilter ?? 'linear';
   const texOptions: OpcionesTextura = { scaleMode, mipmaps: calidad === 'hd' && scaleMode === 'linear' };
@@ -93,5 +104,5 @@ export async function loadFighterFolder(folder: string, id: string, calidad: Cal
   ]);
   const textures: Record<string, Texture> = {};
   for (const sheet of sheets) Object.assign(textures, sheet.textures);
-  return { def, textures, face, folder, fightAtlases: (groups.pelea ?? []).map(url), texOptions };
+  return { def, textures, face, folder, fightAtlases: (groups.pelea ?? []).map(url), texOptions, huella };
 }

@@ -43,8 +43,40 @@ export interface Paquete {
   ack: number;
   /** Cuadro en que va quien lo manda (para emparejar la velocidad de los dos). */
   cuadro: number;
+  /** Cuánto cree ir adelantado quien lo manda (ver SesionRollback.debeFrenar). */
+  ventaja: number;
   /** Huellas de cuadros ya definitivos: [cuadro, huella]. */
   huellas: [number, number][];
+}
+
+/** Paquete en binario (enteros de 32 bits), para mandarlo por la red. */
+export function codificar(p: Paquete): ArrayBuffer {
+  const a = new Int32Array(6 + p.entradas.length + p.huellas.length * 2);
+  a[0] = p.desde;
+  a[1] = p.ack;
+  a[2] = p.cuadro;
+  a[3] = p.ventaja;
+  a[4] = p.entradas.length;
+  a[5] = p.huellas.length;
+  a.set(p.entradas, 6);
+  let k = 6 + p.entradas.length;
+  for (const [f, h] of p.huellas) {
+    a[k++] = f;
+    a[k++] = h | 0;
+  }
+  return a.buffer;
+}
+
+/** Al revés de codificar(); null si no es un paquete válido. */
+export function decodificar(b: ArrayBuffer): Paquete | null {
+  if (b.byteLength < 24 || b.byteLength % 4) return null;
+  const a = new Int32Array(b);
+  const ne = a[4];
+  const nh = a[5];
+  if (ne < 0 || nh < 0 || a.length !== 6 + ne + nh * 2) return null;
+  const huellas: [number, number][] = [];
+  for (let k = 6 + ne; k < a.length; k += 2) huellas.push([a[k], a[k + 1] >>> 0]);
+  return { desde: a[0], ack: a[1], cuadro: a[2], ventaja: a[3], entradas: Array.from(a.subarray(6, 6 + ne)), huellas };
 }
 
 export interface OpcionesRollback {
@@ -82,6 +114,8 @@ export class SesionRollback {
   private readonly susHuellas = new Map<number, number>();
   private ultimaHuella = 0;
   private primeraDiferencia = Infinity;
+  /** Ventaja que dice tener el otro (en su último paquete). */
+  private suVentaja = 0;
   /** Próximo cuadro al que se le asigna un control propio. */
   private localSiguiente: number;
   /** Último cuadro propio que el otro confirmó tener. */
@@ -147,7 +181,7 @@ export class SesionRollback {
     for (let f = desde; f < this.localSiguiente; f++) entradas.push(this.entradas[this.lado].get(f) ?? NEUTRO);
     const huellas: [number, number][] = [];
     for (const [f, h] of this.misHuellas) if (f > this.ultimaHuella - CADA_HUELLA * 4) huellas.push([f, h]);
-    return { desde, entradas, ack: this.remotoContiguo, cuadro: this.cuadro, huellas };
+    return { desde, entradas, ack: this.remotoContiguo, cuadro: this.cuadro, ventaja: this.ventaja, huellas };
   }
 
   recibirPaquete(p: Paquete): void {
@@ -162,16 +196,28 @@ export class SesionRollback {
     }
     while (suyas.has(this.remotoContiguo + 1)) this.remotoContiguo++;
     this.ackLocal = Math.max(this.ackLocal, p.ack);
-    this.cuadroRemoto = Math.max(this.cuadroRemoto, p.cuadro);
+    if (p.cuadro >= this.cuadroRemoto) {
+      this.cuadroRemoto = p.cuadro;
+      this.suVentaja = p.ventaja;
+    }
     for (const [f, h] of p.huellas) {
       this.susHuellas.set(f, h);
       this.compararHuella(f);
     }
   }
 
-  /** Cuadros que este computador va adelantado al otro (positivo: conviene frenar un poquito). */
+  /** Cuadros que este computador va adelantado al otro, según el último paquete (incluye el viaje del paquete). */
   get ventaja(): number {
     return this.cuadro - this.cuadroRemoto;
+  }
+
+  /**
+   * ¿Conviene saltarse un cuadro para que el otro alcance? Cada uno ve al otro atrasado por
+   * lo que tarda el paquete; restando lo que ve el otro, ese atraso se cancela y queda la
+   * diferencia de verdad (como GGPO). El juego se salta como mucho un cuadro de vez en cuando.
+   */
+  get debeFrenar(): boolean {
+    return (this.ventaja - this.suVentaja) / 2 >= 1;
   }
 
   // ---------------------------------------------------------------- interno

@@ -13,6 +13,8 @@ interface Campo {
   /** Atributo autocomplete (así el navegador ofrece el correo y la contraseña guardados). */
   autocompletar?: string;
   max?: number;
+  /** Código en mayúsculas (la sala en línea): sin autocorrector y con letras grandes. */
+  codigo?: boolean;
 }
 
 interface Boton {
@@ -118,6 +120,15 @@ export function abrirFormulario(op: OpcionesFormulario): Formulario {
     input.value = c.valor ?? '';
     if (c.autocompletar) input.autocomplete = c.autocompletar as AutoFill;
     if (c.max) input.maxLength = c.max;
+    if (c.codigo) {
+      input.autocapitalize = 'characters';
+      input.autocomplete = 'off';
+      input.spellcheck = false;
+      input.style.textTransform = 'uppercase';
+      input.style.letterSpacing = '6px';
+      input.style.textAlign = 'center';
+      input.style.fontSize = '22px';
+    }
     if (c.tipo === 'email') {
       input.inputMode = 'email';
       input.autocapitalize = 'off';

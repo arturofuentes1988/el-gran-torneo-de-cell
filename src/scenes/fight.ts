@@ -2,12 +2,13 @@ import { ZoomBlurFilter } from 'pixi-filters';
 import { ColorMatrixFilter, Container, Graphics, type Sprite, type Text } from 'pixi.js';
 import { GROUND_SCREEN_Y, MAX_METER, VIEW_H, VIEW_W } from '../config';
 import type { FightMode, Game, Scene } from '../app/game';
+import { reportarError } from '../app/errores';
 import { loadDifficulty } from '../app/settings';
 import { announcerVoice } from '../audio/announcer';
 import { COMBO_BREAKER, ULTRA_COMBO, comboNameFor } from '../render/comboNames';
 import type { FrameInput } from '../input/buffer';
 import { P1_KEYS, P2_KEYS, PlayerInput, type KeyBindings } from '../input/devices';
-import { mandosDePelea, mandosDePractica } from '../input/touch';
+import { mandosDePelea, mandosDePractica, tactil } from '../input/touch';
 import { FighterView, ProjectileViews, type WorldLayers } from '../render/fighterView';
 import { DiscoShow } from '../render/disco';
 import { StormShow, bolt } from '../render/elemental';
@@ -31,7 +32,26 @@ import type { Fighter, StateName } from '../sim/fighter';
 import { DEAD_LINGER, Match } from '../sim/match';
 import type { SimEvent } from '../sim/events';
 import type { FighterDef, LightsKind, ProjectileDef, SuperCinematic } from '../sim/types';
+import { SesionRollback } from '../online/rollback';
+import type { Sala } from '../online/sala';
 import { MainMenuScene } from './modeSelect';
+
+/**
+ * Cuadros que el round 1 espera las frases de entrada de los dos luchadores (una después de la
+ * otra), según el largo de sus audios. En línea lo calcula quien creó la sala y se lo manda al otro.
+ */
+export function esperaDeEntrada(game: Game, defs: readonly FighterDef[]): number {
+  const len = defs.reduce((t, d) => {
+    const l = game.sfx.duration(`${d.id}/voz/intro`);
+    return t + (l > 0 ? l + 0.3 : 0);
+  }, 0);
+  return len > 0 ? Math.round((len + 0.1) * 60) : 0;
+}
+
+/** En línea: el rival lleva más de esto sin mandar sus controles y se avisa en pantalla (cuadros). */
+const AVISO_ESPERA = 20;
+/** En línea: cuadros entre dos saltos para que el otro computador alcance. */
+const CADA_FRENO = 8;
 
 /** Estados en que un luchador todavía está "dentro" de un combo o recuperándose. */
 const BUSY: ReadonlySet<StateName> = new Set<StateName>(['hitstun', 'airHit', 'knockdown', 'getup', 'blockstun', 'thrown', 'pinned']);
@@ -97,6 +117,8 @@ interface FightOptions {
   singleRound?: boolean;
   /** DEMOSTRACIÓN: adónde vuelve al apretar aceptar o volver. */
   exit?: () => Scene;
+  /** En línea: la sala y la espera de las frases de entrada (la misma en los dos computadores). */
+  online?: { sala: Sala; intro: number; salir: (error: string | null) => Scene };
 }
 
 export class FightScene implements Scene {
@@ -208,6 +230,20 @@ export class FightScene implements Scene {
   private pendingVoices: Array<{ name: string; at: number; channel?: string; wait?: number }> = [];
   /** Puente de pruebas: entradas forzadas por lado (una por cuadro de simulación). */
   readonly qaInputs: [FrameInput[], FrameInput[]] = [[], []];
+  /** En línea: la sesión con rollback (null en las demás peleas). */
+  readonly sesion: SesionRollback | null = null;
+  /** En línea: aviso arriba al centro (esperando al rival, salir, conexión cortada) y el ping. */
+  private onlineUi = new Container();
+  private onlineText = outlinedText('', 9, 0xffffff, 0x0a0610, 2);
+  private pingText = outlinedText('', 6, 0xb8b0c8, 0x0a0610, 1);
+  /** Cuadros seguidos esperando los controles del rival. */
+  private esperaT = 0;
+  /** Cuadros que queda abierta la pregunta "¿salir?" (ESC otra vez sale). */
+  private salirT = 0;
+  /** Cuadros desde el último salto para emparejar la velocidad. */
+  private frenoT = 0;
+  /** Cuadros que queda en pantalla el aviso de la conexión cortada antes de salir. */
+  private cortadaT = 0;
 
   constructor(
     private game: Game,
@@ -227,11 +263,8 @@ export class FightScene implements Scene {
     const pair = chosen.length === 2 ? chosen : [game.assets.fighters[0].def, game.assets.fighters[1].def];
     const defs = teams ? ([teams[0][0], teams[1][0]] as const) : ([pair[0], pair[1]] as const);
     // Las frases de entrada de los dos suenan una después de la otra, y después el "ROUND 1".
-    const introLen = [defs[0], defs[1]].reduce((t, d) => {
-      const len = game.sfx.duration(`${d.id}/voz/intro`);
-      return t + (len > 0 ? len + 0.3 : 0);
-    }, 0);
-    const introDelay = introLen > 0 ? Math.round((introLen + 0.1) * 60) : 0;
+    // En línea la espera viene de la sala: el largo de un audio puede variar un poco entre navegadores.
+    const introDelay = opts.online ? opts.online.intro : esperaDeEntrada(game, [defs[0], defs[1]]);
     this.match = new Match(defs, seed, { practice: mode === 'practica', teams: teams ?? undefined, introDelay, singleRound: opts.singleRound });
     const kb = game.kb;
     const pads = game.pads;
@@ -250,7 +283,17 @@ export class FightScene implements Scene {
       this.dummy = dummy;
       this.sources = [human(mergeKeys(P1_KEYS, P2_KEYS), 0), { sample: (m) => dummy.update(m) }];
       this.syncDummyPose();
+    } else if (opts.online) {
+      // En línea: el jugador maneja su lado con cualquiera de sus controles; el otro lo trae la red.
+      const sala = opts.online.sala;
+      const yo = human(mergeKeys(P1_KEYS, P2_KEYS), 0);
+      const nadie: InputSource = { sample: () => ({ dir: 5, held: 0, pressed: 0 }) };
+      this.sources = sala.lado === 0 ? [yo, nadie] : [nadie, yo];
+      const sesion = new SesionRollback(this.match, sala.lado);
+      this.sesion = sesion;
+      sala.alPaquete = (p) => sesion.recibirPaquete(p);
     } else this.sources = [human(P1_KEYS, 0), human(P2_KEYS, 1)];
+    this.onlineUi.addChild(this.onlineText, this.pingText);
 
     this.world.addChild(this.layers.shadows, this.layers.ghosts, this.layers.projectiles, this.layers.fighters);
     const [a, b] = this.match.fighters;
@@ -443,6 +486,14 @@ export class FightScene implements Scene {
     d.hud.addChildAt(this.punchFlash, 0);
     d.hud.addChild(this.hud.container);
     d.overlay.addChild(this.pauseUi);
+    if (this.sesion) {
+      // En línea: aviso arriba al centro (bajo el reloj y las vistas) y el ping abajo al centro.
+      this.onlineText.anchor.set(0.5);
+      this.onlineText.position.set(VIEW_W / 2, 84);
+      this.pingText.anchor.set(0.5, 1);
+      this.pingText.position.set(VIEW_W / 2, VIEW_H - 3);
+      d.overlay.addChild(this.onlineUi);
+    }
     d.worldView.filters = [this.zoom, this.negative];
     this.zoom.enabled = false;
     this.negative.enabled = false;
@@ -464,6 +515,11 @@ export class FightScene implements Scene {
     d.hud.removeChild(this.hud.container);
     d.hud.removeChild(this.punchFlash);
     d.overlay.removeChild(this.pauseUi);
+    if (this.opts.online) {
+      this.opts.online.sala.alPaquete = null;
+      d.overlay.removeChild(this.onlineUi);
+    }
+    this.onlineUi.destroy({ children: true });
     d.worldView.filters = [];
     this.game.assets.stage.setDarkness(0);
     this.projViews.clear();
@@ -495,7 +551,12 @@ export class FightScene implements Scene {
       g.setScene(this.opts.exit());
       return;
     }
-    if (pausePressed && this.mode !== 'demo') {
+    if (pausePressed && this.sesion) {
+      // En línea no hay pausa (el otro sigue jugando): ESC pregunta y ESC otra vez sale.
+      if (this.salirT > 0) return this.salirOnline(null);
+      this.salirT = 150;
+      g.sfx.play('pause');
+    } else if (pausePressed && this.mode !== 'demo') {
       this.paused = true;
       this.pauseSel = 0;
       this.pauseUi.visible = true;
@@ -507,18 +568,24 @@ export class FightScene implements Scene {
 
     const m = this.match;
     if (this.dummy) this.practiceKeys();
-    const inputs: [FrameInput, FrameInput] = [this.sources[0].sample(m), this.sources[1].sample(m)];
-    for (const i of [0, 1] as const) {
-      const forced = this.qaInputs[i].shift();
-      if (forced) inputs[i] = forced;
+    let events: readonly SimEvent[];
+    if (this.sesion) events = this.stepOnline();
+    else {
+      const inputs: [FrameInput, FrameInput] = [this.sources[0].sample(m), this.sources[1].sample(m)];
+      for (const i of [0, 1] as const) {
+        const forced = this.qaInputs[i].shift();
+        if (forced) inputs[i] = forced;
+      }
+      m.step(inputs);
+      events = m.events;
     }
-    m.step(inputs);
     if (this.dummy) {
       this.practiceAfterStep();
       this.hud.setPractice(this.practiceState!);
     }
     this.t++;
-    this.handleEvents();
+    this.handleEvents(events);
+    if (this.sesion && this.stepOnlineUi()) return;
     this.stepVoices();
     this.stepLights();
     if (m.freeze > 0 && m.freezeOwner) {
@@ -544,11 +611,86 @@ export class FightScene implements Scene {
     if (this.zoomT > 0) this.zoomT--;
     if (this.punchT > 0) this.punchT--;
 
-    if (m.over) {
+    if (m.over && this.finDefinitivo()) {
       if (this.opts.next) g.setScene(this.opts.next(m.matchWinner ?? -1, m.frame));
       else if (this.mode === 'demo') g.setScene(new FightScene(g, 'demo', this.seed + 1, this.opts));
       else g.setScene(new MainMenuScene(g));
     }
+  }
+
+  // ---------------------------------------------------------------- en línea
+
+  /** En línea: avanza un cuadro con la sesión (rehaciendo lo que haga falta) y manda los controles. */
+  private stepOnline(): SimEvent[] {
+    const s = this.sesion!;
+    const sala = this.opts.online!.sala;
+    let ev: SimEvent[];
+    this.frenoT++;
+    if (sala.estado === 'cerrada') ev = [];
+    else if (s.debeFrenar && this.frenoT >= CADA_FRENO) {
+      // Va adelantado: se salta este cuadro para que el otro alcance (casi no se nota).
+      this.frenoT = 0;
+      ev = s.corregir();
+    } else if (s.puedeAvanzar) {
+      // El control se lee solo cuando se usa: si no, se perdería una pulsación.
+      const lado = sala.lado;
+      const input = this.qaInputs[lado].shift() ?? this.sources[lado].sample(this.match);
+      ev = s.avanzar(input) ?? [];
+      this.esperaT = 0;
+    } else {
+      // Faltan los controles del rival de hace muchos cuadros: se espera.
+      this.esperaT++;
+      ev = s.corregir();
+    }
+    sala.enviarPaquete(s.armarPaquete());
+    return ev;
+  }
+
+  /** En línea: los avisos de arriba y el ping. Devuelve true si la escena ya se fue. */
+  private stepOnlineUi(): boolean {
+    const { sala } = this.opts.online!;
+    const s = this.sesion!;
+    const touch = tactil();
+    if (sala.estado === 'cerrada' || s.desincronizado !== null) {
+      if (this.cortadaT === 0) {
+        this.cortadaT = 150;
+        if (s.desincronizado !== null) {
+          reportarError(new Error(`en línea: desincronización en el cuadro ${s.desincronizado}`), 'online');
+          sala.cerrar('LA PELEA SE DESINCRONIZÓ');
+        }
+        this.onlineText.text = sala.error ?? 'SE CORTÓ LA CONEXIÓN';
+        this.game.sfx.play('menuBack');
+      }
+      if (--this.cortadaT <= 0) {
+        this.salirOnline(sala.error);
+        return true;
+      }
+    } else if (this.salirT > 0) {
+      this.salirT--;
+      this.onlineText.text = touch ? '¿SALIR? TOCA ☰ OTRA VEZ' : '¿SALIR? APRIETA ESC OTRA VEZ';
+    } else if (this.esperaT > AVISO_ESPERA) {
+      this.onlineText.text = `ESPERANDO A ${sala.rival?.apodo.toUpperCase() ?? 'TU RIVAL'}…`;
+    } else {
+      this.onlineText.text = '';
+    }
+    this.pingText.text = sala.ping ? `PING ${Math.round(sala.ping)} MS` : '';
+    return false;
+  }
+
+  /** En línea: la pelea solo termina cuando llegaron todos los controles del rival (los dos ven el mismo final). */
+  private finDefinitivo(): boolean {
+    const s = this.sesion;
+    if (!s) return true;
+    if (!s.alDia) return false;
+    this.handleEvents(s.corregir());
+    return this.match.over;
+  }
+
+  private salirOnline(error: string | null): void {
+    const { sala, salir } = this.opts.online!;
+    sala.cerrar();
+    this.game.sfx.play('menuBack');
+    this.game.setScene(salir(error));
   }
 
   private stepPause(pausePressed: boolean): void {
@@ -636,12 +778,13 @@ export class FightScene implements Scene {
     this.pauseUi.visible = this.paused;
   }
 
-  private handleEvents(): void {
+  /** Lo que pasó en la pelea este cuadro (golpes, voces, carteles): efectos y sonidos. */
+  private handleEvents(events: readonly SimEvent[]): void {
     const m = this.match;
     const sfx = this.game.sfx;
     const camLeft = m.camX - VIEW_W / 2;
     const pan = (x: number) => ((x - camLeft) / VIEW_W) * 1.2 - 0.6;
-    for (const e of m.events) {
+    for (const e of events) {
       switch (e.type) {
         case 'hit': {
           this.fx.hit(e.x, e.y, e.dir, e.spark);

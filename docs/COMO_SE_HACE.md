@@ -321,6 +321,9 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
     botones con `+` y repeticiones con `*N` (ej. `input:0:4,5*2,4+lp,5*10` = ← ← + golpe débil).
   - `meter:<lado>:<valor>` (100 = una barra) y `health:<lado>:<valor>`.
 - En práctica, la tecla 4 reinicia la posición.
+- En línea sin cuenta (dos pestañas): `?qa=1&escena=sala&crear=QABC&apodo=UNO` y, en la otra,
+  `?qa=1&escena=sala&unirse=QABC&apodo=DOS` (código de 4 letras sin I ni O). Con `?qa` los controles
+  forzados (`input:<lado>:…`) van al lado propio: 0 quien creó la sala, 1 quien se unió.
 - Las capturas se sacan con el navegador automático (`browser.mjs … --script prueba.mjs`).
 
 ---

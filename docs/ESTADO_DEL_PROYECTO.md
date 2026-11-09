@@ -531,7 +531,7 @@ de respaldo (TURN de Cloudflare), desconexiones, revancha, PARTIDA RÁPIDA y pun
 - `src/online/rollback.ts` (`SesionRollback`): el control propio se aplica 2 cuadros después; del rival se
   adivina que sigue igual y, cuando llega distinto, se carga la foto y se rehacen hasta 8 cuadros. Los
   avisos (sonidos, chispas) que ya salieron no se repiten al rehacer. Cada 30 cuadros se comparan
-  huellas. Arma y recibe paquetes; todavía no sabe de redes ni está conectada al juego (eso es el Paso B).
+  huellas. Arma y recibe paquetes; no sabe de redes (eso lo hace la sala, Paso B).
 - `herramientas/rollback_prueba.ts`: peleas de la CPU contra la CPU (también 2 VS 2) jugadas por dos
   computadores simulados con red perfecta, 50 ms, 100 ms con 10 % de paquetes perdidos y 170 ms con 25 %
   perdidos: todos los cuadros quedaron idénticos a la pelea de referencia. Foto: 12 µs guardar, 6 µs
@@ -548,6 +548,35 @@ de respaldo (TURN de Cloudflare), desconexiones, revancha, PARTIDA RÁPIDA y pun
   - Los dos tienen que tener la misma versión del juego: comparar una huella de las definiciones al conectarse.
   - Con más de ~130 ms de ida el rollback de 8 cuadros no alcanza y el juego espera: subir el retraso
     según el ping (Paso C).
+
+## En línea, fase 2 · Paso B: salas con código (7 de noviembre)
+
+- **EN LÍNEA > CREAR SALA** muestra un código de 4 letras (sin I ni O; tocarlo lo copia). El rival entra
+  a **EN LÍNEA > UNIRSE CON CÓDIGO** y lo escribe. PARTIDA RÁPIDA sigue apagada (Paso C).
+- `src/online/sala.ts` (`Sala`): Supabase Realtime solo presenta a los dos (canal `sala-<CÓDIGO>`,
+  presencia y la oferta/respuesta/ICE de WebRTC; no hace falta pegar SQL ni configurar nada). Después
+  quedan conectados directo entre navegadores: canal "juego" (sin orden ni reenvíos, los controles de
+  cada cuadro) y "control" (seguro: elección, escenario, listo, empezar, ping, adiós). Sin noticias del
+  otro por 6 s, se da por cortada. Al conectarse se compara la versión del juego (`versionJuego`: la
+  huella de la definición de cada luchador al cargarla, `FighterAsset.huella`).
+- **ELIGE LUCHADOR en línea** (`CharacterSelectScene` modo `'online'`): tú a la izquierda, el rival a la
+  derecha con su apodo; su cursor y su elección llegan por la red (`'sel'`, por vuelta: `sala.ronda`).
+  ESC sin nada elegido sale de la sala.
+- **PREPARANDO LA PELEA** (`src/scenes/sala.ts`): quien creó la sala elige el escenario al azar y manda
+  los dos luchadores; cada uno baja lo suyo y avisa; con los dos listos manda la semilla y la espera de
+  las frases de entrada (`esperaDeEntrada`, la misma en los dos). Quien crea la sala pelea a la izquierda.
+- **La pelea en línea** (`FightScene` modo `'online'`): la sesión de rollback del Paso A con el control del
+  jugador (teclado o joystick); manda un paquete cada cuadro. Si va adelantado, se salta un cuadro de vez
+  en cuando para que el otro alcance (`debeFrenar`, como GGPO). No hay pausa: ESC pregunta y ESC otra vez
+  sale. Arriba: "ESPERANDO A …" si el rival se atrasa, y abajo el ping. La pelea termina recién cuando
+  llegaron todos los controles del otro (los dos ven el mismo final); después, ELIGE LUCHADOR otra vez con
+  "¡GANASTE!" o "PERDISTE" (la revancha). Si las huellas se separan, se avisa, se anota en `errores` y se sale.
+- Probado con dos navegadores en el mismo computador (`?escena=sala`, ver COMO_SE_HACE.md): sala en 1,5 s,
+  conectados en 1,5 a 4 s, peleas idénticas (vida y huellas), pelea completa hasta el K.O., revancha con
+  otros luchadores y salida de uno (el otro ve "TU RIVAL SALIÓ DE LA SALA").
+- **Falta (Paso C)**: servidor de respaldo TURN (sin él, algunas redes, como los datos móviles con CGNAT o
+  redes de empresa, no se dejan conectar directo y sale "NO SE PUDO CONECTAR"); retraso según el ping;
+  PARTIDA RÁPIDA; puntos de liga en el ranking; los apodos en la barra de vida.
 
 ## Pendiente y decisiones abiertas
 

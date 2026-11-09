@@ -24,6 +24,7 @@ import { DemoScene } from './scenes/demo';
 import { FightScene } from './scenes/fight';
 import { LoadingScene } from './scenes/loading';
 import { MainMenuScene } from './scenes/modeSelect';
+import { CrearSalaScene, UnirseScene, usarApodoDePrueba } from './scenes/sala';
 import { TitleScene, loadTitleArena } from './scenes/title';
 
 /** Luchadores del plantel (carpetas de public/luchadores/), en este orden. */
@@ -154,6 +155,12 @@ async function main(): Promise<void> {
     const stageId = stages.find(params.get('escenario') ?? '')?.id ?? stages.first.id;
     const needs = { fighters: teams ? [...teams[0], ...teams[1]] : (pair ?? [0, 1]), stage: stageId };
     game.setScene(new LoadingScene(game, needs, () => new FightScene(game, mode, Number(params.get('semilla')) || 7, opts)));
+  } else if (params.get('escena') === 'sala') {
+    // Pruebas en línea: ?escena=sala&crear=ABCD (o &unirse=ABCD); con ?qa, &apodo=PRUEBA1 (sin cuenta).
+    const apodoQa = params.get('apodo');
+    if (params.has('qa') && apodoQa) usarApodoDePrueba(apodoQa);
+    const unirse = params.get('unirse');
+    game.setScene(unirse ? new UnirseScene(game, unirse) : new CrearSalaScene(game, params.get('crear') || undefined));
   } else if (params.get('escena') === 'demostracion') {
     game.setScene(new DemoScene(game, () => new TitleScene(game)));
   } else {

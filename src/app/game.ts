@@ -37,7 +37,8 @@ export interface Assets {
   content: Contenido;
 }
 
-export type FightMode = 'cpu' | '2p' | 'demo' | 'practica';
+/** Modos de pelea. 'online': contra otra persona por internet (sala en línea, con rollback). */
+export type FightMode = 'cpu' | '2p' | 'demo' | 'practica' | 'online';
 
 export class Game {
   scene: Scene | null = null;

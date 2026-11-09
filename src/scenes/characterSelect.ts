@@ -13,6 +13,7 @@ import type { FightMode, Game, Scene } from '../app/game';
 import type { FighterAsset } from '../content/loadFighter';
 import { P1_KEYS, P2_KEYS } from '../input/devices';
 import { tactil } from '../input/touch';
+import type { Sala } from '../online/sala';
 import { costumeFilter } from '../render/costume';
 import { NEON_CYAN, NEON_PINK } from '../render/live';
 import { arcade, outlinedText } from '../render/text';
@@ -39,6 +40,17 @@ const BIG_X = 84;
 const READY_FRAMES = 36;
 
 type SelectMode = Exclude<FightMode, 'demo'> | 'arcade';
+
+/** ELIGE LUCHADOR en línea: el lado derecho lo mueve el rival desde su computador. */
+interface OpcionesOnline {
+  sala: Sala;
+  /** Cómo le fue en la pelea anterior (revancha). */
+  resultado?: 'gane' | 'perdi' | 'empate';
+  /** Al salir de la sala (o si se corta): con el porqué. */
+  salir: (error: string | null) => Scene;
+  /** Con los dos elegidos: mi luchador y el del rival (índices del plantel). */
+  preparar: (mio: number, suyo: number) => Scene;
+}
 
 interface Keys {
   left: string[];
@@ -156,7 +168,14 @@ export class CharacterSelectScene implements Scene {
   private t = 0;
   private grey: [Filter, Filter] = [greyFilter(), greyFilter()];
 
-  constructor(private game: Game, private mode: SelectMode) {
+  /** En línea: lo último que se le mandó al rival (para mandar solo los cambios). */
+  private enviado = { pos: -1, elige: -2 };
+
+  constructor(
+    private game: Game,
+    private mode: SelectMode,
+    private online?: OpcionesOnline,
+  ) {
     this.hands = [new MenuHand(game, p1Menu(), 0), new MenuHand(game, p2Menu(), 1)];
     const bg = new Graphics();
     bg.rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0x0a0414, alpha: 0.55 });
@@ -170,6 +189,17 @@ export class CharacterSelectScene implements Scene {
       sub.position.set(VIEW_W / 2, 36);
       this.ui.addChild(sub);
     } else {
+      if (online) {
+        // En línea: contra quién, y cómo le fue en la pelea anterior.
+        const r = online.resultado;
+        const rivalName = online.sala.rival?.apodo.toUpperCase() ?? 'TU RIVAL';
+        const txt =
+          r === 'gane' ? '¡GANASTE! · ELIGE PARA LA REVANCHA' : r === 'perdi' ? 'PERDISTE · ELIGE PARA LA REVANCHA' : r === 'empate' ? 'EMPATE · ELIGE PARA LA REVANCHA' : `EN LÍNEA CONTRA ${rivalName}`;
+        const sub = outlinedText(arcade(txt), 7, r === 'gane' ? 0xffd040 : 0xd8d0e8, 0x0a0610, 2);
+        sub.anchor.set(0.5);
+        sub.position.set(VIEW_W / 2, 36);
+        this.ui.addChild(sub);
+      }
       const vs = outlinedText('VS', 16, 0xffd040, 0x5a0a10, 3);
       vs.anchor.set(0.5);
       vs.position.set(VIEW_W / 2, 66);
@@ -177,7 +207,9 @@ export class CharacterSelectScene implements Scene {
     }
 
     // Vistas grandes: J1 a la izquierda; CPU / J2 / SPARRING a la derecha (en ARCADE, los rivales).
-    const rival = mode === '2p' ? 'J2' : mode === 'practica' ? 'SPARRING' : mode === 'arcade' ? 'RIVALES' : 'CPU';
+    const rival =
+      mode === 'online' ? arcade(online?.sala.rival?.apodo.toUpperCase() ?? 'RIVAL') : mode === '2p' ? 'J2' : mode === 'practica' ? 'SPARRING' : mode === 'arcade' ? 'RIVALES' : 'CPU';
+    const yo = mode === 'online' ? 'TÚ' : 'J1';
     const makeBig = (side: 0 | 1): Big => {
       const x = side === 0 ? BIG_X : VIEW_W - BIG_X;
       const color = side === 0 ? NEON_PINK : NEON_CYAN;
@@ -193,7 +225,7 @@ export class CharacterSelectScene implements Scene {
       name.anchor.set(0.5);
       name.position.set(x, BIG_Y + 14);
       // Quién elige este lado, en la esquina de arriba.
-      const label = outlinedText(side === 0 ? 'J1' : rival, 10, color, 0x0a0610, 2);
+      const label = outlinedText(side === 0 ? yo : rival, 10, color, 0x0a0610, 2);
       label.anchor.set(side === 0 ? 0 : 1, 0.5);
       // (En el celular, el botón ☰ va en la esquina derecha: la etiqueta se corre.)
       label.position.set(side === 0 ? 14 : VIEW_W - 14 - (tactil() ? 36 : 0), 18);
@@ -226,7 +258,7 @@ export class CharacterSelectScene implements Scene {
 
     // Cada cursor parte en un luchador distinto (si hay más de uno).
     this.pos = [0, Math.min(1, roster.length - 1)];
-    this.cursorLabels = [outlinedText('J1', 6, NEON_PINK, 0x0a0610, 2), outlinedText(mode === '2p' ? 'J2' : rival, 6, NEON_CYAN, 0x0a0610, 2)];
+    this.cursorLabels = [outlinedText(yo, 6, NEON_PINK, 0x0a0610, 2), outlinedText(mode === '2p' ? 'J2' : rival, 6, NEON_CYAN, 0x0a0610, 2)];
     for (const l of this.cursorLabels) l.anchor.set(0.5, 1);
     this.hint = outlinedText('', 6, 0xd8d0e8, 0x0a0610, 1);
     this.hint.anchor.set(0.5, 0);
@@ -292,7 +324,7 @@ export class CharacterSelectScene implements Scene {
   /** Lado que maneja ahora el jugador 1: el suyo y, sin jugador 2, después el del rival. */
   private p1Side(): 0 | 1 | null {
     if (this.stages[0] !== 'done') return 0;
-    if (this.mode !== '2p' && this.stages[1] !== 'done') return 1;
+    if (this.mode !== '2p' && this.mode !== 'online' && this.stages[1] !== 'done') return 1;
     return null;
   }
 
@@ -301,6 +333,15 @@ export class CharacterSelectScene implements Scene {
     const rival = this.mode === 'practica' ? 'TU SPARRING' : 'TU RIVAL';
     const touch = tactil();
     const back = touch ? '☰ VUELVE' : 'ESC VUELVE';
+    if (this.online) {
+      const rivalName = this.online.sala.rival?.apodo.toUpperCase() ?? 'TU RIVAL';
+      this.hint.text = arcade(
+        side === 0
+          ? `${touch ? 'TOCA UNA CARA Y TÓCALA OTRA VEZ' : 'ELIGE TU LUCHADOR'} · ${touch ? '☰' : 'ESC'} SALE DE LA SALA`
+          : `ESPERANDO A ${rivalName}… · ${back.replace('VUELVE', 'CAMBIA')}`,
+      );
+      return;
+    }
     this.hint.text = arcade(
       this.mode === '2p'
         ? `CADA JUGADOR ELIGE CON SU CURSOR · ${back}`
@@ -352,12 +393,19 @@ export class CharacterSelectScene implements Scene {
     this.stages[side] = 'done';
     this.game.sfx.play('menuConfirm');
     this.refreshHint();
+    if (this.online && side === 0) this.enviarSel();
     if (this.stages[0] === 'done' && this.stages[1] === 'done') this.ready = 0;
   }
 
   /** Un lado vuelve un paso atrás; sin nada que deshacer, vuelve al menú. Devuelve false si salió. */
   private undo(side: 0 | 1): boolean {
     this.game.sfx.play('menuBack');
+    if (this.online && side === 0 && this.stages[0] !== 'done') {
+      // En línea, sin nada que deshacer: sale de la sala.
+      this.online.sala.cerrar();
+      this.game.setScene(this.online.salir(null));
+      return false;
+    }
     if (this.stages[side] === 'done') {
       this.stages[side] = 'choose';
       this.picks[side] = -1;
@@ -370,7 +418,46 @@ export class CharacterSelectScene implements Scene {
       return false;
     }
     this.refreshHint();
+    if (this.online) this.enviarSel();
     return true;
+  }
+
+  // ---------------------------------------------------------------- en línea
+
+  /** Le cuenta al rival dónde está el cursor y qué eligió (cada vez que cambia). */
+  private enviarSel(): void {
+    const o = this.online;
+    if (!o) return;
+    const elige = this.stages[0] === 'done' ? this.picks[0] : -1;
+    this.enviado = { pos: this.pos[0], elige };
+    o.sala.enviar({ t: 'sel', ronda: o.sala.ronda, pos: this.pos[0], elige });
+  }
+
+  /** El lado del rival sigue lo que llega de su computador. Devuelve true si la escena ya se fue. */
+  private stepOnline(): boolean {
+    const o = this.online!;
+    const sala = o.sala;
+    if (sala.estado === 'cerrada') {
+      this.game.sfx.play('menuBack');
+      this.game.setScene(o.salir(sala.error));
+      return true;
+    }
+    const r = sala.seleccion;
+    const roster = this.game.assets.roster;
+    if (r.ronda === sala.ronda && this.ready < 0) {
+      if (this.selectable(r.pos) && this.pos[1] !== r.pos) this.pos[1] = r.pos;
+      if (r.elige >= 0 && r.elige < roster.length && this.stages[1] === 'choose') {
+        this.picks[1] = r.elige;
+        this.stages[1] = 'done';
+        this.game.sfx.play('menuConfirm');
+        if (this.stages[0] === 'done') this.ready = 0;
+      } else if (r.elige < 0 && this.stages[1] === 'done') {
+        this.stages[1] = 'choose';
+        this.picks[1] = -1;
+      }
+    }
+    if (this.ready < 0 && this.pos[0] !== this.enviado.pos) this.enviarSel();
+    return false;
   }
 
   /** ¿El toque de este cuadro cayó en la casilla (con un margen alrededor)? */
@@ -441,6 +528,11 @@ export class CharacterSelectScene implements Scene {
   enter(): void {
     backdrop.attach(this.game);
     this.game.display.hud.addChild(this.ui);
+    if (this.online) {
+      // Una vuelta nueva de ELIGE LUCHADOR (la revancha cuenta como otra).
+      this.online.sala.ronda++;
+      this.enviarSel();
+    }
   }
 
   exit(): void {
@@ -459,6 +551,7 @@ export class CharacterSelectScene implements Scene {
         setTex(b.sprite, b.frames[b.fi].tex);
       }
     }
+    if (this.online && this.stepOnline()) return;
     if (this.ready >= 0) {
       if (++this.ready >= READY_FRAMES) this.next();
       return;
@@ -481,6 +574,10 @@ export class CharacterSelectScene implements Scene {
     const g = this.game;
     if (this.mode === 'arcade') {
       g.setScene(startArcade(g, this.picks[0], 0));
+      return;
+    }
+    if (this.online) {
+      g.setScene(this.online.preparar(this.picks[0], this.picks[1]));
       return;
     }
     const fighters: [number, number] = [this.picks[0], this.picks[1]];

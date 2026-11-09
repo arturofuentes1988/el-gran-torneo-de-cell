@@ -18,6 +18,8 @@ import { abrirSelectorDeAvatar } from '../online/avatares';
 import { abrirFormulario, type Formulario } from '../online/formulario';
 import { outlinedText } from '../render/text';
 import { backdrop } from './backdrop';
+import { FormScene } from './formScene';
+import { CrearSalaScene, UnirseScene } from './sala';
 import { MenuScene } from './menu';
 import { MainMenuScene } from './modeSelect';
 import { TitleScene } from './title';
@@ -156,59 +158,6 @@ class CuentaScene extends MenuScene {
 
   protected back(): void {
     this.go(this.motivo === 'online' ? new MainMenuScene(this.game) : new TitleScene(this.game), 'menuBack');
-  }
-}
-
-/** Pantalla con un formulario HTML encima del fondo de los menús (ESC o ☰ vuelve). */
-abstract class FormScene implements Scene {
-  readonly music = 'titulo';
-  protected form: Formulario | null = null;
-  protected ocupado = false;
-
-  constructor(protected game: Game) {}
-
-  protected abstract abrir(): Formulario;
-  protected abstract volver(): void;
-
-  enter(): void {
-    backdrop.attach(this.game);
-    this.form = this.abrir();
-  }
-
-  exit(): void {
-    backdrop.detach(this.game);
-    this.form?.cerrar();
-    this.form = null;
-  }
-
-  step(): void {
-    if (this.game.menu.back && !this.ocupado) this.volver();
-  }
-
-  render(): void {
-    backdrop.render();
-  }
-
-  protected esperar(on: boolean): void {
-    this.ocupado = on;
-    this.form?.ocupado(on);
-  }
-
-  /** Error en el formulario (con el sonido de volver). */
-  protected fallo(texto: string, campo?: string): void {
-    this.form?.mensaje(texto, 'error');
-    if (campo) this.form?.enfocar(campo);
-    this.game.sfx.play('menuBack');
-  }
-
-  protected ir(s: Scene, sound: 'menuConfirm' | 'menuBack' = 'menuConfirm'): void {
-    this.game.sfx.play(sound);
-    this.game.setScene(s);
-  }
-
-  /** ¿Sigue en esta pantalla? (al volver una respuesta de internet). */
-  protected get vigente(): boolean {
-    return this.game.scene === this;
   }
 }
 
@@ -357,12 +306,17 @@ class AvatarScene implements Scene {
   }
 }
 
-/** EN LÍNEA (con cuenta): las salas llegan en la fase 2; por ahora, el apodo, el avatar y cerrar sesión. */
+/** EN LÍNEA (con cuenta) con un aviso (por qué se cerró la sala de la que viene). */
+export function menuEnLinea(game: Game, aviso: string | null = null): Scene {
+  return new OnlineScene(game, aviso);
+}
+
+/** EN LÍNEA (con cuenta): salas con código, el apodo, el avatar y cerrar sesión. PARTIDA RÁPIDA llega en el Paso C. */
 class OnlineScene extends MenuScene {
-  constructor(game: Game) {
+  constructor(game: Game, avisoInicial: string | null = null) {
     super(game, 'online', 'EN LÍNEA', [
-      { id: 'crear', label: 'CREAR SALA', dim: true },
-      { id: 'unirse', label: 'UNIRSE CON CÓDIGO', dim: true },
+      { id: 'crear', label: 'CREAR SALA' },
+      { id: 'unirse', label: 'UNIRSE CON CÓDIGO' },
       { id: 'rapida', label: 'PARTIDA RÁPIDA', dim: true },
       { id: 'apodo', label: 'CAMBIAR APODO' },
       { id: 'avatar', label: 'CAMBIAR AVATAR' },
@@ -383,13 +337,18 @@ class OnlineScene extends MenuScene {
       const marco = new Graphics().roundRect(s.x - 9, s.y - 9, 18, 18, 3).stroke({ color: 0xffd76a, width: 1 });
       this.ui.addChild(s, marco);
     }
+    if (avisoInicial) this.aviso(avisoInicial, 'error', 300);
   }
 
   protected choose(id: string): void {
     const g = this.game;
-    if (id === 'crear' || id === 'unirse' || id === 'rapida') {
+    if (id === 'crear') {
+      this.go(new CrearSalaScene(g));
+    } else if (id === 'unirse') {
+      this.go(new UnirseScene(g));
+    } else if (id === 'rapida') {
       g.sfx.play('menuMove');
-      this.aviso('LAS PELEAS EN LÍNEA LLEGAN EN LA PRÓXIMA ACTUALIZACIÓN', 'info', 180);
+      this.aviso('PARTIDA RÁPIDA LLEGA PRONTO · POR AHORA, USA CREAR SALA', 'info', 240);
     } else if (id === 'apodo') {
       this.go(new ApodoScene(g, false, () => new OnlineScene(g), () => new OnlineScene(g)));
     } else if (id === 'avatar') {
