@@ -112,6 +112,8 @@ function huellaProfunda(raiz: object): number {
 interface Pelea {
   nombre: string;
   crear: () => Match;
+  /** Pausas en línea: en el cuadro n, lo que manda cada lado (1 pide la pausa, 2 la termina). */
+  pausas?: Record<number, [number, number]>;
 }
 
 interface Referencia {
@@ -123,6 +125,9 @@ interface Referencia {
   avisos: number;
   /** Tiempo medio de simular un cuadro (ms), sin contar las huellas. */
   msCuadro: number;
+  /** Cuadros con la pelea congelada por una pausa en línea (o su cuenta), y las pausas que quedaron. */
+  pausados: number;
+  pausasQuedan: [number, number];
 }
 
 function referencia(p: Pelea, seed: number): Referencia {
@@ -133,21 +138,25 @@ function referencia(p: Pelea, seed: number): Referencia {
   const profundas: number[] = [];
   let avisos = 0;
   let ms = 0;
+  let pausados = 0;
   while (!m.over && m.frame < MAX_FRAMES) {
     huellas.push(huella(guardar(m)));
     profundas.push(huellaProfunda(m));
     // Los primeros cuadros, sin controles (como en línea, mientras llega el primero).
-    const ins: [FrameInput, FrameInput] = entradas.length < 10 ? [NEUTRAL_INPUT, NEUTRAL_INPUT] : [cpus[0].update(m), cpus[1].update(m)];
+    let ins: [FrameInput, FrameInput] = entradas.length < 10 ? [NEUTRAL_INPUT, NEUTRAL_INPUT] : [cpus[0].update(m), cpus[1].update(m)];
+    const pz = p.pausas?.[entradas.length];
+    if (pz) ins = [{ ...ins[0], pausa: pz[0] }, { ...ins[1], pausa: pz[1] }];
     entradas.push(ins);
     const t0 = performance.now();
     m.step(ins);
     ms += performance.now() - t0;
     avisos += m.events.length;
     m.events.length = 0;
+    if (m.pausaLado >= 0 || m.cuenta > 0) pausados++;
   }
   huellas.push(huella(guardar(m)));
   profundas.push(huellaProfunda(m));
-  return { entradas, huellas, profundas, avisos, msCuadro: ms / entradas.length };
+  return { entradas, huellas, profundas, avisos, msCuadro: ms / entradas.length, pausados, pausasQuedan: [...m.pausasQuedan] };
 }
 
 /** Controles al azar con todos los botones (burla, cambio, ayuda, rodada, Modo Poder...). */
@@ -307,6 +316,13 @@ for (let k = 0; k < PELEAS; k++) {
   peleas.push(pelea1v1(a, b, 100 + k));
 }
 peleas.push(pelea2v2('samurai', 'lena', 'micky', 'maki', 7));
+// Pausas en línea: J1 pausa y sigue; J2 pausa, J1 intenta seguir (no puede: no pausó él) y J2 sigue;
+// J1 gasta su segunda pausa y no sigue (sigue sola al minuto); los dos piden otra en plena pausa.
+peleas.push({
+  nombre: 'pablito vs carlitos con pausas en línea (semilla 11)',
+  crear: () => new Match([defs.get('pablito')!, defs.get('carlitos')!], 11, { introDelay: 30, pausas: 2 }),
+  pausas: { 400: [1, 0], 700: [2, 0], 1200: [0, 1], 1250: [2, 0], 1500: [0, 2], 2000: [1, 0], 2001: [1, 1] },
+});
 
 const redes: [string, Red][] = [
   ['red perfecta', { atraso: 0, salto: 0, perdida: 0 }],
@@ -319,6 +335,7 @@ let fallas = 0;
 for (const p of peleas) {
   const ref = referencia(p, 1);
   console.log(`\n${p.nombre}: ${ref.entradas.length} cuadros, ${ref.avisos} avisos (simular un cuadro: ${(ref.msCuadro * 1000).toFixed(0)} µs)`);
+  if (p.pausas) console.log(`  pausas: ${ref.pausados} cuadros congelados, quedaron ${ref.pausasQuedan.join(' y ')} pausas`);
   const gc = guardarYCargar(p, ref, 5);
   console.log(`  guardar y cargar: ${gc ?? 'OK'}`);
   if (gc) fallas++;

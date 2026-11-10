@@ -170,6 +170,11 @@ h1 {
   margin-top: 10px;
 }
 
+/* El display de arriba le gana al atributo hidden: las dificultades solo van en CAMPEONES DEL ARCADE. */
+.dificultades[hidden] {
+  display: none;
+}
+
 .dificultades button {
   font-size: 13px;
   padding: 5px 12px;

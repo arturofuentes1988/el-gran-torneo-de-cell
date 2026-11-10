@@ -18,14 +18,23 @@ import { cargar, guardar, huella, type Estado } from '../sim/estado';
 import type { SimEvent } from '../sim/events';
 import type { Match } from '../sim/match';
 
-/** Control de un cuadro en un número: dirección (4 bits), botones apretados (10) y recién apretados (10). */
-export const empacar = (i: FrameInput): number => (i.dir & 15) | ((i.held & 1023) << 4) | ((i.pressed & 1023) << 14);
+/**
+ * Control de un cuadro en un número: dirección (4 bits), botones apretados (10), recién apretados (10)
+ * y la pausa (2: pedirla o terminarla).
+ */
+export const empacar = (i: FrameInput): number =>
+  (i.dir & 15) | ((i.held & 1023) << 4) | ((i.pressed & 1023) << 14) | (((i.pausa ?? 0) & 3) << 24);
 
-export const desempacar = (n: number): FrameInput => ({ dir: n & 15 || 5, held: (n >>> 4) & 1023, pressed: (n >>> 14) & 1023 });
+export const desempacar = (n: number): FrameInput => ({
+  dir: n & 15 || 5,
+  held: (n >>> 4) & 1023,
+  pressed: (n >>> 14) & 1023,
+  pausa: (n >>> 24) & 3,
+});
 
 const NEUTRO = empacar({ dir: 5, held: 0, pressed: 0 });
-/** Lo que se adivina del rival: sigue igual (misma dirección y botones), sin apretar nada nuevo. */
-const adivinar = (ultimo: number): number => ultimo & ~(1023 << 14);
+/** Lo que se adivina del rival: sigue igual (misma dirección y botones), sin apretar nada nuevo ni pausar. */
+const adivinar = (ultimo: number): number => ultimo & ((1 << 14) - 1);
 
 /** Cada cuántos cuadros se compara la huella de la pelea con la del otro (para notar si se separaron). */
 const CADA_HUELLA = 30;

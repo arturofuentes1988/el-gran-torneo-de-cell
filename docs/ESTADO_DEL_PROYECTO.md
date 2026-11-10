@@ -571,10 +571,8 @@ de respaldo (TURN de Cloudflare), desconexiones, revancha, PARTIDA RÁPIDA y pun
   las frases de entrada (`esperaDeEntrada`, la misma en los dos). Quien crea la sala pelea a la izquierda.
 - **La pelea en línea** (`FightScene` modo `'online'`): la sesión de rollback del Paso A con el control del
   jugador (teclado o joystick); manda un paquete cada cuadro. Si va adelantado, se salta un cuadro de vez
-  en cuando para que el otro alcance (`debeFrenar`, como GGPO). No hay pausa: ESC, el ☰ del celular o
-  el botón ☰ MENÚ (abajo al centro, en el computador) abren un menú sobre la pelea, que sigue con el
-  luchador propio quieto: CONTINUAR, MOVIMIENTOS (abre en el luchador propio, con las teclas de J1),
-  CONTROLES y SALIR DE LA SALA (10 de noviembre; antes ESC dos veces sacaba de la sala). Arriba: "ESPERANDO A …" si el rival se atrasa, y abajo el ping. La pelea termina recién cuando
+  en cuando para que el otro alcance (`debeFrenar`, como GGPO). Arriba: "ESPERANDO A …" si el rival se
+  atrasa, y abajo el ping y el botón ☰ MENÚ (en el computador). La pelea termina recién cuando
   llegaron todos los controles del otro (los dos ven el mismo final); después, ELIGE LUCHADOR otra vez con
   "¡GANASTE!" o "PERDISTE" (la revancha). Si las huellas se separan, se avisa, se anota en `errores` y se sale.
 - Probado con dos navegadores en el mismo computador (`?escena=sala`, ver COMO_SE_HACE.md): sala en 1,5 s,
@@ -588,9 +586,30 @@ de respaldo (TURN de Cloudflare), desconexiones, revancha, PARTIDA RÁPIDA y pun
   tabla `errores` (mensaje "sala: …") la etapa a la que llegó, sus caminos de red (host, srflx, relay),
   los del rival, los estados ICE y el tipo de red: ahí se ve si falta el TURN. La pantalla de CREAR SALA
   dice "NO SALGAS DE ESTA PANTALLA" (en el celular, salir a WhatsApp puede congelar la sala).
+- **Pausa en línea, para los dos** (10 de noviembre, pedido del usuario): cada jugador tiene 2 pausas por
+  partido. ESC, el ☰ del celular o el botón ☰ MENÚ piden la pausa; viaja con los controles del cuadro
+  (`FrameInput.pausa`: 1 pedirla, 2 terminarla; bits 24 y 25 del paquete), así empieza y termina en el
+  mismo cuadro en los dos computadores aunque haya rollback (`Match.pausaEnLinea`, opción `pausas`).
+  Congela todo, el reloj también. Quien pausó ve CONTINUAR, MOVIMIENTOS, CONTROLES y SALIR DE LA SALA;
+  el otro ve "PAUSA DE …" sin CONTINUAR: solo quien pausó sigue. A los 60 s sigue sola (`PAUSA_MAX`).
+  Al seguir, "3, 2, 1" grande en los dos (`CUENTA_PAUSA`). Durante un súper, la cámara lenta o un ultra
+  la pausa queda pedida y empieza apenas se pueda; fuera del round no se puede. Sin pausas, ESC abre el
+  menú sobre la pelea, que sigue con el luchador propio quieto ("YA USASTE TUS 2 PAUSAS"). MOVIMIENTOS
+  abre en el luchador propio con las teclas de J1. Probado: `herramientas/rollback_prueba.ts` tiene una
+  pelea con pausas (las 4 redes simuladas dan lo mismo) y dos navegadores quedan congelados en el mismo
+  cuadro.
+- **Liga en línea** (10 de noviembre): al terminar cada pelea en línea, cada jugador manda su resultado
+  (`src/online/liga.ts` → función `reportar_pelea` de `supabase/migraciones/004_liga_en_linea.sql`, que el
+  usuario pega en el SQL Editor). La pelea se reconoce por el código de la sala y la semilla. Cuando llegan
+  los dos resultados y coinciden, suma puntos tipo ELO (K = 32, todos parten con 1.000) a los dos; si no
+  coinciden o la misma cuenta mandó los dos lados, no cuenta; entre los mismos dos, 10 peleas por día como
+  máximo. El ranking de la liga ahora muestra a todos los que tienen apodo (antes solo a quien tenía
+  peleas, y como nada anotaba peleas no salía nadie). Probado en un Postgres de prueba (PGlite) con las 4
+  migraciones. Las peleas de antes no quedaron anotadas en ninguna parte.
 - **Falta (Paso C)**: servidor de respaldo TURN (sin él, algunas redes, como los datos móviles con CGNAT o
-  redes de empresa, no se dejan conectar directo y sale "NO SE PUDO CONECTAR"); retraso según el ping;
-  PARTIDA RÁPIDA; puntos de liga en el ranking; los apodos en la barra de vida.
+  redes de empresa, no se dejan conectar directo y sale "NO SE PUDO CONECTAR"; el código ya está, falta el
+  Worker de Cloudflare); retraso según el ping; PARTIDA RÁPIDA; los apodos en la barra de vida; mostrar
+  los puntos ganados al terminar la pelea.
 
 ## Pendiente y decisiones abiertas
 

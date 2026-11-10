@@ -14,6 +14,7 @@ import { Progreso } from '../content/descargas';
 import { tactil } from '../input/touch';
 import { apodo, avatar } from '../online/cuenta';
 import { abrirFormulario, type Formulario } from '../online/formulario';
+import { reportarPelea, type Resultado } from '../online/liga';
 import { Sala, codigoValido, limpiarCodigo, versionJuego, type Jugador } from '../online/sala';
 import { BarraCarga } from '../render/barraCarga';
 import { arcade, outlinedText } from '../render/text';
@@ -314,12 +315,16 @@ class PreparandoScene extends PantallaSala {
     const g = this.game;
     const s = this.sala;
     const lado = s.lado;
-    const res = (w: 0 | 1 | -1) => (w === -1 ? 'empate' : w === lado ? 'gane' : 'perdi');
+    const res = (w: 0 | 1 | -1): Resultado => (w === -1 ? 'empate' : w === lado ? 'gane' : 'perdi');
     g.setScene(
       new FightScene(g, 'online', semilla, {
         fighters: this.luchadores!,
         online: { sala: s, intro, salir: (e) => alMenu(g, e) },
-        next: (w) => eligeEnLinea(g, s, res(w)),
+        next: (w) => {
+          // A la liga: cada uno manda su resultado (la pelea se reconoce por el código y la semilla).
+          void reportarPelea(`${s.codigo}-${semilla}`, s.rol === 'anfitrion', res(w));
+          return eligeEnLinea(g, s, res(w));
+        },
       }),
     );
   }

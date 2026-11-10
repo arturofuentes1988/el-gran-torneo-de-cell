@@ -22,6 +22,9 @@ const ASSIST_COOLDOWN = 240;
 const ASSIST_COOLDOWN_HIT = 360;
 /** Cuadros desde el K.O. del punto hasta que entra el compañero. */
 const KO_ENTRY_DELAY = 64;
+/** Pelea en línea: cuadros que puede durar una pausa (después sigue sola) y la cuenta al seguir. */
+export const PAUSA_MAX = 60 * 60;
+export const CUENTA_PAUSA = 3 * 60;
 /** Invulnerabilidad del que entra tras un K.O.: la caída (~28 cuadros) y ~40 más. */
 const KO_ENTRY_INVULN = 68;
 /** Altura desde la que cae a la pantalla el que entra. */
@@ -212,6 +215,19 @@ export class Match {
   roundWinner: 0 | 1 | -1 | null = null;
   matchWinner: 0 | 1 | -1 | null = null;
   over = false;
+  /**
+   * Pelea en línea: pausa para los dos. La piden y la terminan los controles de cada cuadro
+   * (FrameInput.pausa), así empieza y termina en el mismo cuadro en los dos computadores.
+   * pausaLado: quién pausó (-1: nadie); pausaT: cuadros que lleva; cuenta: cuadros de la cuenta
+   * "3, 2, 1" al seguir (la pelea sigue congelada); pausasQuedan: las que le quedan a cada uno.
+   */
+  pausaLado = -1;
+  pausaT = 0;
+  cuenta = 0;
+  pausasQuedan: [number, number] = [0, 0];
+  /** Pausa pedida durante un súper o la cámara lenta: empieza apenas se pueda (si sigue el round). */
+  private pausaPedida: [boolean, boolean] = [false, false];
+  private readonly conPausas: boolean;
   /** Un solo round (DEMOSTRACIÓN). */
   private readonly singleRound: boolean;
 
@@ -235,9 +251,14 @@ export class Match {
       introDelay?: number;
       /** La pelea dura un solo round (la DEMOSTRACIÓN cambia de luchadores en cada uno). */
       singleRound?: boolean;
+      /** Pelea en línea: pausas (para los dos) que tiene cada jugador. */
+      pausas?: number;
     } = {},
   ) {
     this.rng = new Rng(seed);
+    const pausas = Math.max(0, Math.floor(opts.pausas ?? 0));
+    this.conPausas = pausas > 0;
+    this.pausasQuedan = [pausas, pausas];
     this.singleRound = !!opts.singleRound;
     this.practice = !!opts.practice;
     this.introDelay = Math.max(0, Math.round(opts.introDelay ?? 0));
@@ -295,6 +316,7 @@ export class Match {
 
   step(inputs: readonly [FrameInput, FrameInput]): void {
     if (this.over) return;
+    if (this.conPausas && this.pausaEnLinea(inputs)) return;
     this.frame++;
     const [a, b] = this.fighters;
     a.input.push(inputs[0], a.facing);
@@ -337,6 +359,46 @@ export class Match {
     this.updateFacing();
     this.updateProjectiles();
     this.detectHits();
+  }
+
+  /**
+   * Pausa en línea. pausa = 1 la pide (si al jugador le quedan y se está peleando; durante un súper
+   * o la cámara lenta queda pedida hasta que se pueda); pausa = 2 de quien pausó la termina. A los
+   * PAUSA_MAX cuadros sigue sola. Al seguir cuenta CUENTA_PAUSA cuadros. Devuelve true si este
+   * cuadro la pelea queda congelada (el reloj del round tampoco corre).
+   */
+  private pausaEnLinea(inputs: readonly [FrameInput, FrameInput]): boolean {
+    if (this.cuenta > 0) {
+      this.cuenta--;
+      return true;
+    }
+    if (this.pausaLado >= 0) {
+      this.pausaT++;
+      if (inputs[this.pausaLado].pausa === 2 || this.pausaT >= PAUSA_MAX) {
+        this.pausaLado = -1;
+        this.pausaT = 0;
+        this.cuenta = CUENTA_PAUSA;
+      }
+      return true;
+    }
+    if (this.phase !== 'fight') {
+      this.pausaPedida[0] = this.pausaPedida[1] = false;
+      return false;
+    }
+    for (const lado of [0, 1] as const) {
+      if (inputs[lado].pausa === 1 && this.pausasQuedan[lado] > 0) this.pausaPedida[lado] = true;
+    }
+    if (this.freeze > 0 || this.slowmo > 0 || this.ultraActive) return false;
+    for (const lado of [0, 1] as const) {
+      if (!this.pausaPedida[lado]) continue;
+      // Si los dos la piden en el mismo cuadro, pausa el de la izquierda (y al otro no se le gasta).
+      this.pausaPedida[0] = this.pausaPedida[1] = false;
+      this.pausasQuedan[lado]--;
+      this.pausaLado = lado;
+      this.pausaT = 0;
+      return true;
+    }
+    return false;
   }
 
   // ---------------------------------------------------------------- rounds

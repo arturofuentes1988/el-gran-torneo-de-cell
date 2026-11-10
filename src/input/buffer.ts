@@ -29,6 +29,8 @@ export interface FrameInput {
   dir: number;
   held: number;
   pressed: number;
+  /** Pelea en línea: 1 pide la pausa (para los dos), 2 la termina (solo quien pausó). */
+  pausa?: number;
 }
 
 export const NEUTRAL_INPUT: FrameInput = { dir: 5, held: 0, pressed: 0 };
