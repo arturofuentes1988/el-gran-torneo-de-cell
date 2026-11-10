@@ -5,3 +5,9 @@
 
 export const SUPABASE_URL = 'https://hmyesbgnihxgaygmkuck.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_SDkVYO6TBQnkWoPv2tq18w_L1LiNx4v';
+
+/**
+ * Worker de Cloudflare que entrega las claves del servidor de respaldo (TURN) a los jugadores con
+ * sesión (ver cloudflare/turn-torneo.js). Vacío: sin TURN, solo conexión directa (STUN).
+ */
+export const TURN_URL = '';

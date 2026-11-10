@@ -49,7 +49,8 @@ function estadoTexto(sala: Sala): string {
     case 'conectando':
       return sala.rol === 'anfitrion' ? 'ABRIENDO LA SALA…' : 'BUSCANDO LA SALA…';
     case 'esperando':
-      return 'ESPERANDO A TU RIVAL…';
+      // En el celular, si se sale del navegador para mandar el código, la sala puede quedar congelada.
+      return 'ESPERANDO A TU RIVAL… · NO SALGAS DE ESTA PANTALLA';
     case 'negociando':
       return sala.rival ? `CONECTANDO CON ${sala.rival.apodo.toUpperCase()}…` : 'CONECTANDO…';
     case 'lista':

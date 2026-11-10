@@ -17,7 +17,11 @@ Juego de pelea 2D para el navegador (Vite 6, TypeScript estricto, PixiJS v8), es
 Marvel vs Capcom, con los personajes del fenómeno de TikTok chileno "Torneo de Cell".
 
 - Repositorio público: https://github.com/arturofuentes1988/el-gran-torneo-de-cell
-- Juego en línea: https://arturofuentes1988.github.io/el-gran-torneo-de-cell/
+- Juego en línea: https://elgrantorneodecell.com (desde el 10 de noviembre; la dirección vieja de
+  github.io y www.elgrantorneodecell.com redirigen ahí). El dominio se compró en Cloudflare (registro y
+  DNS ahí: 4 registros A a GitHub Pages y CNAME www, con la nube gris "DNS only"); el dominio está
+  puesto en GitHub → Settings → Pages, con HTTPS obligatorio (certificado de Let's Encrypt que GitHub
+  renueva solo).
 - Cada push a `main` se publica solo con GitHub Actions (`.github/workflows/pages.yml`).
 - `arte/` y `referencias/` no se suben (están en `.gitignore`): ahí quedan los videos,
   fotos, diseños y notas de trabajo de cada luchador.
@@ -574,6 +578,14 @@ de respaldo (TURN de Cloudflare), desconexiones, revancha, PARTIDA RÁPIDA y pun
 - Probado con dos navegadores en el mismo computador (`?escena=sala`, ver COMO_SE_HACE.md): sala en 1,5 s,
   conectados en 1,5 a 4 s, peleas idénticas (vida y huellas), pelea completa hasta el K.O., revancha con
   otros luchadores y salida de uno (el otro ve "TU RIVAL SALIÓ DE LA SALA").
+- **Arreglo del 10 de noviembre** (la primera prueba real entre dos personas no conectó): la primera lista
+  de presentes que manda Supabase a veces llega sin el anfitrión (tiene varios servidores y el del
+  invitado puede tardar en enterarse; medido en 1 de 10 entradas). Antes el invitado miraba la lista a los
+  0,9 s fijos y podía decir "NO HAY NINGUNA SALA CON ESE CÓDIGO" con la sala abierta. Ahora espera hasta
+  ver al anfitrión (máximo 8 s, `ESPERA_ANFITRION`). Además, si no se conectan, cada lado anota en la
+  tabla `errores` (mensaje "sala: …") la etapa a la que llegó, sus caminos de red (host, srflx, relay),
+  los del rival, los estados ICE y el tipo de red: ahí se ve si falta el TURN. La pantalla de CREAR SALA
+  dice "NO SALGAS DE ESTA PANTALLA" (en el celular, salir a WhatsApp puede congelar la sala).
 - **Falta (Paso C)**: servidor de respaldo TURN (sin él, algunas redes, como los datos móviles con CGNAT o
   redes de empresa, no se dejan conectar directo y sale "NO SE PUDO CONECTAR"); retraso según el ping;
   PARTIDA RÁPIDA; puntos de liga en el ranking; los apodos en la barra de vida.

@@ -10,11 +10,15 @@
  * - Quien crea la sala es el lado izquierdo (lado 0) en la pelea; quien se une, el derecho.
  *
  * Las pantallas leen `estado`, `error`, `rival`, `seleccion` y la `bandeja` en cada cuadro.
- * Sin servidor de respaldo (TURN, Paso C), algunas redes no se dejan conectar directo.
+ * Si las redes no se dejan conectar directo, la pelea pasa por el servidor de respaldo (TURN de
+ * Cloudflare, claves por el Worker de cloudflare/turn-torneo.js; apagado si `TURN_URL` está vacío).
+ * Si no se conectan, `informarFalla` deja anotado el porqué en la tabla `errores`.
  */
 
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { reportarError } from '../app/errores';
 import type { FighterAsset } from '../content/loadFighter';
+import { TURN_URL } from './config';
 import { obtenerCliente } from './cuenta';
 import { codificar, decodificar, type Paquete } from './rollback';
 
@@ -65,13 +69,56 @@ type Senal =
 /** Letras del código: sin I ni O (se confunden con 1 y 0). */
 const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 /** Servidores que le dicen a cada navegador cómo se ve desde internet (STUN, gratis). */
-const ICE: RTCIceServer[] = [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }];
+const STUN: RTCIceServer[] = [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }];
+/** Pruebas: `?relay=1` obliga a pasar por el TURN (como si las dos redes no se dejaran conectar directo). */
+const SOLO_RELAY = new URLSearchParams(location.search).get('relay') === '1';
+/** Segundos como máximo para conseguir las claves del TURN (si no, se intenta solo directo). */
+const ESPERA_TURN = 4;
+
+/** Claves del TURN ya conseguidas, hasta poco antes de que venzan. */
+let turnGuardado: { servidores: RTCIceServer[]; vence: number } | null = null;
+
+/**
+ * STUN y, si hay Worker configurado y sesión iniciada, el TURN de Cloudflare (servidor de
+ * respaldo: la pelea pasa por ahí cuando las redes no se dejan conectar directo).
+ */
+async function servidoresIce(): Promise<{ servidores: RTCIceServer[]; turn: boolean }> {
+  if (!TURN_URL) return { servidores: STUN, turn: false };
+  if (turnGuardado && Date.now() < turnGuardado.vence) return { servidores: turnGuardado.servidores, turn: true };
+  const corte = new AbortController();
+  const plazo = setTimeout(() => corte.abort(), ESPERA_TURN * 1000);
+  try {
+    const cliente = await obtenerCliente();
+    const token = (await cliente.auth.getSession()).data.session?.access_token;
+    if (!token) return { servidores: STUN, turn: false };
+    const r = await fetch(TURN_URL, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, signal: corte.signal });
+    if (!r.ok) throw new Error(`el Worker del TURN respondió ${r.status}`);
+    const j = (await r.json()) as { iceServers: RTCIceServer[]; duracion: number };
+    // De lo que manda Cloudflare, solo los TURN (los que traen usuario): el STUN ya está.
+    const servidores = [...STUN, ...j.iceServers.filter((x) => x.username)];
+    turnGuardado = { servidores, vence: Date.now() + Math.max(60, j.duracion - 3600) * 1000 };
+    return { servidores, turn: true };
+  } catch (err) {
+    reportarError(err, 'sala: turn');
+    return { servidores: STUN, turn: false };
+  } finally {
+    clearTimeout(plazo);
+  }
+}
 /** Sube cuando cambia lo que se mandan los dos computadores. */
 const PROTOCOLO = 1;
 /** Segundos sin noticias del otro para dar la conexión por cortada. */
 const SIN_NOTICIAS = 6;
 /** Segundos para lograr la conexión directa. */
 const PLAZO_CONEXION = 20;
+/** Segundos como máximo para recibir la lista de presentes al entrar al canal (datos móviles lentos). */
+const ESPERA_PRESENTES = 5;
+/**
+ * Segundos que el invitado espera ver al anfitrión antes de decir que la sala no existe. La primera
+ * lista a veces llega sin él: Supabase tiene varios servidores y el que le tocó al invitado puede
+ * tardar en enterarse de quién está en el canal (medido: el anfitrión llegó en un segundo aviso).
+ */
+const ESPERA_ANFITRION = 8;
 
 /** Versión del juego para comparar al conectarse: el protocolo y la definición de cada luchador. */
 export function versionJuego(roster: readonly FighterAsset[]): string {
@@ -121,6 +168,19 @@ export class Sala {
   private plazo: ReturnType<typeof setTimeout> | null = null;
   private pings = new Map<number, number>();
   private nPing = 0;
+  /** Para el informe si no se logra conectar: hasta dónde se llegó y cómo iba la red. */
+  private readonly inicio = performance.now();
+  private etapa = 'canal';
+  private estadosIce: string[] = [];
+  private iceMandados = 0;
+  private iceRecibidos = 0;
+  /** Los servidores ICE (se piden al crear la sala, para tenerlos listos cuando llegue el rival). */
+  private readonly ice = servidoresIce();
+  private conTurn = false;
+  /** Ya llegó al menos una lista de presentes del canal. */
+  private huboLista = false;
+  /** Quien espera un cambio en la lista de presentes (ver esperarPresentes). */
+  private alCambiarPresentes: (() => void) | null = null;
 
   private constructor(
     readonly rol: 'anfitrion' | 'invitado',
@@ -165,9 +225,16 @@ export class Sala {
     return this.bandeja.splice(i, 1)[0] as Extract<Mensaje, { t: T }>;
   }
 
+  /** Si ya se cerró (se revisa después de cada espera: pudo cerrarse mientras tanto). */
+  private cerrada(): boolean {
+    return this.estado === 'cerrada';
+  }
+
   /** Avisa al otro y corta todo. */
   cerrar(error: string | null = null): void {
     if (this.estado === 'cerrada') return;
+    // Si no se alcanzó a conectar, queda anotado por qué (tabla `errores`), para poder arreglarlo.
+    if (error && this.estado !== 'lista') void this.informarFalla(error);
     this.enviar({ t: 'adios' });
     this.estado = 'cerrada';
     this.error ??= error;
@@ -196,7 +263,12 @@ export class Sala {
     const canal = cliente.channel(`sala-${this.codigo}`, { config: { broadcast: { self: false }, presence: { key: this.id } } });
     this.canal = canal;
     canal.on('broadcast', { event: 'senal' }, ({ payload }) => void this.senal(payload as Senal));
-    canal.on('presence', { event: 'sync' }, () => this.revisarPresentes());
+    this.huboLista = false;
+    canal.on('presence', { event: 'sync' }, () => {
+      this.huboLista = true;
+      this.alCambiarPresentes?.();
+      this.revisarPresentes();
+    });
     canal.subscribe((st) => {
       if (st === 'SUBSCRIBED') void this.anunciarse();
       else if ((st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') && this.estado !== 'lista') this.cerrar('NO SE PUDO ABRIR LA SALA · REVISA TU INTERNET');
@@ -209,6 +281,45 @@ export class Sala {
     if (canal) void obtenerCliente().then((c) => c.removeChannel(canal)).catch(() => undefined);
   }
 
+  /**
+   * Anota en la tabla `errores` por qué no se conectaron: la etapa a la que se llegó, los caminos
+   * de red de cada uno (host = red local, srflx = dirección pública vía STUN, relay = TURN), los
+   * estados de la conexión y el tipo de red del aparato si el navegador lo dice.
+   */
+  private async informarFalla(motivo: string): Promise<void> {
+    const local = new Set<string>();
+    const remoto = new Set<string>();
+    let pares = 0;
+    try {
+      const stats = await this.pc?.getStats();
+      stats?.forEach((r: { type: string; candidateType?: string; protocol?: string; state?: string }) => {
+        if (r.type === 'local-candidate') local.add(`${r.candidateType}/${r.protocol}`);
+        else if (r.type === 'remote-candidate') remoto.add(`${r.candidateType}/${r.protocol}`);
+        else if (r.type === 'candidate-pair' && r.state === 'succeeded') pares++;
+      });
+    } catch {
+      // Sin estadísticas: igual se manda lo demás.
+    }
+    const red = (navigator as Navigator & { connection?: { type?: string; effectiveType?: string } }).connection;
+    const detalle = {
+      rol: this.rol,
+      etapa: this.etapa,
+      segundos: Math.round((performance.now() - this.inicio) / 100) / 10,
+      ice: this.estadosIce.join(' > ') || '-',
+      conexion: this.pc?.connectionState ?? 'sin conexión',
+      caminosPropios: [...local].join(', ') || '-',
+      caminosDelRival: [...remoto].join(', ') || '-',
+      iceMandados: this.iceMandados,
+      iceRecibidos: this.iceRecibidos,
+      paresQueFuncionaron: pares,
+      servidorDeRespaldo: this.conTurn ? 'sí' : 'no',
+      red: red ? `${red.type ?? '?'} ${red.effectiveType ?? ''}`.trim() : '?',
+    };
+    const e = new Error(`${motivo} (${this.rol}, ${this.etapa})`);
+    e.stack = JSON.stringify(detalle, null, 1);
+    reportarError(e, 'sala');
+  }
+
   /** Presentes en el canal (menos yo). */
   private presentes(): Array<{ id: string } & Presencia> {
     const st = (this.canal?.presenceState() ?? {}) as Record<string, Presencia[]>;
@@ -217,9 +328,29 @@ export class Sala {
       .map(([id, p]) => ({ id, ...p[0] }));
   }
 
+  /** Espera hasta que `listo()` se cumpla con la lista de presentes (se revisa con cada aviso) o hasta `seg` segundos. */
+  private esperarPresentes(listo: () => boolean, seg: number): Promise<void> {
+    return new Promise((r) => {
+      const fin = (): void => {
+        clearTimeout(plazo);
+        this.alCambiarPresentes = null;
+        r();
+      };
+      const plazo = setTimeout(fin, seg * 1000);
+      this.alCambiarPresentes = () => {
+        if (listo()) fin();
+      };
+      if (listo()) fin();
+    });
+  }
+
   private async anunciarse(): Promise<void> {
-    // Un momento para saber quién está (la presencia llega justo después de entrar).
-    await new Promise((r) => setTimeout(r, 900));
+    // Antes de decidir nada, la lista de quién está. El anfitrión, con la primera lista le basta
+    // (solo revisa que el código no esté ocupado); el invitado espera hasta ver al anfitrión.
+    this.etapa = 'presentes';
+    const hayAnfitrion = (): boolean => this.presentes().some((p) => p.rol === 'anfitrion');
+    if (this.rol === 'anfitrion') await this.esperarPresentes(() => this.huboLista, ESPERA_PRESENTES);
+    else await this.esperarPresentes(() => this.huboLista && hayAnfitrion(), ESPERA_ANFITRION);
     if (this.estado === 'cerrada' || !this.canal) return;
     const otros = this.presentes();
     const anfitrion = otros.find((p) => p.rol === 'anfitrion');
@@ -238,6 +369,7 @@ export class Sala {
     }
     const yo: Presencia = { rol: this.rol, apodo: this.yo.apodo, avatar: this.yo.avatar, version: this.version };
     await this.canal.track(yo);
+    this.etapa = this.rol === 'anfitrion' ? 'esperando' : 'esperando la oferta';
     if (this.estado === 'conectando') this.estado = this.rol === 'anfitrion' ? 'esperando' : 'negociando';
     if (this.rol === 'invitado') this.ponerPlazo();
     this.revisarPresentes();
@@ -272,12 +404,17 @@ export class Sala {
 
   // ---------------------------------------------------------------- conexión directa (WebRTC)
 
-  private nuevaConexion(): RTCPeerConnection {
-    const pc = new RTCPeerConnection({ iceServers: ICE });
+  private async nuevaConexion(): Promise<RTCPeerConnection> {
+    const { servidores, turn } = await this.ice;
+    this.conTurn = turn;
+    const pc = new RTCPeerConnection({ iceServers: servidores, iceTransportPolicy: SOLO_RELAY ? 'relay' : 'all' });
     this.pc = pc;
     pc.onicecandidate = (e) => {
-      if (e.candidate && this.conRival) void this.mandarSenal({ t: 'ice', de: this.id, para: this.conRival, c: e.candidate.toJSON() });
+      if (!e.candidate || !this.conRival) return;
+      this.iceMandados++;
+      void this.mandarSenal({ t: 'ice', de: this.id, para: this.conRival, c: e.candidate.toJSON() });
     };
+    pc.oniceconnectionstatechange = () => this.estadosIce.push(pc.iceConnectionState);
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === 'failed') this.cerrar(this.estado === 'lista' ? 'SE CORTÓ LA CONEXIÓN' : 'NO SE PUDO CONECTAR CON TU RIVAL');
     };
@@ -287,11 +424,13 @@ export class Sala {
 
   private async ofrecer(): Promise<void> {
     try {
-      const pc = this.nuevaConexion();
+      const pc = await this.nuevaConexion();
+      if (this.cerrada()) return;
       this.usarCanal(pc.createDataChannel('juego', { ordered: false, maxRetransmits: 0 }));
       this.usarCanal(pc.createDataChannel('control', { ordered: true }));
       await pc.setLocalDescription(await pc.createOffer());
       await this.mandarSenal({ t: 'oferta', de: this.id, para: this.conRival!, sdp: pc.localDescription!.toJSON() });
+      this.etapa = 'oferta mandada';
     } catch (err) {
       console.warn('sala: no se pudo ofrecer la conexión', err);
       this.cerrar('NO SE PUDO CONECTAR CON TU RIVAL');
@@ -303,17 +442,22 @@ export class Sala {
     try {
       if (s.t === 'rechazo') {
         this.cerrar(s.motivo === 'version' ? 'TU RIVAL TIENE OTRA VERSIÓN DEL JUEGO · RECARGUEN LA PÁGINA' : 'NO SE PUDO ENTRAR A LA SALA');
-      } else if (s.t === 'oferta' && this.rol === 'invitado' && !this.pc) {
+      } else if (s.t === 'oferta' && this.rol === 'invitado' && !this.conRival) {
         this.conRival = s.de;
-        const pc = this.nuevaConexion();
+        this.etapa = 'oferta recibida';
+        const pc = await this.nuevaConexion();
+        if (this.cerrada()) return;
         await pc.setRemoteDescription(s.sdp);
         await this.iceGuardados();
         await pc.setLocalDescription(await pc.createAnswer());
         await this.mandarSenal({ t: 'respuesta', de: this.id, para: s.de, sdp: pc.localDescription!.toJSON() });
+        this.etapa = 'respuesta mandada';
       } else if (s.t === 'respuesta' && this.pc && s.de === this.conRival) {
+        this.etapa = 'respuesta recibida';
         await this.pc.setRemoteDescription(s.sdp);
         await this.iceGuardados();
       } else if (s.t === 'ice' && s.de === this.conRival) {
+        this.iceRecibidos++;
         if (this.pc?.remoteDescription) await this.pc.addIceCandidate(s.c);
         else this.iceEnEspera.push(s.c);
       }
