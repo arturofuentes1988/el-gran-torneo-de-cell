@@ -15,8 +15,8 @@ La web (`index.html`) tiene dos pestañas: **JUGAR**, con el juego (`juego.html`
 **RANKING**: puntos de liga, victorias y mejor racha en línea, y los campeones del ARCADE
 (los más rápidos en coronarse, por dificultad), con el avatar de cada jugador. Si entraste con tu
 cuenta, arriba a la derecha salen tu avatar (la cara de un luchador) y tu apodo, con un menú
-para cambiar el avatar o cerrar sesión. Abajo va el botón para DONAR con Mercado Pago (se ve
-cuando hay enlaces en `DONACIONES`, en `src/web/portal.ts`).
+para cambiar el avatar o cerrar sesión. Por ahora no hay donaciones (la lista `DONACIONES` de
+`src/web/portal.ts` está vacía, y así la parte de DONAR no se ve).
 
 Documentación del proyecto en `docs/`: [estado del proyecto](docs/ESTADO_DEL_PROYECTO.md)
 (qué está hecho, qué falta y las reglas acordadas), [luchadores](docs/LUCHADORES.md),

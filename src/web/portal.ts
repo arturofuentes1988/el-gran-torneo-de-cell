@@ -17,11 +17,9 @@ type Tabla = 'puntos' | 'victorias' | 'racha' | 'arcade';
 /**
  * Donaciones (Mercado Pago): un botón por enlace. Mientras esté vacío, la parte de DONAR no se ve.
  * Cada enlace de pago se crea en Mercado Pago (Cobrar → Link de pago) y se pega aquí.
+ * Apagadas desde el 10 de noviembre a pedido del usuario ("por ahora nada de donaciones").
  */
-const DONACIONES: ReadonlyArray<{ texto: string; url: string }> = [
-  { texto: '$2.000', url: 'https://mpago.la/2cGKFVN' },
-  { texto: '$5.000', url: 'https://mpago.la/1QyZHDD' },
-];
+const DONACIONES: ReadonlyArray<{ texto: string; url: string }> = [];
 
 interface FilaLiga {
   apodo: string;

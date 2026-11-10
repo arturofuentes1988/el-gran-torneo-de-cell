@@ -343,8 +343,10 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
 
 ## Golpes más fluidos y gancho estilo Mortal Kombat (3 de noviembre)
 
-- **Donar**: ya tiene los enlaces de Mercado Pago ($2.000 y $5.000). El SQL de avatares (003) está
-  pegado y revisado.
+- **Donar**: tuvo los enlaces de Mercado Pago ($2.000 y $5.000) hasta el 10 de noviembre; ese día el
+  usuario pidió sacarlas ("por ahora nada de donaciones"): `DONACIONES` quedó vacía y la parte de DONAR no
+  se ve (los enlaces siguen en el historial de git si se quieren volver a poner). El SQL de avatares (003)
+  está pegado y revisado.
 - **Golpes fluidos**: los normales de pie y agachados de los cinco usan el doble de dibujos
   (`herramientas/fluidez.py`), con los mismos tiempos de antes.
 - El primer cuadro activo del golpe fuerte de pie del Vendedor y de Carlitos y del gancho de Pablito solo
