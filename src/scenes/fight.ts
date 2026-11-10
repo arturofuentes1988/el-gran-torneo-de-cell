@@ -82,7 +82,10 @@ function mergeKeys(a: KeyBindings, b: KeyBindings): KeyBindings {
   return out;
 }
 
-const PAUSE_OPTIONS = ['CONTINUAR', 'REINICIAR COMBATE', 'MOVIMIENTOS', 'CONTROLES', 'SALIR AL MENÚ'] as const;
+type OpcionPausa = 'CONTINUAR' | 'REINICIAR COMBATE' | 'MOVIMIENTOS' | 'CONTROLES' | 'SALIR AL MENÚ' | 'SALIR DE LA SALA';
+const PAUSE_OPTIONS: readonly OpcionPausa[] = ['CONTINUAR', 'REINICIAR COMBATE', 'MOVIMIENTOS', 'CONTROLES', 'SALIR AL MENÚ'];
+/** En línea no hay pausa (el otro sigue jugando): el menú se abre sobre la pelea, que sigue. */
+const ONLINE_OPTIONS: readonly OpcionPausa[] = ['CONTINUAR', 'MOVIMIENTOS', 'CONTROLES', 'SALIR DE LA SALA'];
 /**
  * Menú de pausa (mismo estilo que los menús: una barra inclinada por opción). Grande para tocarlo
  * en el celular: cada fila mide P_ROW unidades (~45 px en un celular horizontal) y toda la fila cuenta.
@@ -92,11 +95,13 @@ const P_ROW = 31;
 const P_BAR = 24;
 const P_W = 252;
 const P_PAD = 10;
-const P_H = P_PAD * 2 + (PAUSE_OPTIONS.length - 1) * P_ROW + P_BAR;
 const P_X = Math.round((VIEW_W - P_W) / 2);
-const P_Y = Math.round((VIEW_H - P_H) / 2) + 8;
-/** Arriba de la barra de cada opción. */
-const pauseBarY = (i: number): number => P_Y + P_PAD + i * P_ROW;
+/** Alto del panel y su borde de arriba, según cuántas opciones tenga. */
+const pauseH = (n: number): number => P_PAD * 2 + (n - 1) * P_ROW + P_BAR;
+const pauseY = (n: number): number => Math.round((VIEW_H - pauseH(n)) / 2) + 8;
+/** Botón ☰ MENÚ de la pelea en línea en el computador (en el celular está el ☰ de siempre). */
+const MENU_BTN = { x: VIEW_W / 2 - 34, y: VIEW_H - 27, w: 68, h: 13 };
+const NEUTRO: FrameInput = { dir: 5, held: 0, pressed: 0 };
 
 /** Colores para distinguir a un luchador repetido en la misma pelea (el primero va sin cambio). */
 
@@ -206,6 +211,8 @@ export class FightScene implements Scene {
   /** Lado de quien pausó (1 VS 1 entre dos con el joystick 2: J2); MOVIMIENTOS abre en su luchador. */
   private pausedBy: 0 | 1 = 0;
   private pauseT = 0;
+  /** Opciones del menú de esta pelea (en línea, sin reiniciar y saliendo de la sala). */
+  private readonly opciones: readonly OpcionPausa[];
   /** Brillo persistente del Modo Poder, uno por luchador (se crea al activarlo). */
   private powerGlows: [Sprite | null, Sprite | null] = [null, null];
   private seed: number;
@@ -238,8 +245,6 @@ export class FightScene implements Scene {
   private pingText = outlinedText('', 6, 0xb8b0c8, 0x0a0610, 1);
   /** Cuadros seguidos esperando los controles del rival. */
   private esperaT = 0;
-  /** Cuadros que queda abierta la pregunta "¿salir?" (ESC otra vez sale). */
-  private salirT = 0;
   /** Cuadros desde el último salto para emparejar la velocidad. */
   private frenoT = 0;
   /** Cuadros que queda en pantalla el aviso de la conexión cortada antes de salir. */
@@ -252,6 +257,7 @@ export class FightScene implements Scene {
     private opts: FightOptions = {},
   ) {
     this.seed = seed;
+    this.opciones = opts.online ? ONLINE_OPTIONS : PAUSE_OPTIONS;
     this.difficulty = mode === 'demo' ? opts.difficulty ?? 'normal' : opts.difficulty ?? loadDifficulty();
     // 2 VS 2: los luchadores de cada equipo salen del plantel; el primero de cada uno parte peleando.
     const roster = game.assets.roster;
@@ -294,6 +300,15 @@ export class FightScene implements Scene {
       sala.alPaquete = (p) => sesion.recibirPaquete(p);
     } else this.sources = [human(P1_KEYS, 0), human(P2_KEYS, 1)];
     this.onlineUi.addChild(this.onlineText, this.pingText);
+    if (opts.online && !tactil()) {
+      // En el computador, un botón para abrir el menú con el mouse (ESC también lo abre).
+      const b = MENU_BTN;
+      const caja = new Graphics().roundRect(b.x, b.y, b.w, b.h, 3).fill({ color: 0x140a24, alpha: 0.75 }).stroke({ color: 0xc89a3a, width: 0.8 });
+      const txt = outlinedText('☰ MENÚ · ESC', 6, 0xfff4e0, 0x0a0610, 1);
+      txt.anchor.set(0.5);
+      txt.position.set(b.x + b.w / 2, b.y + b.h / 2);
+      this.onlineUi.addChild(caja, txt);
+    }
 
     this.world.addChild(this.layers.shadows, this.layers.ghosts, this.layers.projectiles, this.layers.fighters);
     const [a, b] = this.match.fighters;
@@ -416,20 +431,39 @@ export class FightScene implements Scene {
     }
   }
 
+  /** Borde de arriba del panel (en línea, un poco más abajo: el título no tapa las vistas). */
+  private panelY(): number {
+    return pauseY(this.opciones.length) + (this.opts.online ? 12 : 0);
+  }
+
+  /** Arriba de la barra de cada opción. */
+  private pauseBarY(i: number): number {
+    return this.panelY() + P_PAD + i * P_ROW;
+  }
+
   private buildPause(): void {
+    const n = this.opciones.length;
+    const enLinea = !!this.opts.online;
     const bg = new Graphics();
-    bg.rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0x05020c, alpha: 0.6 });
-    bg.roundRect(P_X, P_Y, P_W, P_H, 6).fill({ color: 0x140a24, alpha: 0.92 }).stroke({ color: 0xc89a3a, width: 1.2 });
-    const title = outlinedText('PAUSA', 14, 0xfff4e0, 0x5a0a10, 3);
+    // En línea la pelea sigue detrás: se oscurece menos, para verla.
+    bg.rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0x05020c, alpha: enLinea ? 0.35 : 0.6 });
+    bg.roundRect(P_X, this.panelY(), P_W, pauseH(n), 6).fill({ color: 0x140a24, alpha: 0.92 }).stroke({ color: 0xc89a3a, width: 1.2 });
+    const title = outlinedText(enLinea ? 'MENÚ' : 'PAUSA', 14, 0xfff4e0, 0x5a0a10, 3);
     title.anchor.set(0.5);
-    title.position.set(VIEW_W / 2, P_Y - 15);
+    title.position.set(VIEW_W / 2, this.panelY() - 15);
+    if (enLinea) {
+      const nota = outlinedText('LA PELEA SIGUE: TU LUCHADOR SE QUEDA QUIETO', 6, 0xffd76a, 0x0a0610, 1);
+      nota.anchor.set(0.5);
+      nota.position.set(VIEW_W / 2, this.panelY() + pauseH(n) + 9);
+      this.pauseUi.addChild(nota);
+    }
     this.pauseGlow.blendMode = 'add';
     this.pauseCursor.anchor.set(0, 0.5);
     this.pauseUi.addChild(bg, this.pauseGlow, this.pauseBar, title, this.pauseCursor);
-    PAUSE_OPTIONS.forEach((o, i) => {
+    this.opciones.forEach((o, i) => {
       const t = outlinedText(o, P_FONT, 0xffffff, 0x1a0a24, 2);
       t.anchor.set(0.5);
-      t.position.set(VIEW_W / 2, pauseBarY(i) + P_BAR / 2);
+      t.position.set(VIEW_W / 2, this.pauseBarY(i) + P_BAR / 2);
       this.pauseItems.push(t);
       this.pauseUi.addChild(t);
     });
@@ -439,7 +473,7 @@ export class FightScene implements Scene {
   /** Opción de la pausa bajo el toque de este cuadro (toda la fila cuenta), o -1. */
   private pauseTapped(): number {
     const mi = this.game.menu;
-    return PAUSE_OPTIONS.findIndex((_, i) => mi.tapIn(P_X, pauseBarY(i) - (P_ROW - P_BAR) / 2, P_W, P_ROW));
+    return this.opciones.findIndex((_, i) => mi.tapIn(P_X, this.pauseBarY(i) - (P_ROW - P_BAR) / 2, P_W, P_ROW));
   }
 
   /** Barras de la pausa: la marcada se enciende (magenta con borde dorado), con cursor que pestañea. */
@@ -448,11 +482,11 @@ export class FightScene implements Scene {
     this.pauseGlow.clear();
     const slant = 7;
     const pulse = 0.5 + 0.5 * Math.sin(this.pauseT * 0.12);
-    PAUSE_OPTIONS.forEach((_, i) => {
+    this.opciones.forEach((_, i) => {
       const on = i === this.pauseSel;
       const w = P_W - 36 + (on ? 10 : 0);
       const x = VIEW_W / 2 - w / 2;
-      const y = pauseBarY(i);
+      const y = this.pauseBarY(i);
       const shape = [x + slant, y, x + w + slant, y, x + w - slant, y + P_BAR, x - slant, y + P_BAR];
       if (on) {
         this.pauseGlow.roundRect(x - 8, y - 4, w + 16, P_BAR + 8, 8).fill({ color: 0xff3ac0, alpha: 0.14 + 0.1 * pulse });
@@ -463,7 +497,7 @@ export class FightScene implements Scene {
       this.pauseItems[i].style.fill = on ? 0xffffff : 0xd8cfe8;
       this.pauseItems[i].scale.set(on ? 1.06 : 1);
     });
-    const y = pauseBarY(this.pauseSel) + P_BAR / 2;
+    const y = this.pauseBarY(this.pauseSel) + P_BAR / 2;
     this.pauseCursor.position.set(P_X + 8 + (Math.floor(this.pauseT / 10) % 2), y);
   }
 
@@ -539,31 +573,33 @@ export class FightScene implements Scene {
 
   step(): void {
     const g = this.game;
-    const pausePressed = g.kb.hit('Escape') || [0, 1, 2, 3].some((i) => g.pads.pressed(i, 9));
-    if (pausePressed && !this.paused) this.pausedBy = this.mode === '2p' && g.pads.pressed(1, 9) ? 1 : 0;
+    // ESC, el botón START de un joystick o (en línea, en el computador) el botón ☰ MENÚ.
+    const menuBtn = !!this.sesion && !this.paused && !tactil() && g.menu.tapIn(MENU_BTN.x, MENU_BTN.y, MENU_BTN.w, MENU_BTN.h);
+    const pausePressed = g.kb.hit('Escape') || [0, 1, 2, 3].some((i) => g.pads.pressed(i, 9)) || menuBtn;
+    if (pausePressed && !this.paused) {
+      // MOVIMIENTOS abre en el luchador de quien abrió el menú (en línea, el propio).
+      this.pausedBy = this.opts.online ? this.opts.online.sala.lado : this.mode === '2p' && g.pads.pressed(1, 9) ? 1 : 0;
+    }
     if (this.paused) {
       this.stepPause(pausePressed);
-      return;
-    }
-    // DEMOSTRACIÓN: aceptar, volver o un toque sale (no hay pausa).
-    if (this.mode === 'demo' && this.opts.exit && (pausePressed || g.menu.confirm || g.menu.back || g.menu.tap)) {
-      g.sfx.play('menuBack');
-      g.setScene(this.opts.exit());
-      return;
-    }
-    if (pausePressed && this.sesion) {
-      // En línea no hay pausa (el otro sigue jugando): ESC pregunta y ESC otra vez sale.
-      if (this.salirT > 0) return this.salirOnline(null);
-      this.salirT = 150;
-      g.sfx.play('pause');
-    } else if (pausePressed && this.mode !== 'demo') {
-      this.paused = true;
-      this.pauseSel = 0;
-      this.pauseUi.visible = true;
-      // En la pausa las opciones se tocan: la cruceta y los botones no las tapan.
-      mandosDePelea(false);
-      g.sfx.play('pause');
-      return;
+      // En línea la pelea sigue detrás del menú (el rival sigue jugando); si se salió de la sala, nada más.
+      if (!this.sesion || this.game.scene !== this) return;
+    } else {
+      // DEMOSTRACIÓN: aceptar, volver o un toque sale (no hay pausa).
+      if (this.mode === 'demo' && this.opts.exit && (pausePressed || g.menu.confirm || g.menu.back || g.menu.tap)) {
+        g.sfx.play('menuBack');
+        g.setScene(this.opts.exit());
+        return;
+      }
+      if (pausePressed && this.mode !== 'demo') {
+        this.paused = true;
+        this.pauseSel = 0;
+        this.pauseUi.visible = true;
+        // En la pausa las opciones se tocan: la cruceta y los botones no las tapan.
+        mandosDePelea(false);
+        g.sfx.play('pause');
+        if (!this.sesion) return;
+      }
     }
 
     const m = this.match;
@@ -634,7 +670,8 @@ export class FightScene implements Scene {
     } else if (s.puedeAvanzar) {
       // El control se lee solo cuando se usa: si no, se perdería una pulsación.
       const lado = sala.lado;
-      const input = this.qaInputs[lado].shift() ?? this.sources[lado].sample(this.match);
+      // Con el menú abierto, el luchador propio se queda quieto (las teclas manejan el menú).
+      const input = this.qaInputs[lado].shift() ?? (this.paused ? NEUTRO : this.sources[lado].sample(this.match));
       ev = s.avanzar(input) ?? [];
       this.esperaT = 0;
     } else {
@@ -650,7 +687,6 @@ export class FightScene implements Scene {
   private stepOnlineUi(): boolean {
     const { sala } = this.opts.online!;
     const s = this.sesion!;
-    const touch = tactil();
     if (sala.estado === 'cerrada' || s.desincronizado !== null) {
       if (this.cortadaT === 0) {
         this.cortadaT = 150;
@@ -665,9 +701,6 @@ export class FightScene implements Scene {
         this.salirOnline(sala.error);
         return true;
       }
-    } else if (this.salirT > 0) {
-      this.salirT--;
-      this.onlineText.text = touch ? '¿SALIR? TOCA ☰ OTRA VEZ' : '¿SALIR? APRIETA ESC OTRA VEZ';
     } else if (this.esperaT > AVISO_ESPERA) {
       this.onlineText.text = `ESPERANDO A ${sala.rival?.apodo.toUpperCase() ?? 'TU RIVAL'}…`;
     } else {
@@ -714,7 +747,7 @@ export class FightScene implements Scene {
       return;
     }
     if (mi.up || mi.down) {
-      const n = PAUSE_OPTIONS.length;
+      const n = this.opciones.length;
       this.pauseSel = (this.pauseSel + (mi.up ? n - 1 : 1)) % n;
       g.sfx.play('menuMove');
     }
@@ -725,7 +758,8 @@ export class FightScene implements Scene {
       this.pauseSel = hit;
       confirm = true;
     }
-    const resume = pausePressed || (confirm && this.pauseSel === 0);
+    const op = confirm ? this.opciones[this.pauseSel] : null;
+    const resume = pausePressed || op === 'CONTINUAR';
     if (resume) {
       this.paused = false;
       this.pauseUi.visible = false;
@@ -733,33 +767,35 @@ export class FightScene implements Scene {
       g.sfx.play('pause');
       return;
     }
-    if (confirm && this.pauseSel === 1) {
+    if (op === 'REINICIAR COMBATE') {
       // La misma pelea desde el round 1: mismos luchadores, colores, escenario y lo que venga después.
       g.sfx.play('menuConfirm');
       g.setScene(new FightScene(g, this.mode, this.seed, this.opts));
       return;
     }
-    if (confirm && this.pauseSel === 2) {
+    if (op === 'MOVIMIENTOS') {
       g.sfx.play('menuConfirm');
       // Abre en el luchador con que está peleando quien pausó (con ← → se ven los demás).
       const side = this.pausedBy;
       const id = this.activeFighter(side).def.id;
-      this.moveList = new MoveListPanel(g.assets, g.assets.roster.findIndex((r) => r.def.id === id), side);
+      // En línea se juega con las teclas de J1 (las dos manos sirven): esas se muestran.
+      this.moveList = new MoveListPanel(g.assets, g.assets.roster.findIndex((r) => r.def.id === id), this.opts.online ? 0 : side);
       g.display.overlay.addChild(this.moveList.container);
       this.pauseUi.visible = false;
       return;
     }
-    if (confirm && this.pauseSel === 3) {
+    if (op === 'CONTROLES') {
       g.sfx.play('menuConfirm');
       this.controls = new ControlsPanel(g, true);
       g.display.overlay.addChild(this.controls.container);
       this.pauseUi.visible = false;
       return;
     }
-    if (confirm && this.pauseSel === 4) {
+    if (op === 'SALIR AL MENÚ') {
       g.sfx.play('menuBack');
       g.setScene(new MainMenuScene(g));
     }
+    if (op === 'SALIR DE LA SALA') this.salirOnline(null);
   }
 
   private closeMoveList(): void {

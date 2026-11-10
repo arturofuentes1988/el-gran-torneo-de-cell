@@ -571,8 +571,10 @@ de respaldo (TURN de Cloudflare), desconexiones, revancha, PARTIDA RÁPIDA y pun
   las frases de entrada (`esperaDeEntrada`, la misma en los dos). Quien crea la sala pelea a la izquierda.
 - **La pelea en línea** (`FightScene` modo `'online'`): la sesión de rollback del Paso A con el control del
   jugador (teclado o joystick); manda un paquete cada cuadro. Si va adelantado, se salta un cuadro de vez
-  en cuando para que el otro alcance (`debeFrenar`, como GGPO). No hay pausa: ESC pregunta y ESC otra vez
-  sale. Arriba: "ESPERANDO A …" si el rival se atrasa, y abajo el ping. La pelea termina recién cuando
+  en cuando para que el otro alcance (`debeFrenar`, como GGPO). No hay pausa: ESC, el ☰ del celular o
+  el botón ☰ MENÚ (abajo al centro, en el computador) abren un menú sobre la pelea, que sigue con el
+  luchador propio quieto: CONTINUAR, MOVIMIENTOS (abre en el luchador propio, con las teclas de J1),
+  CONTROLES y SALIR DE LA SALA (10 de noviembre; antes ESC dos veces sacaba de la sala). Arriba: "ESPERANDO A …" si el rival se atrasa, y abajo el ping. La pelea termina recién cuando
   llegaron todos los controles del otro (los dos ven el mismo final); después, ELIGE LUCHADOR otra vez con
   "¡GANASTE!" o "PERDISTE" (la revancha). Si las huellas se separan, se avisa, se anota en `errores` y se sale.
 - Probado con dos navegadores en el mismo computador (`?escena=sala`, ver COMO_SE_HACE.md): sala en 1,5 s,
