@@ -633,7 +633,14 @@ de respaldo (TURN de Cloudflare), desconexiones, revancha, PARTIDA RÁPIDA y pun
 - **Falta (Paso C)**: servidor de respaldo TURN (sin él, algunas redes, como los datos móviles con CGNAT o
   redes de empresa, no se dejan conectar directo y sale "NO SE PUDO CONECTAR"; el código ya está, falta el
   Worker de Cloudflare); retraso según el ping; los apodos en la barra de vida; mostrar los puntos ganados
-  al terminar la pelea; mostrar los jugadores en línea también en la web.
+  al terminar la pelea.
+- **Web: jugadores en línea y visitas** (11 de noviembre, pedido del usuario): arriba al centro (en el
+  computador) "● N JUGADORES EN LÍNEA · N VISITAS"; en el celular arriba no cabe y se ve en el RANKING
+  (con las de hoy). Los jugadores: la web mira el lobby sin anunciarse (`mirarLobby`), así no se cuenta.
+  Las visitas: `supabase/migraciones/005_visitas.sql` (tabla `visitas` por día de Chile y la función
+  `visitas_web(contar)`), una por navegador por día (`localStorage` 'torneoDeCell.visita'); mientras no
+  se pegue la 005, no se muestran. Se cuentan desde que se pegó (no hay historia de antes). También: en
+  el celular angosto (≤ 430 px) el nombre y JUGAR / RANKING caben en una fila (antes se montaban).
 
 ## Pendiente y decisiones abiertas
 

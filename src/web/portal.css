@@ -64,6 +64,59 @@ body::before {
   color: var(--oro);
 }
 
+/* Arriba al centro: jugadores en EN LÍNEA ahora y visitas de la web. */
+.en-vivo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.en-vivo[hidden],
+.en-vivo [hidden],
+.estadisticas[hidden] {
+  display: none;
+}
+
+.en-vivo .jugadores {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #c8ffd8;
+}
+
+.en-vivo .visitas {
+  color: #d8cfe8;
+}
+
+.punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4dff88;
+  box-shadow: 0 0 8px #4dff88;
+  animation: latido 1.6s ease-in-out infinite;
+}
+
+@keyframes latido {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* En el ranking (se ve también en el celular, donde arriba no cabe). */
+.estadisticas {
+  margin: 10px 0 0;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #c8ffd8;
+}
+
 .pestanas,
 .tablas,
 .dificultades {
@@ -417,6 +470,10 @@ td.luchador img {
     font-size: 16px;
   }
 
+  .cabecera .en-vivo {
+    display: none;
+  }
+
   button {
     font-size: 14px;
     padding: 6px 12px;
@@ -470,5 +527,23 @@ td.luchador img {
   td,
   th {
     padding: 6px 5px;
+  }
+}
+
+/* Celular angosto (vertical): el nombre y las pestañas JUGAR / RANKING caben en una fila. */
+@media (max-width: 430px) {
+  .logo {
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  .pestanas {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .pestanas button {
+    font-size: 12px;
+    padding: 5px 9px;
   }
 }

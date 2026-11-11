@@ -9,6 +9,7 @@ import './portal.css';
 import { abrirSelectorDeAvatar, urlAvatar } from '../online/avatares';
 import { SUPABASE_KEY, SUPABASE_URL } from '../online/config';
 import { alCambiarCuenta, apodo, avatar, cerrarSesion, conectado, guardarAvatar, iniciarCuenta } from '../online/cuenta';
+import { mirarLobby } from '../online/lobby';
 import { DIFFICULTIES, DIFFICULTY_NAME, type DifficultyId } from '../sim/difficulty';
 
 type Pestana = 'jugar' | 'ranking';
@@ -300,6 +301,74 @@ if (DONACIONES.length) {
   }
   caja.hidden = false;
 }
+
+// Arriba: cuántos jugadores hay en EN LÍNEA (el lobby del juego, mirado sin contarse) y las visitas
+// de la web (supabase/migraciones/005_visitas.sql: una por navegador por día). En el celular, arriba no
+// cabe: se ve en el ranking.
+const enVivoEl = document.querySelector<HTMLElement>('.cabecera .en-vivo')!;
+const jugadoresEl = enVivoEl.querySelector<HTMLElement>('.jugadores')!;
+const visitasEl = enVivoEl.querySelector<HTMLElement>('.visitas')!;
+const estadisticasEl = document.querySelector<HTMLElement>('#ranking .estadisticas')!;
+const CLAVE_VISITA = 'torneoDeCell.visita';
+let jugadores: number | null = null;
+let visitas: { hoy: number; total: number } | null = null;
+const numero = (n: number): string => n.toLocaleString('es-CL');
+
+function pintarEnVivo(): void {
+  const enLinea = jugadores === null ? '' : `${numero(jugadores)} ${jugadores === 1 ? 'JUGADOR' : 'JUGADORES'} EN LÍNEA`;
+  const vistas = visitas ? `${numero(visitas.total)} ${visitas.total === 1 ? 'VISITA' : 'VISITAS'}` : '';
+  jugadoresEl.querySelector('.texto')!.textContent = enLinea;
+  jugadoresEl.hidden = !enLinea;
+  visitasEl.textContent = vistas;
+  visitasEl.hidden = !vistas;
+  enVivoEl.hidden = !enLinea && !vistas;
+  const hoy = visitas ? `${vistas} (${numero(visitas.hoy)} HOY)` : '';
+  estadisticasEl.textContent = [enLinea && `● ${enLinea}`, hoy].filter(Boolean).join('  ·  ');
+  estadisticasEl.hidden = !estadisticasEl.textContent;
+}
+
+/** Lee las visitas; la primera vez del día en este navegador, además suma una. */
+async function cargarVisitas(): Promise<void> {
+  const hoy = new Date().toLocaleDateString('sv-SE');
+  let contar = false;
+  try {
+    contar = localStorage.getItem(CLAVE_VISITA) !== hoy;
+  } catch {
+    // Sin almacenamiento (modo privado estricto): solo se leen.
+  }
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/visitas_web`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contar }),
+    });
+    // Mientras no se pegue la migración 005, la función no existe: no se muestran.
+    if (!r.ok) return;
+    const [f] = (await r.json()) as Array<{ hoy: number; total: number }>;
+    if (!f) return;
+    if (contar) {
+      try {
+        localStorage.setItem(CLAVE_VISITA, hoy);
+      } catch {
+        // Igual se muestra.
+      }
+    }
+    visitas = { hoy: Number(f.hoy), total: Number(f.total) };
+    pintarEnVivo();
+  } catch {
+    // Sin internet: no se muestran.
+  }
+}
+
+void cargarVisitas();
+setInterval(() => void cargarVisitas(), 60_000);
+// Los jugadores en línea: la librería de Supabase baja un poco después, para no atrasar la página.
+setTimeout(() => {
+  mirarLobby((n) => {
+    jugadores = n;
+    pintarEnVivo();
+  });
+}, 1500);
 
 // #ranking en la dirección abre directo el ranking (para compartirlo).
 if (location.hash === '#ranking') mostrar('ranking');

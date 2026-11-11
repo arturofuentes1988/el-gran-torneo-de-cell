@@ -215,6 +215,32 @@ class Lobby {
   }
 }
 
+/**
+ * Mirar el lobby sin entrar (la web): avisa cuántos hay en EN LÍNEA, sin contarse (no se anuncia).
+ * Devuelve cómo dejar de mirar.
+ */
+export function mirarLobby(alCambiar: (cuantos: number) => void): () => void {
+  let canal: RealtimeChannel | null = null;
+  let fin = false;
+  void obtenerCliente()
+    .then((c) => {
+      if (fin) return;
+      const ch = c.channel(nombreCanal(), { config: { presence: { key: `web-${Math.random().toString(36).slice(2, 8)}` } } });
+      canal = ch;
+      const contar = (): void => alCambiar(Object.values(ch.presenceState()).filter((p) => p.length).length);
+      ch.on('presence', { event: 'sync' }, contar);
+      ch.subscribe((st) => {
+        if (st === 'SUBSCRIBED') contar();
+      });
+    })
+    .catch(() => undefined);
+  return () => {
+    fin = true;
+    const ch = canal;
+    if (ch) void obtenerCliente().then((c) => c.removeChannel(ch));
+  };
+}
+
 /** El lobby (uno solo por pestaña). */
 export const lobby = new Lobby();
 // Pruebas (?qa): el puente de pruebas lo lee desde la página.
