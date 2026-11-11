@@ -608,10 +608,32 @@ de respaldo (TURN de Cloudflare), desconexiones, revancha, PARTIDA RÁPIDA y pun
   máximo. El ranking de la liga ahora muestra a todos los que tienen apodo (antes solo a quien tenía
   peleas, y como nada anotaba peleas no salía nadie). Probado en un Postgres de prueba (PGlite) con las 4
   migraciones. Las peleas de antes no quedaron anotadas en ninguna parte.
+- **Lobby, SALAS ABIERTAS, PARTIDA RÁPIDA y jugadores en línea** (11 de noviembre, pedido del usuario):
+  - `src/online/lobby.ts`: un canal de Supabase Realtime ("lobby") donde se anuncian todos los que están
+    en EN LÍNEA (apodo, avatar, versión y estado: menú, buscando, sala abierta con su código, jugando).
+    Se entra al abrir EN LÍNEA y se sale con VOLVER o CERRAR SESIÓN (o cerrando el juego). Sin SQL.
+  - EN LÍNEA ahora: PARTIDA RÁPIDA, SALAS ABIERTAS, CREAR SALA PRIVADA, UNIRSE CON CÓDIGO, CAMBIAR APODO,
+    CAMBIAR AVATAR, CERRAR SESIÓN, VOLVER; arriba a la derecha "● N JUGADORES EN LÍNEA" (también en
+    PARTIDA RÁPIDA y SALAS ABIERTAS).
+  - SALAS ABIERTAS: la lista de salas que esperan rival (entrar es un toque) y "+ CREAR SALA ABIERTA".
+    Una sala abierta también tiene código. Al llenarse desaparece de la lista.
+  - PARTIDA RÁPIDA: los que buscan se ordenan por cuándo empezaron y se juntan de a dos (`pareja`); el
+    primero crea la sala con un código que sale de los dos identificadores (`codigoDe`), así los dos
+    llegan al mismo sin hablarse. La pareja tiene que verse igual 0,7 s antes de armar la sala; si no
+    resulta (12 s sin rival, o la sala se cierra), los dos vuelven al final de la fila.
+  - Medido: la presencia de Supabase entre servidores se pone al día cada 1,5 a 3 s (y cada cambio de
+    estado se agrega al final de la lista de esa persona: vale el último). Por eso todo va también por
+    mensaje directo, que llega al tiro: en el lobby (estado, "hola" al entrar, repetido cada 2,5 s por
+    los que buscan o tienen sala abierta, "adios" al salir) y en la sala (el anfitrión repite "aquí está
+    la sala" y el invitado "hola" cada segundo mientras esperan; el anfitrión ofrece apenas lo oye y
+    contesta "llena" a un tercero). Resultado: partida rápida conectada en 1,3 a 2,1 s (antes 2 a 9 s) y
+    salas privadas en 0,4 a 1,1 s.
+  - PROTOCOLO 2 (`sala.ts`): los controles llevan la pausa; un juego viejo no puede pelear con uno nuevo
+    (se les pide recargar).
 - **Falta (Paso C)**: servidor de respaldo TURN (sin él, algunas redes, como los datos móviles con CGNAT o
   redes de empresa, no se dejan conectar directo y sale "NO SE PUDO CONECTAR"; el código ya está, falta el
-  Worker de Cloudflare); retraso según el ping; PARTIDA RÁPIDA; los apodos en la barra de vida; mostrar
-  los puntos ganados al terminar la pelea.
+  Worker de Cloudflare); retraso según el ping; los apodos en la barra de vida; mostrar los puntos ganados
+  al terminar la pelea; mostrar los jugadores en línea también en la web.
 
 ## Pendiente y decisiones abiertas
 

@@ -24,7 +24,8 @@ import { DemoScene } from './scenes/demo';
 import { FightScene } from './scenes/fight';
 import { LoadingScene } from './scenes/loading';
 import { MainMenuScene } from './scenes/modeSelect';
-import { CrearSalaScene, UnirseScene, usarApodoDePrueba } from './scenes/sala';
+import { CrearSalaScene, PartidaRapidaScene, SalasAbiertasScene, UnirseScene, usarApodoDePrueba } from './scenes/sala';
+import { menuEnLinea } from './scenes/cuenta';
 import { TitleScene, loadTitleArena } from './scenes/title';
 
 /** Luchadores del plantel (carpetas de public/luchadores/), en este orden. */
@@ -155,12 +156,26 @@ async function main(): Promise<void> {
     const stageId = stages.find(params.get('escenario') ?? '')?.id ?? stages.first.id;
     const needs = { fighters: teams ? [...teams[0], ...teams[1]] : (pair ?? [0, 1]), stage: stageId };
     game.setScene(new LoadingScene(game, needs, () => new FightScene(game, mode, Number(params.get('semilla')) || 7, opts)));
-  } else if (params.get('escena') === 'sala') {
-    // Pruebas en línea: ?escena=sala&crear=ABCD (o &unirse=ABCD); con ?qa, &apodo=PRUEBA1 (sin cuenta).
+  } else if (params.has('qa') && params.get('escena') === 'enlinea') {
+    // Pruebas: el menú EN LÍNEA directo (sin cuenta el apodo sale como …).
+    game.setScene(menuEnLinea(game));
+  } else if (params.get('escena') === 'sala' || params.get('escena') === 'rapida' || params.get('escena') === 'salas') {
+    // Pruebas en línea: ?escena=sala&crear=ABCD (&abierta=1: sala abierta) o &unirse=ABCD;
+    // ?escena=rapida (PARTIDA RÁPIDA); ?escena=salas (SALAS ABIERTAS). Con ?qa: &apodo=PRUEBA1 (sin
+    // cuenta) y &lobby=x (un lobby aparte, para no mezclarse con los jugadores de verdad).
     const apodoQa = params.get('apodo');
     if (params.has('qa') && apodoQa) usarApodoDePrueba(apodoQa);
     const unirse = params.get('unirse');
-    game.setScene(unirse ? new UnirseScene(game, unirse) : new CrearSalaScene(game, params.get('crear') || undefined));
+    const escena = params.get('escena');
+    game.setScene(
+      escena === 'rapida'
+        ? new PartidaRapidaScene(game)
+        : escena === 'salas'
+          ? new SalasAbiertasScene(game)
+          : unirse
+            ? new UnirseScene(game, unirse)
+            : new CrearSalaScene(game, params.get('crear') || undefined, params.get('abierta') === '1'),
+    );
   } else if (params.get('escena') === 'demostracion') {
     game.setScene(new DemoScene(game, () => new TitleScene(game)));
   } else {

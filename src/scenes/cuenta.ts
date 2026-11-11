@@ -16,10 +16,11 @@ import {
 } from '../online/cuenta';
 import { abrirSelectorDeAvatar } from '../online/avatares';
 import { abrirFormulario, type Formulario } from '../online/formulario';
+import { lobby } from '../online/lobby';
 import { outlinedText } from '../render/text';
 import { backdrop } from './backdrop';
 import { FormScene } from './formScene';
-import { CrearSalaScene, UnirseScene } from './sala';
+import { ContadorEnLinea, CrearSalaScene, PartidaRapidaScene, SalasAbiertasScene, UnirseScene, entrarAlLobby } from './sala';
 import { MenuScene } from './menu';
 import { MainMenuScene } from './modeSelect';
 import { TitleScene } from './title';
@@ -311,13 +312,21 @@ export function menuEnLinea(game: Game, aviso: string | null = null): Scene {
   return new OnlineScene(game, aviso);
 }
 
-/** EN LÍNEA (con cuenta): salas con código, el apodo, el avatar y cerrar sesión. PARTIDA RÁPIDA llega en el Paso C. */
+/**
+ * EN LÍNEA (con cuenta): PARTIDA RÁPIDA, SALAS ABIERTAS, salas privadas con código, el apodo, el
+ * avatar y cerrar sesión. Arriba a la derecha, cuántos jugadores hay en línea (el lobby).
+ */
 class OnlineScene extends MenuScene {
+  private contador = new ContadorEnLinea();
+  /** Cuadros de esta pantalla (para el pulso del punto verde). */
+  private cuadros = 0;
+
   constructor(game: Game, avisoInicial: string | null = null) {
     super(game, 'online', 'EN LÍNEA', [
-      { id: 'crear', label: 'CREAR SALA' },
+      { id: 'rapida', label: 'PARTIDA RÁPIDA' },
+      { id: 'abiertas', label: 'SALAS ABIERTAS' },
+      { id: 'crear', label: 'CREAR SALA PRIVADA' },
       { id: 'unirse', label: 'UNIRSE CON CÓDIGO' },
-      { id: 'rapida', label: 'PARTIDA RÁPIDA', dim: true },
       { id: 'apodo', label: 'CAMBIAR APODO' },
       { id: 'avatar', label: 'CAMBIAR AVATAR' },
       { id: 'salir', label: 'CERRAR SESIÓN' },
@@ -338,17 +347,31 @@ class OnlineScene extends MenuScene {
       this.ui.addChild(s, marco);
     }
     if (avisoInicial) this.aviso(avisoInicial, 'error', 300);
+    this.ui.addChild(this.contador.container);
+  }
+
+  override enter(): void {
+    super.enter();
+    // En el lobby (para contar a los que están, las salas abiertas y la partida rápida).
+    entrarAlLobby(this.game);
+    lobby.poner('menu');
+  }
+
+  override step(): void {
+    this.contador.actualizar(++this.cuadros);
+    super.step();
   }
 
   protected choose(id: string): void {
     const g = this.game;
-    if (id === 'crear') {
+    if (id === 'rapida') {
+      this.go(new PartidaRapidaScene(g));
+    } else if (id === 'abiertas') {
+      this.go(new SalasAbiertasScene(g));
+    } else if (id === 'crear') {
       this.go(new CrearSalaScene(g));
     } else if (id === 'unirse') {
       this.go(new UnirseScene(g));
-    } else if (id === 'rapida') {
-      g.sfx.play('menuMove');
-      this.aviso('PARTIDA RÁPIDA LLEGA PRONTO · POR AHORA, USA CREAR SALA', 'info', 240);
     } else if (id === 'apodo') {
       this.go(new ApodoScene(g, false, () => new OnlineScene(g), () => new OnlineScene(g)));
     } else if (id === 'avatar') {
@@ -357,6 +380,7 @@ class OnlineScene extends MenuScene {
       g.sfx.play('menuConfirm');
       this.busy = true;
       this.aviso('CERRANDO SESIÓN…');
+      lobby.salir();
       void cerrarSesion().then(() => {
         if (g.scene === this) this.go(new MainMenuScene(g), 'menuBack');
       });
@@ -366,6 +390,8 @@ class OnlineScene extends MenuScene {
   }
 
   protected back(): void {
+    // Sale de EN LÍNEA: deja de contar como jugador en línea.
+    lobby.salir();
     this.go(new MainMenuScene(this.game), 'menuBack');
   }
 }

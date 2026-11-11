@@ -324,6 +324,10 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 - En línea sin cuenta (dos pestañas): `?qa=1&escena=sala&crear=QABC&apodo=UNO` y, en la otra,
   `?qa=1&escena=sala&unirse=QABC&apodo=DOS` (código de 4 letras sin I ni O). Con `?qa` los controles
   forzados (`input:<lado>:…`) van al lado propio: 0 quien creó la sala, 1 quien se unió.
+- Lobby (con `?qa`): `&lobby=x` usa un lobby aparte (si no, las pruebas se mezclan con los jugadores de
+  verdad y la PARTIDA RÁPIDA podría emparejar a alguien con una prueba). `?escena=rapida` (PARTIDA
+  RÁPIDA), `?escena=salas` (SALAS ABIERTAS), `?escena=enlinea` (el menú EN LÍNEA),
+  `?escena=sala&crear=QABC&abierta=1` (sala abierta). `window.__lobby` es el lobby (solo con `?qa`).
 - Las capturas se sacan con el navegador automático (`browser.mjs … --script prueba.mjs`).
 
 ---

@@ -106,7 +106,8 @@ async function servidoresIce(): Promise<{ servidores: RTCIceServer[]; turn: bool
   }
 }
 /** Sube cuando cambia lo que se mandan los dos computadores. */
-const PROTOCOLO = 1;
+// 2: los controles llevan la pausa en línea (bits 24 y 25): un juego sin pausa no puede pelear con uno que la tiene.
+const PROTOCOLO = 2;
 /** Segundos sin noticias del otro para dar la conexión por cortada. */
 const SIN_NOTICIAS = 6;
 /** Segundos para lograr la conexión directa. */
@@ -131,6 +132,18 @@ export function versionJuego(roster: readonly FighterAsset[]): string {
 function codigoNuevo(): string {
   const r = crypto.getRandomValues(new Uint32Array(4));
   return Array.from(r, (n) => LETRAS[n % LETRAS.length]).join('');
+}
+
+/** Un código que sale siempre igual del mismo texto (PARTIDA RÁPIDA: los dos lo calculan sin hablarse). */
+export function codigoDe(texto: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < texto.length; i++) h = Math.imul(h ^ texto.charCodeAt(i), 0x01000193);
+  let out = '';
+  for (let k = 0; k < 4; k++) {
+    h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
+    out += LETRAS[h % LETRAS.length];
+  }
+  return out;
 }
 
 /** Normaliza lo que escribe el jugador (minúsculas, espacios, guiones...). */
@@ -181,6 +194,14 @@ export class Sala {
   private huboLista = false;
   /** Quien espera un cambio en la lista de presentes (ver esperarPresentes). */
   private alCambiarPresentes: (() => void) | null = null;
+  /**
+   * Mensajes directos que repiten cada segundo, mientras esperan, quien creó la sala ("aquí está
+   * la sala") y quien entra ("hola"). Llegan al tiro entre los servidores de Supabase; la presencia
+   * se pone al día recién cada 1,5 a 3 s.
+   */
+  private faro: ReturnType<typeof setInterval> | null = null;
+  /** El invitado: el anfitrión que se oyó por mensaje (antes de verlo en la presencia). */
+  private anfitrionOido: ({ id: string } & Presencia) | null = null;
 
   private constructor(
     readonly rol: 'anfitrion' | 'invitado',
@@ -240,6 +261,7 @@ export class Sala {
     this.error ??= error;
     if (this.reloj) clearInterval(this.reloj);
     if (this.plazo) clearTimeout(this.plazo);
+    if (this.faro) clearInterval(this.faro);
     this.salirDelCanal();
     // Un momento para que alcance a salir el "adiós".
     const { juego, control, pc } = this;
@@ -263,6 +285,8 @@ export class Sala {
     const canal = cliente.channel(`sala-${this.codigo}`, { config: { broadcast: { self: false }, presence: { key: this.id } } });
     this.canal = canal;
     canal.on('broadcast', { event: 'senal' }, ({ payload }) => void this.senal(payload as Senal));
+    canal.on('broadcast', { event: 'anfitrion' }, ({ payload }) => this.oirAnfitrion(payload as { id: string } & Presencia));
+    canal.on('broadcast', { event: 'hola' }, ({ payload }) => this.oirInvitado(payload as { id: string } & Presencia));
     this.huboLista = false;
     canal.on('presence', { event: 'sync' }, () => {
       this.huboLista = true;
@@ -348,12 +372,12 @@ export class Sala {
     // Antes de decidir nada, la lista de quién está. El anfitrión, con la primera lista le basta
     // (solo revisa que el código no esté ocupado); el invitado espera hasta ver al anfitrión.
     this.etapa = 'presentes';
-    const hayAnfitrion = (): boolean => this.presentes().some((p) => p.rol === 'anfitrion');
+    const hayAnfitrion = (): boolean => !!this.anfitrionOido || this.presentes().some((p) => p.rol === 'anfitrion');
     if (this.rol === 'anfitrion') await this.esperarPresentes(() => this.huboLista, ESPERA_PRESENTES);
-    else await this.esperarPresentes(() => this.huboLista && hayAnfitrion(), ESPERA_ANFITRION);
+    else await this.esperarPresentes(() => (this.huboLista || !!this.anfitrionOido) && hayAnfitrion(), ESPERA_ANFITRION);
     if (this.estado === 'cerrada' || !this.canal) return;
     const otros = this.presentes();
-    const anfitrion = otros.find((p) => p.rol === 'anfitrion');
+    const anfitrion = otros.find((p) => p.rol === 'anfitrion') ?? this.anfitrionOido ?? undefined;
     if (this.rol === 'anfitrion') {
       if (anfitrion) {
         // Código ocupado (muy raro): se prueba con otro.
@@ -372,14 +396,50 @@ export class Sala {
     this.etapa = this.rol === 'anfitrion' ? 'esperando' : 'esperando la oferta';
     if (this.estado === 'conectando') this.estado = this.rol === 'anfitrion' ? 'esperando' : 'negociando';
     if (this.rol === 'invitado') this.ponerPlazo();
+    // Por mensaje, cada segundo: el anfitrión avisa que la sala está; el invitado saluda hasta que le ofrezcan.
+    const aviso = { id: this.id, ...yo };
+    const evento = this.rol === 'anfitrion' ? 'anfitrion' : 'hola';
+    const sigue = (): boolean => (this.rol === 'anfitrion' ? this.estado === 'esperando' : this.estado === 'negociando' && !this.pc);
+    const latir = (): void => {
+      if (sigue()) void this.canal?.send({ type: 'broadcast', event: evento, payload: aviso }).catch(() => undefined);
+      else if (this.faro) {
+        clearInterval(this.faro);
+        this.faro = null;
+      }
+    };
+    latir();
+    if (this.faro) clearInterval(this.faro);
+    this.faro = setInterval(latir, 1000);
     this.revisarPresentes();
   }
 
-  /** El anfitrión, al ver llegar a alguien: le ofrece la conexión directa. */
+  /** El invitado oye por mensaje que la sala está (antes de que la presencia lo diga). */
+  private oirAnfitrion(a: { id: string } & Presencia): void {
+    if (this.rol !== 'invitado' || !a?.id || a.id === this.id) return;
+    this.anfitrionOido = a;
+    this.alCambiarPresentes?.();
+  }
+
+  /** El anfitrión oye por mensaje a alguien que quiere entrar. */
+  private oirInvitado(a: { id: string } & Presencia): void {
+    if (this.rol !== 'anfitrion' || !a?.id || a.id === this.id || a.id === this.conRival) return;
+    if (this.conRival || this.estado !== 'esperando') {
+      // Ya hay rival: al otro se le avisa que la sala está llena.
+      if (this.estado !== 'cerrada') void this.mandarSenal({ t: 'rechazo', de: this.id, para: a.id, motivo: 'llena' });
+      return;
+    }
+    this.aceptar(a);
+  }
+
+  /** El anfitrión, al ver llegar a alguien (presencia): le ofrece la conexión directa. */
   private revisarPresentes(): void {
     if (this.rol !== 'anfitrion' || this.estado !== 'esperando' || this.conRival) return;
     const inv = this.presentes().find((p) => p.rol === 'invitado');
-    if (!inv) return;
+    if (inv) this.aceptar(inv);
+  }
+
+  /** El anfitrión acepta al invitado (si es de la misma versión) y le ofrece la conexión. */
+  private aceptar(inv: { id: string } & Presencia): void {
     if (inv.version !== this.version) {
       void this.mandarSenal({ t: 'rechazo', de: this.id, para: inv.id, motivo: 'version' });
       return;
@@ -441,7 +501,13 @@ export class Sala {
     if (s.para !== this.id || this.estado === 'cerrada') return;
     try {
       if (s.t === 'rechazo') {
-        this.cerrar(s.motivo === 'version' ? 'TU RIVAL TIENE OTRA VERSIÓN DEL JUEGO · RECARGUEN LA PÁGINA' : 'NO SE PUDO ENTRAR A LA SALA');
+        this.cerrar(
+          s.motivo === 'version'
+            ? 'TU RIVAL TIENE OTRA VERSIÓN DEL JUEGO · RECARGUEN LA PÁGINA'
+            : s.motivo === 'llena'
+              ? 'ESA SALA ESTÁ LLENA'
+              : 'NO SE PUDO ENTRAR A LA SALA',
+        );
       } else if (s.t === 'oferta' && this.rol === 'invitado' && !this.conRival) {
         this.conRival = s.de;
         this.etapa = 'oferta recibida';
