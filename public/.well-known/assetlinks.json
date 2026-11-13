@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.elgrantorneodecell.app",
+      "sha256_cert_fingerprints": [
+        "0E:EB:68:B3:73:CE:0C:40:33:F9:6B:5D:82:E9:9D:60:24:61:16:63:E0:92:DB:DA:C5:CE:FA:B3:2E:94:F6:8F"
+      ]
+    }
+  }
+]

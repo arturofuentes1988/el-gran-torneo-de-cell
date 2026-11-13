@@ -12,7 +12,7 @@ import { alCambiarCuenta, apodo, avatar, cerrarSesion, conectado, guardarAvatar,
 import { mirarLobby } from '../online/lobby';
 import { DIFFICULTIES, DIFFICULTY_NAME, type DifficultyId } from '../sim/difficulty';
 
-type Pestana = 'jugar' | 'ranking';
+type Pestana = 'jugar' | 'ranking' | 'plataformas';
 type Tabla = 'puntos' | 'victorias' | 'racha' | 'arcade';
 
 /**
@@ -91,10 +91,10 @@ function mostrar(p: Pestana): void {
   // Escondido, el juego se calla (y el navegador deja de dibujarlo).
   juego.contentWindow?.postMessage({ torneo: p === 'jugar' ? 'visible' : 'escondido' }, location.origin);
   const url = new URL(location.href);
-  url.hash = p === 'ranking' ? 'ranking' : '';
+  url.hash = p === 'jugar' ? '' : p;
   history.replaceState(null, '', url.pathname + url.search + url.hash);
   if (p === 'jugar') juego.focus();
-  else void cargar();
+  else if (p === 'ranking') void cargar();
 }
 
 function elegirTabla(t: Tabla): void {
@@ -242,6 +242,10 @@ async function cargar(): Promise<void> {
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pestana]')) {
   b.addEventListener('click', () => mostrar(b.dataset.pestana as Pestana));
 }
+// Botones que llevan a otra pestaña (JUGAR AHORA, en PLATAFORMAS).
+for (const b of document.querySelectorAll<HTMLButtonElement>('[data-ir]')) {
+  b.addEventListener('click', () => mostrar(b.dataset.ir as Pestana));
+}
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-tabla]')) {
   b.addEventListener('click', () => elegirTabla(b.dataset.tabla as Tabla));
 }
@@ -370,5 +374,11 @@ setTimeout(() => {
   });
 }, 1500);
 
-// #ranking en la dirección abre directo el ranking (para compartirlo).
-if (location.hash === '#ranking') mostrar('ranking');
+// #ranking o #plataformas en la dirección abren directo esa pestaña (para compartirla), también
+// si la página ya estaba abierta.
+function abrirPorDireccion(): void {
+  if (location.hash === '#ranking') mostrar('ranking');
+  else if (location.hash === '#plataformas') mostrar('plataformas');
+}
+abrirPorDireccion();
+window.addEventListener('hashchange', abrirPorDireccion);

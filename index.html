@@ -7,6 +7,8 @@
     <meta name="description" content="El Gran Torneo de Cell: juego de pelea 2D gratis en el navegador, con ranking de jugadores." />
     <title>El Gran Torneo de Cell</title>
     <link rel="icon" type="image/png" href="icono.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="iconos/icono-apple-180.png" />
   </head>
   <body>
     <header class="cabecera">
@@ -19,6 +21,7 @@
         <nav class="pestanas">
           <button type="button" data-pestana="jugar" class="activa">JUGAR</button>
           <button type="button" data-pestana="ranking">RANKING</button>
+          <button type="button" data-pestana="plataformas"><span class="largo">PLATAFORMAS</span><span class="corto">APP</span></button>
         </nav>
         <div id="cuenta" hidden>
           <button type="button" class="chip" aria-haspopup="menu"><span class="avatar"></span><span class="apodo"></span></button>
@@ -53,6 +56,30 @@
           <nav class="dificultades" hidden></nav>
           <p class="explica"></p>
           <div class="tabla"></div>
+        </div>
+      </section>
+      <section id="plataformas" class="pestana" hidden>
+        <div class="caja">
+          <h1>PLATAFORMAS</h1>
+          <div class="acento"></div>
+          <p class="explica">EL MISMO JUEGO Y LA MISMA CUENTA EN TODAS PARTES</p>
+          <div class="tarjetas">
+            <article class="tarjeta">
+              <h2>ANDROID</h2>
+              <p>INSTALA LA APP: ABRE EL JUEGO A PANTALLA COMPLETA Y SE ACTUALIZA SOLA.</p>
+              <a class="boton" href="descargas/el-gran-torneo-de-cell.apk" download>DESCARGAR APK</a>
+              <p class="nota">AL INSTALARLA, ANDROID PIDE PERMISO PARA APPS QUE NO VIENEN DE PLAY STORE. NECESITA CHROME E INTERNET.</p>
+            </article>
+            <article class="tarjeta">
+              <h2>IPHONE Y IPAD</h2>
+              <p>ABRE ESTA PÁGINA EN SAFARI, TOCA <b>COMPARTIR</b> Y ELIGE <b>AGREGAR A INICIO</b>. QUEDA COMO UNA APP, A PANTALLA COMPLETA.</p>
+            </article>
+            <article class="tarjeta">
+              <h2>COMPUTADOR</h2>
+              <p>JUEGA AQUÍ MISMO, EN EL NAVEGADOR, CON TECLADO O CON JOYSTICK. NO HAY QUE INSTALAR NADA.</p>
+              <button type="button" class="activa" data-ir="jugar">JUGAR AHORA</button>
+            </article>
+          </div>
         </div>
       </section>
       <footer class="pie">

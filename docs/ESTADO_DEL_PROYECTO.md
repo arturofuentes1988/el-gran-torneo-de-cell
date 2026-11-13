@@ -683,6 +683,36 @@ demostración (perfil de CPU con el procesador frenado y registro de lo que se s
 - **Peso**: se midió recomprimir las hojas (WebP 72 y 65 en vez de 80): ahorra apenas 10 a 15 % y se nota
   en la imagen, así que no se hizo. El peso ya está repartido (ver "Carga liviana").
 
+## Plataformas: app de Android y pestaña PLATAFORMAS (13 de noviembre)
+
+Pedido del usuario: un APK de Android y un PKG de PS4 para descargar, y una sección de plataformas en la web.
+
+- **APK de Android** (`public/descargas/el-gran-torneo-de-cell.apk`, ~4 MB, lo publica la web):
+  - Es una "Trusted Web Activity": la app abre `https://elgrantorneodecell.com/juego.html` a pantalla
+    completa y acostada con el motor de Chrome del celular. No lleva el juego adentro.
+    - Se actualiza sola con la web (no hay que publicar un APK nuevo por cada cambio del juego).
+    - La entrada con Google funciona igual que en el navegador. Con el juego metido en un WebView
+      común, Google la rechaza.
+    - Necesita internet y Chrome (sin Chrome, se abre en una pestaña del navegador que haya).
+  - Lo arma `android/generar.mjs` (ver `docs/COMO_SE_HACE.md`). Paquete `com.elgrantorneodecell.app`,
+    Android 7 o más nuevo.
+  - **La firma está fuera del repositorio**, en `C:\Users\fuent\.torneo-android\firma\`
+    (`torneo.keystore` y `clave.txt`). No se sube y no se puede perder: sin ella, un APK nuevo no se
+    instala sobre el anterior. En la misma carpeta están Java 17 y el SDK de Android (~1 GB).
+  - `public/.well-known/assetlinks.json` lleva la huella de esa firma: con eso Chrome muestra el
+    juego sin barra de direcciones. Si se cambia la firma, hay que cambiar la huella ahí.
+  - No está probado en un celular por quien lo armó (no había celular ni emulador): se revisó el
+    paquete (firma, dirección de inicio, pantalla completa, orientación) y falta la prueba del usuario.
+- **Instalar desde el navegador**: `public/manifest.webmanifest` y los íconos de `public/iconos/`
+  (los hace `herramientas/icono_app.py` con la cara de Tío René de su diseño aprobado). Con eso Chrome
+  ofrece "Instalar app" y en el iPhone sirve "Agregar a inicio" (abre el juego a pantalla completa).
+- **Pestaña PLATAFORMAS** de la web (`#plataformas` en la dirección la abre directo): Android (el APK),
+  iPhone y iPad (Agregar a inicio) y computador. En el celular parado la pestaña se llama APP y el
+  nombre del juego va en dos líneas, para que quepan las tres pestañas y la cuenta.
+- **PS4: no se hizo.** Un PKG oficial exige ser desarrollador registrado de PlayStation (kit de
+  desarrollo y aprobación de Sony). Un PKG casero solo se instala en consolas con jailbreak y obligaría
+  a reescribir el juego para la consola (no corre páginas web), sin poder probarlo.
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra

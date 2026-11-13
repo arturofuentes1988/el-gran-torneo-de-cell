@@ -1,0 +1,8 @@
+{
+  "name": "torneo-de-cell-android",
+  "private": true,
+  "description": "Generador del APK de Android (ver generar.mjs)",
+  "type": "module",
+  "scripts": { "apk": "node generar.mjs" },
+  "dependencies": { "@bubblewrap/core": "1.27.0" }
+}

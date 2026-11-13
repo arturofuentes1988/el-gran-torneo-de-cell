@@ -362,3 +362,20 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 | `bocetos.py` | Bocetos gratis de movimientos con FLUX.1 Kontext (Hugging Face). |
 | `dificultad_sim.ts` | Torneo de la CPU contra la CPU entre niveles de dificultad (`npx tsx`). |
 | `rollback_prueba.ts` | Prueba del juego en línea sin navegador (`npx tsx herramientas/rollback_prueba.ts [peleas]`): guardar y cargar la pelea, y dos computadores simulados por una red mala que tienen que quedar idénticos a una pelea de referencia. Correrla después de cambiar la simulación (`src/sim/`). |
+
+## 6. El APK de Android
+
+La app es una "Trusted Web Activity" (abre el juego de la web con Chrome, a pantalla completa): solo hay
+que rehacerla si cambia el ícono, el nombre o la dirección de inicio, no por cada cambio del juego.
+
+1. Una vez: `cd android && npm install`.
+2. Subir `VERSION.codigo` en 1 (y `VERSION.nombre`) en `android/generar.mjs`.
+3. `node android/generar.mjs`: deja el APK firmado en `public/descargas/el-gran-torneo-de-cell.apk`.
+4. Subirlo con la web (la pestaña PLATAFORMAS lo enlaza).
+
+Necesita, fuera del repositorio, la carpeta `~/.torneo-android` con `jdk17/` (Java 17), `sdk/` (SDK de
+Android con `platforms;android-36` y `build-tools;35.0.0`) y `firma/` (`torneo.keystore` y `clave.txt`).
+La firma no se sube ni se pierde: sin ella, el APK nuevo no se instala sobre el anterior. Si algún día se
+cambia, hay que poner su huella SHA-256 en `public/.well-known/assetlinks.json`.
+
+Los íconos (`public/iconos/`) se rehacen con `python -P -E herramientas/icono_app.py`.

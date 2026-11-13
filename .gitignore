@@ -9,3 +9,7 @@ referencias/
 
 # Lo arma herramientas/tamanos.mjs antes de cada build.
 public/tamanos.json
+
+# Android: lo que se instala y el proyecto que arma android/generar.mjs (el APK firmado va en public/descargas).
+android/node_modules/
+android/proyecto/
