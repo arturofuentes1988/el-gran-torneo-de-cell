@@ -1,3 +1,4 @@
+import { rendimiento, Vigia } from './app/rendimiento';
 import '@fontsource/oswald/500.css';
 import '@fontsource/oswald/700.css';
 import type { Texture } from 'pixi.js';
@@ -134,6 +135,7 @@ async function main(): Promise<void> {
   // Pareja por defecto (pruebas con ?escena=pelea): los dos primeros. ?luchadores=i,j la cambia (índices del plantel).
   const pair = parsePair(params.get('luchadores'), roster.length);
   const content = new Contenido(roster, textures, sfx, stages);
+  content.renderer = display.app.renderer;
   const game = new Game(display, kb, pads, menu, sfx, {
     fighters: [roster[pair?.[0] ?? 0], roster[pair?.[1] ?? 1]],
     roster,
@@ -201,6 +203,9 @@ async function main(): Promise<void> {
   let acc = 0;
   let last = performance.now();
   let fallos = 0;
+  // Si la pelea se dibuja lento, el juego se aliviana solo (rendimiento.ts).
+  const vigia = new Vigia(() => display.aplicarAhorro());
+  if (rendimiento.ahorro) display.aplicarAhorro();
   display.app.ticker.add(() => {
     try {
       const now = performance.now();
@@ -220,6 +225,7 @@ async function main(): Promise<void> {
       if (steps >= 5) acc = 0;
       game.scene?.render();
       display.renderWorld();
+      vigia.cuadro(now, game.scene instanceof FightScene && game.scene.andando);
       qa?.();
       fallos = 0;
     } catch (err) {

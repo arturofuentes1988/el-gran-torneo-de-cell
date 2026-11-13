@@ -6,6 +6,7 @@
 import { B_HK, B_HP, B_LK, B_LP, B_POWER_KEY, B_ROLL_KEY, B_TAUNT, type FrameInput } from '../input/buffer';
 import { FightScene } from '../scenes/fight';
 import type { Game } from './game';
+import { rendimiento } from './rendimiento';
 
 const QA_BITS: Record<string, number> = {
   lp: B_LP, hp: B_HP, lk: B_LK, hk: B_HK, taunt: B_TAUNT,
@@ -60,6 +61,7 @@ export function installQaBridge(game: Game): () => void {
     }
     state.textContent = JSON.stringify({
       scene: scene?.constructor.name ?? null,
+      ahorro: rendimiento.ahorro,
       practice: scene instanceof FightScene ? scene.practiceState : null,
       difficulty: scene instanceof FightScene ? scene.difficulty : null,
       live: scene instanceof FightScene ? scene.liveState : null,

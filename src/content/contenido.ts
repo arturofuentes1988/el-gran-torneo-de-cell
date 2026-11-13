@@ -4,8 +4,9 @@
 // no llenar la memoria de video (lo que trababa a los celulares), lo que lleva rato sin usarse
 // se suelta al empezar una pelea.
 
-import type { Texture } from 'pixi.js';
+import type { Renderer, Texture, TextureSource } from 'pixi.js';
 import type { Sfx } from '../audio/sfx';
+import { calentarFiltros, subirTexturas } from '../render/calentar';
 import type { StageView } from '../render/stage';
 import { calidad } from './calidad';
 import { loadSheets, Progreso } from './descargas';
@@ -33,6 +34,10 @@ export class Contenido {
   /** Orden de uso, del más antiguo al más reciente. */
   private recentFighters: FighterAsset[] = [];
   private recentStages: string[] = [];
+  /** Las imágenes de los efectos (compartidas). */
+  private effectSources: TextureSource[] = [];
+  /** Quien dibuja (main.ts): con él, las texturas de cada pelea se suben antes de empezarla. */
+  renderer: Renderer | null = null;
 
   constructor(
     private roster: FighterAsset[],
@@ -73,6 +78,7 @@ export class Contenido {
     const fighters = this.fightersOf(needs);
     this.effects ??= loadEffects(calidad(), prog).then((t) => {
       Object.assign(this.textures, t);
+      this.effectSources = [...new Set(Object.values(t).map((x) => x.source))];
       this.effectsReady = true;
     });
     const stageIds = this.stagesOf(needs);
@@ -90,12 +96,28 @@ export class Contenido {
       }
     }
     const own = needs.stage ? stageIds.indexOf(needs.stage) : -1;
-    if (own < 0) {
-      await Promise.allSettled(stageJobs);
-      return null;
-    }
-    const [stage] = await Promise.all([stageJobs[own], Promise.allSettled(stageJobs)]);
+    const settled = await Promise.allSettled(stageJobs);
+    const stage = own < 0 ? null : await stageJobs[own];
+    await this.calentar(fighters, settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : [])));
     return stage;
+  }
+
+  /** Deja las texturas de la pelea en la tarjeta de video y los filtros compilados (sin tirones en plena pelea). */
+  private async calentar(fighters: FighterAsset[], stages: StageView[]): Promise<void> {
+    const r = this.renderer;
+    if (!r) return;
+    try {
+      calentarFiltros(r);
+      const sources: TextureSource[] = [...this.effectSources];
+      for (const f of fighters) {
+        for (const s of (await this.sheets.get(f)) ?? []) sources.push(...new Set(Object.values(s.textures).map((t) => t.source)));
+      }
+      for (const st of stages) sources.push(...st.fuentes);
+      await subirTexturas(r, sources);
+    } catch (err) {
+      // No es grave: se suben solas al dibujarse.
+      console.warn('No se pudieron preparar las texturas.', err);
+    }
   }
 
   private loadFight(f: FighterAsset, prog: Progreso): Promise<unknown> {

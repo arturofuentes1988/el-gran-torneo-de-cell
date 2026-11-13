@@ -2,7 +2,8 @@
 // paralaje por capa, repetición horizontal, desplazamiento automático, capas
 // animadas y video de fondo. Se cargan con StageView.load().
 
-import { Container, Graphics, Rectangle, Sprite, Texture, TilingSprite } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite, Texture, TilingSprite, type TextureSource } from 'pixi.js';
+import { rendimiento } from '../app/rendimiento';
 import { dibujo, type Calidad } from '../content/calidad';
 import { bajarJson, bajarTextura, bajarVideo, type Progreso } from '../content/descargas';
 import { FRAME_MS, GROUND_SCREEN_Y, STAGE_W, VIEW_H, VIEW_W } from '../config';
@@ -592,6 +593,11 @@ export class StageView {
     return new StageView({ name: def.name, layers: loaded, particles: def.particles, music: def.music });
   }
 
+  /** Las imágenes que bajó este escenario (para subirlas a la tarjeta de video antes de la pelea). */
+  get fuentes(): TextureSource[] {
+    return this.own.map((t) => t.source);
+  }
+
   /** Libera sus texturas y videos (para no llenar la memoria de un celular con escenarios que ya no se usan). */
   destroy(): void {
     if (this.videoWatch !== null) clearInterval(this.videoWatch);
@@ -606,6 +612,7 @@ export class StageView {
       v.load();
     }
     this.videos = [];
+    this.conVideo = [];
     // Solo sus propias texturas: las de las partículas (punto y estela de lluvia) son una para todos
     // los escenarios. Antes se destruían también, y el escenario que seguía en pantalla quedaba con
     // partículas rotas: el dibujo fallaba en cada cuadro y la imagen se congelaba (celulares en
@@ -617,6 +624,8 @@ export class StageView {
 
   /** Videos del escenario: se reproducen solo mientras el escenario se está dibujando. */
   private videos: HTMLVideoElement[] = [];
+  /** Cada video con su dibujo y la imagen fija que tapa (si la tiene). */
+  private conVideo: Array<{ el: HTMLVideoElement; video: Sprite; fija: Container | null }> = [];
   private lastDraw = 0;
   private videoWatch: number | null = null;
 
@@ -656,7 +665,19 @@ export class StageView {
     }
     if (def.additive) view.blendMode = 'add';
     view.alpha = def.alpha ?? 1;
-    if (def.video) this.trackVideo(tex);
+    if (def.video) {
+      this.trackVideo(tex);
+      // La capa anterior es su imagen fija (mismo lugar y tamaño): mientras el video anda, no se dibuja.
+      const el = (tex.source as unknown as { resource?: unknown }).resource;
+      const fija = this.layers[this.layers.length - 1];
+      if (el instanceof HTMLVideoElement && view instanceof Sprite) {
+        const calza =
+          !!fija && !fija.strips && fija.view instanceof Sprite && fija.top === def.top && fija.left === (def.left ?? 0) &&
+          fija.fx === def.parallax[0] && fija.fy === def.parallax[1] && fija.alpha === 1 && (def.alpha ?? 1) === 1 && !def.additive &&
+          Math.abs(fija.view.width - view.width) <= view.width * 0.02 && Math.abs(fija.view.height - view.height) <= view.height * 0.02;
+        this.conVideo.push({ el, video: view, fija: calza ? fija.view : null });
+      }
+    }
     this.container.addChild(view);
     this.layers.push({
       view,
@@ -723,7 +744,19 @@ export class StageView {
     const dt = Math.min(3, (now - this.lastTime) / FRAME_MS);
     this.lastTime = now;
     this.lastDraw = now;
-    for (const v of this.videos) if (v.paused) void v.play().catch(() => undefined);
+    // Con ahorro 2 (el aparato no alcanza), los videos se detienen y queda la imagen fija.
+    const sinVideo = rendimiento.ahorro >= 2;
+    for (const v of this.videos) {
+      if (sinVideo) {
+        if (!v.paused) v.pause();
+      } else if (v.paused) void v.play().catch(() => undefined);
+    }
+    for (const c of this.conVideo) {
+      if (!c.fija) continue;
+      const anda = !sinVideo && !c.el.paused && c.el.readyState >= 2 && c.el.currentTime > 0;
+      c.video.visible = anda;
+      c.fija.visible = !anda;
+    }
     for (const l of this.layers) {
       const x = l.left - camLeft * l.fx;
       const y = snap(GROUND_SCREEN_Y + l.top + camOffY * l.fy);

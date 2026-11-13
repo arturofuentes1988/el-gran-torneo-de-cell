@@ -310,6 +310,8 @@ costura, iguala la sonoridad (-16 LUFS) y escribe `public/musica/<clave>.mp3` y 
 - `npm run dev` (puerto 5173), `npx tsc --noEmit -p .` y `npm run build`.
 - Atajos de URL: `?escena=pelea&modo=cpu|2p|demo|practica&luchadores=i,j&escenario=<id>`
   (índices del plantel: 0 René, 1 Pablito, 2 Flaitiano, 3 Vendedor de Leña, 4 Carlitos Run).
+- `?ahorro=1|2|3` fuerza el ahorro automático (`src/app/rendimiento.ts`): 1 = mundo a escala 2 y brillo
+  simple; 2 = además densidad 1,5 y sin videos de fondo; 3 = densidad 1.
 - `?calidad=hd` o `?calidad=liviano` fuerza la calidad de los gráficos (si no, la de OPCIONES >
   GRÁFICOS, o la que corresponde al aparato). `?tactil=1` muestra los controles de celular.
 - Peso: el arranque baja solo lo de los menús (~9,5 MB en HD, ~4 MB en liviano); cada pelea baja

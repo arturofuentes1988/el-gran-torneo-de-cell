@@ -202,6 +202,8 @@ export class LiveShow {
   private viewsPop = 0;
   private viewsColor = 0xffffff;
   private livePill = new Graphics();
+  private pillKey = -1;
+  private viewsBgKey = -1;
   private liveDot = new Graphics();
   private liveText: Text;
   private viewsBg = new Graphics();
@@ -632,12 +634,20 @@ export class LiveShow {
     // "● EN VIVO" y las vistas, bajo el reloj.
     const pw = Math.ceil(this.liveText.width) + 15;
     const px = Math.round(cx - pw / 2);
-    this.livePill.clear();
-    this.livePill.roundRect(px, 37, pw, 10, 3).fill(NEON_PINK).stroke({ color: 0xffffff, width: 0.5, alpha: 0.6 });
-    this.liveDot.clear();
-    if (this.frame % 60 < 40) this.liveDot.circle(px + 6, 42, 2).fill(0xffffff);
+    // Los fondos se redibujan solo si cambian de lugar o tamaño (redibujarlos en cada cuadro le cuesta al celular).
+    const pillKey = px * 1000 + pw;
+    if (pillKey !== this.pillKey) {
+      this.pillKey = pillKey;
+      this.livePill.clear();
+      this.livePill.roundRect(px, 37, pw, 10, 3).fill(NEON_PINK).stroke({ color: 0xffffff, width: 0.5, alpha: 0.6 });
+      this.liveDot.clear();
+      this.liveDot.circle(px + 6, 42, 2).fill(0xffffff);
+    }
+    this.liveDot.visible = this.frame % 60 < 40;
     this.liveText.position.set(px + 11, 42.5);
-    this.viewsNum.text = formatViews(this.shownViews);
+    // Cada cambio de texto es una textura nueva: mientras las vistas suben, el número cambia 10 veces
+    // por segundo (no en cada cuadro) y termina en el valor exacto.
+    if (this.frame % 6 === 0 || this.shownViews === this.views) this.viewsNum.text = formatViews(this.shownViews);
     const lw = this.viewsLabel.width;
     const nw = this.viewsNum.width;
     const total = lw + 4 + nw;
@@ -649,10 +659,15 @@ export class LiveShow {
     const color = this.viewsPop > 4 ? NEON_YELLOW : 0xffffff;
     if (color !== this.viewsColor) {
       this.viewsColor = color;
-      this.viewsNum.style.fill = color;
+      // Teñido (el número es blanco): no rehace la textura del texto.
+      this.viewsNum.tint = color;
     }
-    this.viewsBg.clear();
-    this.viewsBg.roundRect(vx - 4, 49, total + 8, 10, 3).fill({ color: INK, alpha: 0.6 });
+    const bgKey = vx * 1000 + Math.round(total);
+    if (bgKey !== this.viewsBgKey) {
+      this.viewsBgKey = bgKey;
+      this.viewsBg.clear();
+      this.viewsBg.roundRect(vx - 4, 49, total + 8, 10, 3).fill({ color: INK, alpha: 0.6 });
+    }
 
     // Regalos: entran deslizándose desde su lado y se desvanecen al final.
     for (const p of this.pills) {

@@ -389,6 +389,11 @@ export class FightScene implements Scene {
     return this.live.qaState();
   }
 
+  /** La pelea está andando (sin pausa): ahí se mide el ritmo del dibujo (rendimiento.ts). */
+  get andando(): boolean {
+    return !this.paused;
+  }
+
   /** Estado de la práctica (null fuera de ese modo); también lo lee el puente de pruebas. */
   get practiceState(): PracticeState | null {
     if (!this.dummy) return null;

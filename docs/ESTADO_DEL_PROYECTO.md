@@ -642,6 +642,38 @@ de respaldo (TURN de Cloudflare), desconexiones, revancha, PARTIDA RÁPIDA y pun
   se pegue la 005, no se muestran. Se cuentan desde que se pegó (no hay historia de antes). También: en
   el celular angosto (≤ 430 px) el nombre y JUGAR / RANKING caben en una fila (antes se montaban).
 
+## Rendimiento en el celular (13 de noviembre)
+
+Pedido del usuario: en el celular a veces se queda pegado o anda lento. Medido con una pelea de
+demostración (perfil de CPU con el procesador frenado y registro de lo que se sube a la tarjeta de video):
+
+- **El procesador no era el problema**: la lógica y el armado del dibujo ocupan ~18 % del cuadro con el
+  procesador frenado 4 veces. Lo que pesa es la tarjeta de video.
+- **Causa de los tirones (lo de "se queda pegado")**: cada hoja de un luchador (2048 x 2048 en liviano,
+  4096 en HD) se subía a la tarjeta de video la primera vez que salía uno de sus cuadros, o sea en plena
+  pelea (un tirón por hoja, hasta 8 por pelea más los efectos), y los programas de los filtros (brillo,
+  zoom, negativo) se compilaban en el primer golpe.
+  - Ahora `Contenido.prepare` termina con `calentar` (`src/render/calentar.ts`): con la barra de carga en
+    pantalla sube todas las texturas de la pelea (luchadores, efectos y escenario), una por cuadro, y
+    dibuja una vez cada filtro fuera de pantalla. Medido: en la pelea ya no se sube ninguna hoja y quedan
+    2 programas por compilar (antes 10).
+- **Textos**: cada vez que cambia un texto, Pixi lo redibuja y sube una textura nueva. Las VISTAS del
+  "EN VIVO" cambiaban en cada cuadro mientras subían: ahora cambian 10 veces por segundo y el amarillo
+  del salto es un teñido (no rehace la textura). Los fondos del "EN VIVO" y de las vistas se redibujan
+  solo si cambian de tamaño.
+- **Escenarios**: la imagen fija que va debajo de cada video ya no se dibuja mientras el video anda (era
+  una pantalla completa pintada dos veces en cada cuadro). Si el video se detiene, vuelve la imagen.
+- **Ahorro automático** (`src/app/rendimiento.ts`): con GRÁFICOS en AUTOMÁTICO, si la pelea se dibuja a
+  menos de 45 cuadros por segundo durante 4 segundos seguidos, el juego se aliviana solo, un nivel por
+  vez, sin recargar (y no vuelve a subir en esa sesión):
+  1. el mundo se dibuja a escala 2, el brillo usa 2 pasadas a densidad 1 y los textos a 2x como máximo;
+  2. además, densidad de pantalla 1,5 como máximo y escenarios sin video;
+  3. además, densidad de pantalla 1.
+  Si el jugador eligió un nivel en OPCIONES > GRÁFICOS (o con `?calidad=`), se respeta y no se aliviana.
+  `?ahorro=1|2|3` lo fuerza (pruebas) y el puente de pruebas lo informa (`ahorro`).
+- **Peso**: se midió recomprimir las hojas (WebP 72 y 65 en vez de 80): ahorra apenas 10 a 15 % y se nota
+  en la imagen, así que no se hizo. El peso ya está repartido (ver "Carga liviana").
+
 ## Pendiente y decisiones abiertas
 
 - **Victoria del Vendedor de Leña**: el clip de victoria salió con otro tipo (musculoso, otra

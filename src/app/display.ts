@@ -2,6 +2,7 @@ import { Application, Container, Graphics, RenderTexture, Sprite } from 'pixi.js
 import { VIEW_H, VIEW_W } from '../config';
 import { dibujo } from '../content/calidad';
 import { renderScale } from '../render/scale';
+import { rendimiento } from './rendimiento';
 
 /** Escala de dibujo del mundo mínima (S = 2 → 960x540); la máxima depende de los gráficos (S = 4 → 1920x1080). */
 const MIN_S = 2;
@@ -61,6 +62,19 @@ export class Display {
     this.layout(true);
   }
 
+  /** El ahorro cambió (rendimiento.ts): menos densidad de pantalla y el mundo a menor escala. */
+  aplicarAhorro(): void {
+    const a = rendimiento.ahorro;
+    const tope = a >= 3 ? 1 : a >= 2 ? 1.5 : dibujo().dpr;
+    const dpr = Math.min(tope, this.dpr);
+    if (dpr !== this.dpr) {
+      this.dpr = dpr;
+      this.app.renderer.resolution = dpr;
+      this.app.resize();
+    }
+    this.layout(true);
+  }
+
   onResize(fn: () => void): void {
     this.listeners.push(fn);
   }
@@ -75,7 +89,8 @@ export class Display {
     this.scale = Math.min(W / VIEW_W, H / VIEW_H);
     // S: los pixeles reales por unidad de mundo, redondeado hacia arriba
     // (con un margen para no saltar de nivel por un pixel de más).
-    const s = Math.max(MIN_S, Math.min(dibujo().maxS, Math.ceil(this.scale * this.dpr - 0.05)));
+    const maxS = rendimiento.ahorro >= 1 ? MIN_S : dibujo().maxS;
+    const s = Math.max(MIN_S, Math.min(maxS, Math.ceil(this.scale * this.dpr - 0.05)));
     if (s !== this.renderScale || !this.rt) {
       this.renderScale = s;
       renderScale.s = s;
@@ -99,7 +114,9 @@ export class Display {
 
   /** Resolución para que el texto del HUD quede nítido. */
   get textResolution(): number {
-    return Math.max(1, this.scale * this.dpr);
+    const r = Math.max(1, this.scale * this.dpr);
+    // Con ahorro, los textos se dibujan a 2x como máximo (cada texto que cambia es una textura nueva).
+    return rendimiento.ahorro >= 1 ? Math.min(r, 2) : r;
   }
 
   /** Dibuja el mundo en su textura HD (se muestra con worldView). */

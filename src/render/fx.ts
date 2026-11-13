@@ -6,6 +6,7 @@
 import { AdvancedBloomFilter } from 'pixi-filters';
 import { CanvasSource, Container, Sprite, Texture } from 'pixi.js';
 import { dibujo } from '../content/calidad';
+import { rendimiento } from '../app/rendimiento';
 import type { SparkKind } from '../sim/types';
 
 interface Particle {
@@ -114,6 +115,8 @@ export class FxLayer {
   private bolts: Texture[] = [];
   /** Fracción de partículas de cada ráfaga (según los gráficos). */
   private particulas = dibujo().particulas;
+  private bloom: AdvancedBloomFilter;
+  private ahorro = 0;
 
   constructor() {
     this.tex = {
@@ -197,8 +200,18 @@ export class FxLayer {
       );
     }
     // Gráficos BAJA: brillo con menos pasadas (es lo que más le cuesta a la tarjeta de video).
-    this.glowLayer.filters = [new AdvancedBloomFilter({ threshold: 0.25, bloomScale: 1.2, brightness: 1, blur: 6, quality: dibujo().bloom })];
+    this.bloom = new AdvancedBloomFilter({ threshold: 0.25, bloomScale: 1.2, brightness: 1, blur: 6, quality: dibujo().bloom });
+    this.glowLayer.filters = [this.bloom];
+    this.ahorrar();
     this.container.addChild(this.normalLayer, this.glowLayer);
+  }
+
+  /** Con ahorro (el aparato no alcanza): brillo con menos pasadas y a densidad 1 (4 veces menos pixeles en un celular). */
+  private ahorrar(): void {
+    this.ahorro = rendimiento.ahorro;
+    if (this.ahorro < 1) return;
+    this.bloom.quality = Math.min(this.bloom.quality, 2);
+    this.bloom.resolution = 1;
   }
 
   /** Agrega un dibujo propio a la capa con brillo (las estelas de los golpes). */
@@ -622,6 +635,7 @@ export class FxLayer {
 
   /** Avanza un cuadro. */
   step(): void {
+    if (this.ahorro !== rendimiento.ahorro) this.ahorrar();
     for (let i = this.sheets.length - 1; i >= 0; i--) {
       const s = this.sheets[i];
       if (++s.t >= s.frames.length * s.frameDur) {
