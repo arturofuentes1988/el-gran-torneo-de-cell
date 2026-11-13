@@ -1,0 +1,93 @@
+/* Página de texto (la política de privacidad): la caja de la web, con letra para leer. */
+.texto {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.texto h2 {
+  margin: 22px 0 6px;
+  font-size: 18px;
+  letter-spacing: 1.5px;
+  color: var(--oro-suave);
+}
+
+.texto p,
+.texto li {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: 0.3px;
+  color: #e9e0f2;
+}
+
+.texto p {
+  margin: 0 0 10px;
+}
+
+.texto ul {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+
+.texto li {
+  margin-bottom: 4px;
+}
+
+.texto b {
+  color: #fff4e0;
+}
+
+.texto a {
+  color: var(--oro);
+  overflow-wrap: anywhere;
+}
+
+.texto .fecha {
+  margin-bottom: 16px;
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #b8acc8;
+}
+
+/* Arriba a la derecha: volver al juego (como los botones de la web). */
+.volver {
+  font: 700 15px var(--fuente);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  text-decoration: none;
+  color: #fff;
+  background: #b02a90;
+  border: 1px solid var(--oro-suave);
+  border-radius: 4px;
+  padding: 7px 16px;
+  transform: skewX(-12deg);
+  box-shadow: 0 0 14px rgba(255, 58, 192, 0.35);
+}
+
+.volver:hover {
+  filter: brightness(1.25);
+}
+
+@media (max-width: 560px) {
+  /* En el celular no caben el nombre y el botón: el nombre se achica. */
+  .cabecera .logo {
+    font-size: 15px;
+    letter-spacing: 1px;
+  }
+
+  .volver {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+
+  .texto p,
+  .texto li {
+    font-size: 15px;
+  }
+
+  /* En el celular la web no deja margen (el juego ocupa todo el ancho): la caja de texto pone el suyo. */
+  .texto {
+    margin: 10px;
+  }
+}

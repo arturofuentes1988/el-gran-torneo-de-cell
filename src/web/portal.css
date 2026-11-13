@@ -460,6 +460,14 @@ td.luchador img {
   color: #8a7fa0;
 }
 
+.firma a {
+  color: #b8acc8;
+}
+
+.firma a:hover {
+  color: var(--oro);
+}
+
 /* Celular (vertical u horizontal): el juego ocupa todo lo que queda bajo la cabecera (el juego acomoda sus controles). */
 @media (pointer: coarse), (max-width: 700px), (max-height: 500px) {
   :root {

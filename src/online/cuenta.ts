@@ -193,7 +193,9 @@ export function iniciarCuenta(): void {
     }
   })().finally(() => {
     pendiente = null;
-    for (const fn of oyentes) fn();
+    // Recién entró con Google: la web (que lleva el juego dentro) también tiene que saberlo.
+    if (vueltaGoogle && usuario) notificar();
+    else for (const fn of oyentes) fn();
   });
 }
 
@@ -319,6 +321,9 @@ export async function entrarConGoogle(motivo: Motivo): Promise<string | null> {
     return traducir(err);
   }
   if (!activo) return 'LA ENTRADA CON GOOGLE TODAVÍA NO ESTÁ LISTA · USA EL CORREO';
+  // Google rechaza la entrada desde el navegador de dentro de otra app (muestra un error 403 en inglés
+  // y no vuelve): se avisa antes de salir del juego.
+  if (dentroDeUnaApp()) return 'GOOGLE NO DEJA ENTRAR DESDE DENTRO DE OTRA APP\nABRE EL JUEGO EN CHROME O SAFARI, O USA EL CORREO';
   try {
     const c = await aTiempo(obtenerCliente());
     escribir(() => sessionStorage, KEY_VOLVER, motivo);
@@ -335,6 +340,16 @@ export async function entrarConGoogle(motivo: Motivo): Promise<string | null> {
   } catch (err) {
     return traducir(err);
   }
+}
+
+/**
+ * ¿El juego está abierto en el navegador de dentro de otra app (TikTok, Instagram, Facebook…)?
+ * Muchos llegan así, por un enlace: ahí Google no deja entrar (el correo sí funciona).
+ */
+export function dentroDeUnaApp(ua = navigator.userAgent): boolean {
+  if (/musical_ly|BytedanceWebview|TikTok|Instagram|FBAN|FBAV|FB_IAB|; wv\)/i.test(ua)) return true;
+  // iPhone y iPad: el navegador de dentro de una app no dice "Safari" (Safari, Chrome y los demás sí).
+  return /iPhone|iPad|iPod/.test(ua) && /AppleWebKit/.test(ua) && !/Safari\//.test(ua);
 }
 
 /** La página de la web si el juego va dentro de ella (mismo sitio); si no, la del juego. */

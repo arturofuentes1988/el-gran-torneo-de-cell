@@ -253,6 +253,15 @@ ARCADE) y el horizonte de Santiago (`public/titulo/`).
 - **Falta**:
   - La entrada con Google: el usuario tiene que crear la llave en Google Cloud y pegarla en Supabase.
     Mientras tanto, el juego dice "todavía no está lista · usa el correo".
+    El lado del juego quedó probado el 13 de noviembre con Supabase simulado: ida a Google (sola y
+    dentro de la web), vuelta con `?code=` (entra, pide el apodo y la web muestra la cuenta) y
+    cancelación. Dentro de otra app (TikTok, Instagram, Facebook) Google rechaza la entrada: el juego
+    avisa que hay que abrirlo en Chrome o Safari, o usar el correo (`dentroDeUnaApp` en
+    `src/online/cuenta.ts`).
+  - Para publicar la app en Google Cloud (pasarla de "Prueba" a "En producción"), Google exige una
+    página principal y una política de privacidad: `privacidad.html` (tercera página del build, con
+    los estilos de la web en `src/web/privacidad.css`; enlazada abajo en la portada). Dice lo que el
+    juego guarda de verdad; si cambia lo que se guarda, hay que actualizarla (y su fecha).
   - Revisar que la URL Configuration del panel tenga la dirección del juego.
   - Borrar las cuentas de prueba `qa.torneo.*@example.com` en Authentication → Users.
 
